@@ -1,0 +1,102 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  --color-zinc-950: #09090b;
+  --color-zinc-900: #18181b;
+  --color-zinc-800: #27272a;
+  --color-zinc-700: #3f3f46;
+  --color-zinc-600: #52525b;
+  --color-zinc-500: #71717a;
+  --color-zinc-400: #a1a1aa;
+  --color-zinc-300: #d4d4d8;
+  --color-zinc-200: #e4e4e7;
+  --color-zinc-100: #f4f4f5;
+  --color-zinc-50: #fafafa;
+
+  --color-brand-orange-950: #431407;
+  --color-brand-orange-900: #7c2d12;
+  --color-brand-orange-800: #9a3412;
+  --color-brand-orange-700: #c2410c;
+  --color-brand-orange-600: #ea580c;
+  --color-brand-orange-500: #f97316;
+  --color-brand-orange-400: #fb923c;
+  --color-brand-orange-300: #fdba74;
+  --color-brand-orange-200: #fed7aa;
+  --color-brand-orange-100: #ffedd5;
+  --color-brand-orange-50: #fff7ed;
+
+  --color-navy-950: #172554;
+  --color-navy-900: #1e3a8a;
+  --color-navy-800: #1e40af;
+  --color-navy-700: #1d4ed8;
+  --color-navy-600: #2563eb;
+  --color-navy-500: #3b82f6;
+  --color-navy-400: #60a5fa;
+  --color-navy-300: #93c5fd;
+  --color-navy-200: #bfdbfe;
+  --color-navy-100: #dbeafe;
+  --color-navy-50: #eff6ff;
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Hide scrollbars globally for a sleek UI while maintaining scroll functionality */
+* {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+*::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari, Opera */
+  width: 0;
+  height: 0;
+}
+
+/* Global base styling for Off White canvas and High-Contrast Ink typography */
+body {
+  background-color: #fafafa;
+  color: #09090b;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  letter-spacing: -0.011em;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html.dark body {
+  background-color: #09090b;
+  color: #f4f4f5;
+}
+
+/* Ensure all interactive elements show pointer cursor */
+button,
+a,
+select,
+summary,
+[role="button"],
+[type="button"],
+[type="submit"],
+[type="reset"],
+.cursor-pointer {
+  cursor: pointer !important;
+}
+
+@utility no-scrollbar {
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+select {
+  border-radius: 0;
+}
+
+select option {
+  border-radius: 0;
+  padding: 8px 12px;
+}
+
