@@ -10,24 +10,8 @@ import { ProfessionalNotifications } from './components/ProfessionalNotification
 import { ProfessionalProfileModal } from './components/ProfessionalProfileModal';
 import { BookingModal } from './components/BookingModal';
 import { ChatModal } from './components/ChatModal';
-import { SplashScreen } from './components/auth/SplashScreen';
-import { OnboardingScreen } from './components/auth/OnboardingScreen';
-import { RoleSelectionScreen } from './components/auth/RoleSelectionScreen';
-import { AuthFlow } from './components/auth/AuthFlow';
 
 export default function App() {
-  const [appFlowState, setAppFlowState] = useState<'splash' | 'onboarding' | 'role_select' | 'auth' | 'app'>(() => {
-    const hasSeenSplash = localStorage.getItem('kazihub_splash_seen');
-    if (!hasSeenSplash) return 'splash';
-    const hasSeenOnboarding = localStorage.getItem('kazihub_onboarding_seen');
-    if (!hasSeenOnboarding) return 'onboarding';
-    const hasRole = localStorage.getItem('kazihub_role');
-    if (!hasRole) return 'role_select';
-    const isAuthed = localStorage.getItem('kazihub_authenticated');
-    if (!isAuthed) return 'auth';
-    return 'app';
-  });
-
   const [currentRole, setCurrentRole] = useState<Role>(() => {
     return (localStorage.getItem('kazihub_role') as Role) || 'customer';
   });
@@ -239,16 +223,16 @@ export default function App() {
 
   // Automatic Availability Management: When logged in as professional, set isAvailableNow = true. When leaving/unloading/visibility hidden/logout/switch role, set isAvailableNow = false.
   useEffect(() => {
-    if (appFlowState === 'app' && currentRole === 'professional') {
+    if (currentRole === 'professional') {
       setProfessionals(prev => prev.map(p => p.id === activeProId ? { ...p, isAvailableNow: true } : p));
     }
-  }, [appFlowState, currentRole, activeProId]);
+  }, [currentRole, activeProId]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
         setProfessionals(prev => prev.map(p => p.id === activeProId ? { ...p, isAvailableNow: false } : p));
-      } else if (document.visibilityState === 'visible' && appFlowState === 'app' && currentRole === 'professional') {
+      } else if (document.visibilityState === 'visible' && currentRole === 'professional') {
         setProfessionals(prev => prev.map(p => p.id === activeProId ? { ...p, isAvailableNow: true } : p));
       }
     };
@@ -267,25 +251,22 @@ export default function App() {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       setProfessionals(prev => prev.map(p => p.id === activeProId ? { ...p, isAvailableNow: false } : p));
     };
-  }, [activeProId, appFlowState, currentRole]);
+  }, [activeProId, currentRole]);
 
   const handleLogout = () => {
     setProfessionals(prev => prev.map(p => p.id === activeProId ? { ...p, isAvailableNow: false } : p));
-    localStorage.removeItem('kazihub_authenticated');
-    setAppFlowState('auth');
+    setActiveTab('explore');
   };
 
   const handleDeleteAccount = () => {
     setProfessionals(prev => prev.map(p => p.id === activeProId ? { ...p, isAvailableNow: false } : p));
-    localStorage.removeItem('kazihub_authenticated');
-    localStorage.removeItem('kazihub_role');
-    setAppFlowState('role_select');
+    setCurrentRole('customer');
+    setActiveTab('explore');
   };
 
   const handleDeactivateAccount = () => {
     setProfessionals(prev => prev.map(p => p.id === activeProId ? { ...p, isAvailableNow: false } : p));
-    localStorage.removeItem('kazihub_authenticated');
-    setAppFlowState('auth');
+    setActiveTab('explore');
   };
 
   // 4-day window 1 (completion-submitted -> completed) & 4-day window 2 (completed -> closed) checks
@@ -519,59 +500,6 @@ export default function App() {
   const currentChatMessages = chatTargetPro
     ? messages.filter(m => m.senderId === chatTargetPro.id || m.recipientId === chatTargetPro.id)
     : [];
-
-  // Render auth & onboarding flow steps
-  if (appFlowState === 'splash') {
-    return (
-      <SplashScreen
-        onComplete={() => {
-          localStorage.setItem('kazihub_splash_seen', 'true');
-          const seenOnboarding = localStorage.getItem('kazihub_onboarding_seen');
-          setAppFlowState(seenOnboarding ? 'role_select' : 'onboarding');
-        }}
-      />
-    );
-  }
-
-  if (appFlowState === 'onboarding') {
-    return (
-      <OnboardingScreen
-        onFinish={() => {
-          localStorage.setItem('kazihub_onboarding_seen', 'true');
-          setAppFlowState('role_select');
-        }}
-      />
-    );
-  }
-
-  if (appFlowState === 'role_select') {
-    return (
-      <RoleSelectionScreen
-        onSelectRole={(role) => {
-          setCurrentRole(role);
-          localStorage.setItem('kazihub_role', role);
-          setAppFlowState('auth');
-        }}
-      />
-    );
-  }
-
-  if (appFlowState === 'auth') {
-    return (
-      <AuthFlow
-        role={currentRole}
-        onAuthenticated={() => {
-          localStorage.setItem('kazihub_authenticated', 'true');
-          setAppFlowState('app');
-        }}
-        onSwitchRolePreference={() => {
-          const next = currentRole === 'customer' ? 'professional' : 'customer';
-          setCurrentRole(next);
-          localStorage.setItem('kazihub_role', next);
-        }}
-      />
-    );
-  }
 
   const handleProfessionalSendMessage = (customerId: string, text: string, mediaProps?: Partial<ChatMessage>) => {
     const newMsg: ChatMessage = {

@@ -4,7 +4,7 @@ import { Language, t } from '../translations';
 import { 
   Wrench, Home, Calendar, MessageSquare,
   Moon, Sun, Bell, Settings, Briefcase, LogOut,
-  Menu, Search
+  Menu, Search, X
 } from 'lucide-react';
 
 interface AppShellProps {
@@ -66,45 +66,58 @@ export const AppShell: React.FC<AppShellProps> = ({
     <div className={`min-h-screen ${darkMode ? 'bg-zinc-950 text-zinc-100 dark' : 'bg-zinc-50 text-zinc-900'} antialiased`}>
       
       {/* Shell Layout Wrapper */}
-      <div className="w-full flex min-h-screen">
+      <div className="w-full flex min-h-screen relative">
         
         {/* ================= OVERLAY FOR MOBILE SIDEBAR ================= */}
         {isMobileSidebarOpen && (
           <div 
-            className="fixed inset-0 bg-navy-950/40 backdrop-blur-sm z-40 md:hidden"
+            className="fixed inset-0 bg-navy-950/60 backdrop-blur-xs z-40 md:hidden transition-opacity duration-300 animate-in fade-in"
             onClick={() => setIsMobileSidebarOpen(false)}
           />
         )}
 
         {/* ================= LEFT SIDEBAR ================= */}
         <aside
-          className={`flex flex-col transition-[width,transform] duration-300 ease-in-out border-r border-zinc-200 dark:border-zinc-800 fixed md:sticky top-0 h-screen overflow-hidden shrink-0 z-50 md:z-30 bg-white dark:bg-zinc-950 group ${
-            isMobileSidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full md:translate-x-0 md:w-[68px] md:hover:w-64'
+          className={`flex flex-col border-r border-zinc-200 dark:border-zinc-800 fixed inset-y-0 left-0 md:sticky top-0 h-screen overflow-hidden shrink-0 z-50 md:z-30 bg-white dark:bg-zinc-950 group w-72 max-w-[85vw] md:w-[68px] md:hover:w-64 transition-transform md:transition-[width] duration-300 ease-in-out ${
+            isMobileSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'
           }`}
         >
           
-          {/* Brand Logo (Matches Top Navbar Height & Padding) */}
-          <div className="h-[65px] md:h-[73px] w-full shrink-0 flex items-center px-3.5 border-b border-zinc-200/80 dark:border-zinc-800/80 overflow-hidden">
-            <div
-              onClick={() => {
-                onTabChange('explore');
-                if (window.innerWidth < 768) {
-                  setIsMobileSidebarOpen(false);
-                }
-              }}
-              className="w-10 h-10 rounded-xl bg-navy-900 dark:bg-navy-100 flex items-center justify-center text-white dark:text-navy-900 border border-navy-900 dark:border-navy-100 shrink-0 cursor-pointer"
-              title="KaziHub Home"
-              aria-label="KaziHub Home"
+          {/* Brand Logo & Mobile Close Button */}
+          <div className="h-[65px] md:h-[73px] w-full shrink-0 flex items-center justify-between px-3.5 border-b border-zinc-200/80 dark:border-zinc-800/80 overflow-hidden">
+            <div className="flex items-center">
+              <div
+                onClick={() => {
+                  onTabChange('explore');
+                  if (window.innerWidth < 768) {
+                    setIsMobileSidebarOpen(false);
+                  }
+                }}
+                className="w-10 h-10 rounded-xl bg-navy-900 dark:bg-navy-100 flex items-center justify-center text-white dark:text-navy-900 border border-navy-900 dark:border-navy-100 shrink-0 cursor-pointer"
+                title="KaziHub Home"
+                aria-label="KaziHub Home"
+              >
+                <Wrench className="w-5 h-5" strokeWidth={1.5} />
+              </div>
+              <div className={`pl-2.5 whitespace-nowrap overflow-hidden transition-opacity duration-200 ${
+                isMobileSidebarOpen ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
+              }`}>
+                <h1 className="text-[17px] font-bold tracking-tight text-navy-900 dark:text-navy-100">
+                  Kazi<span className="text-brand-orange-600">Hub</span>
+                </h1>
+              </div>
+            </div>
+
+            {/* Mobile Close Button */}
+            <button
+              type="button"
+              onClick={() => setIsMobileSidebarOpen(false)}
+              className="md:hidden p-2 rounded-xl text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+              title="Close Menu"
+              aria-label="Close Menu"
             >
-              <Wrench className="w-5 h-5" strokeWidth={1.5} />
-            </div>
-            <div className={`pl-2.5 whitespace-nowrap overflow-hidden transition-opacity duration-200 ${
-              isMobileSidebarOpen ? 'opacity-100' : 'opacity-0 md:group-hover:opacity-100'
-            }`}>
-              <h1 className="text-[17px] font-bold tracking-tight text-navy-900 dark:text-navy-100">
-                Kazi<span className="text-brand-orange-600">Hub</span>
-              </h1>
-            </div>
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
           <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col justify-between p-3.5">
@@ -134,13 +147,13 @@ export const AppShell: React.FC<AppShellProps> = ({
                       <Icon className="w-5 h-5 shrink-0" strokeWidth={1.5} />
                     </div>
                     <span className={`pl-12 whitespace-nowrap overflow-hidden text-left flex-1 transition-opacity duration-200 ${
-                      isMobileSidebarOpen ? 'opacity-100' : 'opacity-0 md:group-hover:opacity-100'
+                      isMobileSidebarOpen ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
                     }`}>
                       {item.label}
                     </span>
                     {item.badge !== undefined && (
                       <span className={`absolute right-3 top-1/2 -translate-y-1/2 min-w-4 h-4 px-1 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0 transition-opacity duration-200 ${
-                        isMobileSidebarOpen ? 'opacity-100' : 'opacity-0 md:group-hover:opacity-100'
+                        isMobileSidebarOpen ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
                       } bg-brand-orange-600 text-white`}>
                         {item.badge}
                       </span>
@@ -165,7 +178,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                     {darkMode ? <Sun className="w-5 h-5 text-amber-500" strokeWidth={1.5} /> : <Moon className="w-5 h-5 text-zinc-500" strokeWidth={1.5} />}
                   </div>
                   <span className={`pl-12 whitespace-nowrap overflow-hidden text-left flex-1 transition-opacity duration-200 ${
-                    isMobileSidebarOpen ? 'opacity-100' : 'opacity-0 md:group-hover:opacity-100'
+                    isMobileSidebarOpen ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
                   }`}>
                     {darkMode ? 'Light Theme' : 'Dark Theme'}
                   </span>
@@ -185,7 +198,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                     <LogOut className="w-5 h-5" strokeWidth={1.5} />
                   </div>
                   <span className={`pl-12 whitespace-nowrap overflow-hidden text-left flex-1 transition-opacity duration-200 ${
-                    isMobileSidebarOpen ? 'opacity-100' : 'opacity-0 md:group-hover:opacity-100'
+                    isMobileSidebarOpen ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
                   }`}>
                     Sign Out
                   </span>
@@ -217,7 +230,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                   />
                 </div>
                 <div className={`pl-12 pr-2 whitespace-nowrap overflow-hidden text-left transition-opacity duration-200 ${
-                  isMobileSidebarOpen ? 'opacity-100' : 'opacity-0 md:group-hover:opacity-100'
+                  isMobileSidebarOpen ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
                 }`}>
                   <h4 className={`font-semibold text-xs truncate ${
                     activeTab === 'profile' ? 'text-white dark:text-navy-900' : 'text-navy-900 dark:text-navy-100'
@@ -252,7 +265,7 @@ export const AppShell: React.FC<AppShellProps> = ({
             <div className="flex md:hidden items-center gap-2.5">
               <button 
                 onClick={() => setIsMobileSidebarOpen(true)}
-                className="p-1 -ml-1 text-zinc-900 dark:text-white cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-colors"
+                className="p-2 -ml-1 text-zinc-900 dark:text-white cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-colors active:scale-95"
                 title="Open Navigation"
                 aria-label="Open Navigation"
               >
@@ -320,3 +333,4 @@ export const AppShell: React.FC<AppShellProps> = ({
     </div>
   );
 };
+

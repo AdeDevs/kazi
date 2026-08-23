@@ -1752,11 +1752,11 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
               )}
             </div>
 
-            <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
+            <div className="flex flex-col sm:flex-row lg:items-center gap-2 w-full lg:w-auto">
               <CustomDropdown
                 value={selectedCategoryFilter}
                 onChange={(val) => onSelectCategoryFilter(val as Category | 'All')}
-                icon={<Briefcase className="w-3.5 h-3.5 text-slate-400" />}
+                icon={<Briefcase className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
                 options={[
                   { 
                     value: 'All', 
@@ -1770,21 +1770,22 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                   }))
                 ]}
                 placeholder="All Categories"
-                className="w-full sm:w-auto min-w-[190px]"
-                buttonClassName="py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-navy-800/50"
+                className="w-full sm:w-auto lg:min-w-[190px]"
+                buttonClassName="py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-navy-800/50"
                 dropdownWidth="w-64"
               />
 
               <CustomDropdown
                 value={selectedNeighborhood}
                 onChange={(val) => setSelectedNeighborhood(val)}
-                icon={<MapPin className="w-3.5 h-3.5 text-slate-400" />}
+                icon={<MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
                 options={neighborhoods.map((n) => ({
                   value: n,
                   label: n === 'All' ? 'All Neighborhoods' : n
                 }))}
-                className="w-full sm:w-auto min-w-[175px]"
-                buttonClassName="py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-navy-800/50"
+                placeholder="All Neighborhoods"
+                className="w-full sm:w-auto lg:min-w-[175px]"
+                buttonClassName="py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-navy-800/50"
               />
 
               {(selectedCategoryFilter !== 'All' || selectedNeighborhood !== 'All' || searchTerm || searchMinRating > 0 || searchMinExperience > 0 || searchAvailabilityOnly) && (
@@ -1798,7 +1799,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     setSearchAvailabilityOnly(false);
                     setProViewFilter('all');
                   }}
-                  className="px-3.5 py-2.5 rounded-xl text-xs font-bold bg-navy-800 hover:bg-navy-900 text-white shadow-xs transition-colors cursor-pointer shrink-0"
+                  className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl text-xs font-bold bg-navy-800 hover:bg-navy-900 text-white shadow-xs transition-colors cursor-pointer shrink-0 text-center"
                   title="Clear Search & Filter State" aria-label="Clear Search & Filter State"
                 >
                   Reset
@@ -1943,9 +1944,9 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
               <div
                 key={pro.id}
                 onClick={() => onSelectProForProfile(pro)}
-                className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200/90 dark:border-slate-800 flex flex-col justify-between shadow-xs cursor-pointer hover:border-navy-600 dark:hover:border-navy-400 hover:shadow-md transition-all active:scale-[0.99] focus-within:ring-2 focus-within:ring-navy-800/30 group"
+                className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/90 dark:border-slate-800 flex flex-col justify-between shadow-xs cursor-pointer hover:border-navy-600 dark:hover:border-navy-400 hover:shadow-md transition-all active:scale-[0.99] focus-within:ring-2 focus-within:ring-navy-800/30 group"
               >
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   {/* Top card header */}
                   <div className="flex items-start justify-between gap-2.5">
                     <div className="flex items-center gap-3">
@@ -1953,7 +1954,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                         <img
                           src={pro.avatar}
                           alt={pro.name}
-                          className="w-12 h-12 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shadow-xs group-hover:scale-102 transition-transform"
+                          className="w-12 h-12 rounded-2xl object-cover border border-slate-200 dark:border-slate-700 shadow-xs group-hover:scale-102 transition-transform"
                         />
                         {pro.isAvailableNow && (
                           <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900" title="Available for immediate dispatch" aria-label="Available for immediate dispatch" />
@@ -1968,26 +1969,22 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                             <ShieldCheck className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400 shrink-0" title="Verified Professional" />
                           )}
                         </div>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="text-[11px] font-bold text-navy-800 dark:text-navy-400 bg-navy-50 dark:bg-navy-950/80 px-1.5 py-0.2 rounded-md">
+                        <div className="flex items-center gap-1.5 mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                          <span className="font-semibold text-navy-800 dark:text-navy-300">
                             {pro.category}
                           </span>
-                          <span className="text-[11px] text-slate-400 font-bold">•</span>
-                          <span className="text-[11px] font-extrabold text-emerald-700 dark:text-emerald-400">
-                            From ₦{(pro.hourlyRate || 4000).toLocaleString()}
-                          </span>
+                          <span>•</span>
+                          <span>{pro.experienceYears} yrs exp</span>
                         </div>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5 truncate">
+                        <p className="text-[11px] text-slate-400 dark:text-slate-500 flex items-center gap-1 mt-0.5 truncate">
                           <MapPin className="w-3 h-3 text-slate-400 shrink-0" /> {pro.neighborhood}
-                          <span className="text-slate-300 dark:text-slate-600">•</span>
-                          <span className="text-slate-500 font-medium">&lt; 15 min avg response</span>
                         </p>
                       </div>
                     </div>
 
                     <button
                       onClick={(e) => toggleSavePro(pro.id, e)}
-                      className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer shrink-0"
+                      className="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer shrink-0"
                       title={savedProIds.includes(pro.id) ? "Remove from saved" : "Save professional"} aria-label={savedProIds.includes(pro.id) ? "Remove from saved" : "Save professional"}
                     >
                       <Bookmark className={`w-3.5 h-3.5 ${savedProIds.includes(pro.id) ? 'fill-navy-800 text-navy-800 dark:fill-navy-400 dark:text-navy-400' : ''}`} />
@@ -1995,30 +1992,36 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                   </div>
 
                   {/* Tagline / Specialty */}
-                  <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2 leading-relaxed min-h-[34px]">
+                  <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2 leading-relaxed">
                     {pro.tagline}
                   </p>
 
-                  {/* Key Metrics Comparison Strip */}
+                  {/* Single Clean Trust & Rating Strip */}
                   <div className="flex items-center justify-between text-[11px] text-slate-500 py-1.5 px-2.5 rounded-xl bg-slate-50 dark:bg-slate-850/60 border border-slate-100 dark:border-slate-800">
                     <span className="font-bold text-amber-500 flex items-center gap-1">
                       <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
                       {pro.rating} <span className="text-slate-400 font-normal">({pro.reviewCount})</span>
                     </span>
-                    <span className="font-semibold text-slate-700 dark:text-slate-300">{pro.completedJobs}+ jobs</span>
-                    <span className="font-semibold text-slate-700 dark:text-slate-300">{pro.experienceYears}y exp</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">{pro.completedJobs}+ jobs completed</span>
                   </div>
                 </div>
 
-                {/* Bottom action buttons */}
-                <div className="pt-3 mt-3 border-t border-slate-100 dark:border-slate-800">
-                  <div className="grid grid-cols-2 gap-2">
+                {/* Bottom Pricing & Action Buttons */}
+                <div className="pt-3 mt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-bold">Starts From</span>
+                    <span className="text-xs sm:text-sm font-black text-navy-900 dark:text-white">
+                      ₦{(pro.hourlyRate || 4000).toLocaleString()}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         onOpenChat(pro);
                       }}
-                      className="py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                      className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors cursor-pointer flex items-center gap-1"
                     >
                       <MessageSquare className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400" /> Chat
                     </button>
@@ -2027,7 +2030,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                         e.stopPropagation();
                         onOpenBooking(pro);
                       }}
-                      className="py-2.5 rounded-xl bg-brand-orange-500 hover:bg-brand-orange-600 text-xs font-extrabold text-white shadow-xs transition-colors cursor-pointer flex items-center justify-center gap-1"
+                      className="px-3.5 py-2 rounded-xl bg-brand-orange-500 hover:bg-brand-orange-600 text-xs font-extrabold text-white shadow-xs transition-colors cursor-pointer flex items-center gap-1"
                     >
                       Book Now
                     </button>
