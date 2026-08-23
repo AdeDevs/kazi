@@ -93,7 +93,7 @@ export const ProfessionalNotifications: React.FC<ProfessionalNotificationsProps>
               Notifications
             </h1>
             {unreadCount > 0 && (
-              <span className="px-2.5 py-0.5 rounded-full bg-rose-500 text-white text-xs font-black shadow-2xs animate-pulse">
+              <span className="px-2.5 py-0.5 rounded-full bg-brand-orange-500 text-white text-xs font-bold shadow-xs flex items-center justify-center text-center">
                 {unreadCount} unread
               </span>
             )}

@@ -62,6 +62,18 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   const [searchAvailabilityOnly, setSearchAvailabilityOnly] = useState<boolean>(false);
   const [proViewFilter, setProViewFilter] = useState<'all' | 'available' | 'topRated'>('all');
 
+  // Dedicated page-specific search & filter states for unified search banner pattern
+  const [bookingsSearchTerm, setBookingsSearchTerm] = useState('');
+  const [bookingsCategoryFilter, setBookingsCategoryFilter] = useState<Category | 'All'>('All');
+  const [savedSearchTerm, setSavedSearchTerm] = useState('');
+  const [savedCategoryFilter, setSavedCategoryFilter] = useState<Category | 'All'>('All');
+  const [savedNeighborhoodFilter, setSavedNeighborhoodFilter] = useState<string>('All');
+  const [messagesSearchTerm, setMessagesSearchTerm] = useState('');
+  const [messagesCategoryFilter, setMessagesCategoryFilter] = useState<Category | 'All'>('All');
+  const [notificationsSearchTerm, setNotificationsSearchTerm] = useState('');
+  const [notificationsFilterType, setNotificationsFilterType] = useState<string>('All');
+  const [settingsSearchTerm, setSettingsSearchTerm] = useState('');
+
   // AI Diagnosis State
   const [isAIDiagnosisOpen, setIsAIDiagnosisOpen] = useState(false);
   const [aiSymptomInput, setAiSymptomInput] = useState('');
@@ -397,7 +409,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 onFocus={() => setIsSearchFocused(true)}
                 onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
                 placeholder="Search specialty, pro name, or service keyword (e.g. plumber, wire, AC)..."
-                className="w-full pl-11 pr-12 py-3 rounded-2xl bg-navy-900 border border-navy-700 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-white transition-all shadow-inner"
+                className="w-full pl-11 pr-12 py-3 rounded-2xl bg-navy-900 border border-navy-700 text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-orange-500/50 focus:border-brand-orange-500 transition-all shadow-inner"
               />
               {searchTerm && (
                 <button
@@ -437,7 +449,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                                 ? 'bg-navy-800 text-white border-navy-800 shadow-xs'
                                 : isMatch
                                 ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
-                                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200/60 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-750'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200/60 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
                             }`}
                           >
                             <span>{cat}</span>
@@ -491,7 +503,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
               icon={<MapPin className="w-4 h-4 text-slate-300" />}
               options={neighborhoods.map(n => ({ value: n, label: n === 'All' ? 'All Neighborhoods' : n }))}
               className="min-w-[210px]"
-              buttonClassName="py-3 rounded-2xl bg-navy-900 border border-navy-700 text-white hover:border-slate-300 transition-colors"
+              buttonClassName="py-3 rounded-2xl bg-navy-900 border border-navy-700 text-white hover:border-brand-orange-500/50 focus:border-brand-orange-500 focus:ring-2 focus:ring-brand-orange-500/50 transition-colors"
             />
           </div>
 
@@ -647,7 +659,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
             </div>
           ) : (
             filteredProfessionals.map(pro => (
-              <div key={pro.id} onClick={() => onSelectProForProfile(pro)} className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-xs flex flex-col justify-between group cursor-pointer hover:border-navy-600 dark:hover:border-navy-400 hover:shadow-md transition-all active:scale-[0.99] focus-within:ring-2 focus-within:ring-navy-800/30">
+              <div key={pro.id} onClick={() => onSelectProForProfile(pro)} className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-xs flex flex-col justify-between group cursor-pointer hover:border-brand-orange-500/60 dark:hover:border-brand-orange-400 hover:shadow-md transition-all active:scale-[0.99] focus-within:ring-2 focus-within:ring-brand-orange-500/40">
                 <div className="space-y-3">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
@@ -668,16 +680,19 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
 
                   <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2">{pro.tagline}</p>
 
-                  <div className="flex items-center gap-2 text-[10px] text-slate-500">
-                    <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 font-bold">{pro.experienceYears} Yrs Exp</span>
-                    <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 font-bold">{pro.completedJobs} Jobs</span>
-                    {pro.isAvailableNow && <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 font-bold">Available Now</span>}
+                  <div className="flex items-center gap-2 text-[10px]">
+                    <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/60 dark:border-slate-700/60 font-bold">{pro.experienceYears} Yrs Exp</span>
+                    <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/60 dark:border-slate-700/60 font-bold">{pro.completedJobs} Jobs</span>
+                    {pro.isAvailableNow && <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-bold">Available Now</span>}
                   </div>
                 </div>
 
                 <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-navy-800 dark:text-navy-400">★ {pro.rating} ({pro.reviewCount} reviews)</span>
+                    <span className="font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                      <Star className="w-3.5 h-3.5 fill-amber-500 dark:fill-amber-400 text-amber-500 dark:text-amber-400" />
+                      {pro.rating} <span className="text-slate-500 dark:text-slate-400 font-normal">({pro.reviewCount} reviews)</span>
+                    </span>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <button onClick={(e) => { e.stopPropagation(); onOpenChat(pro); }} className="py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">Chat</button>
@@ -700,22 +715,39 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
     const issueReportedCount = bookings.filter(b => b.status === 'issue-reported').length;
     const closedCount = bookings.filter(b => b.status === 'closed' || b.status === 'cancelled').length;
 
+    const bookingsSearchTrimmed = bookingsSearchTerm.trim().toLowerCase();
+
     const filteredBookingsList = bookings.filter(b => {
+      // Filter by status tab
       if (bookingFilter === 'active') {
-        return b.status === 'pending' || b.status === 'awaiting_quote' || b.status === 'accepted' || b.status === 'in-progress';
+        if (!(b.status === 'pending' || b.status === 'awaiting_quote' || b.status === 'accepted' || b.status === 'in-progress')) return false;
+      } else if (bookingFilter === 'awaiting_completion') {
+        if (b.status !== 'completion-submitted') return false;
+      } else if (bookingFilter === 'completed') {
+        if (b.status !== 'completed') return false;
+      } else if (bookingFilter === 'issue_reported') {
+        if (b.status !== 'issue-reported') return false;
+      } else if (bookingFilter === 'closed') {
+        if (!(b.status === 'closed' || b.status === 'cancelled')) return false;
       }
-      if (bookingFilter === 'awaiting_completion') {
-        return b.status === 'completion-submitted';
+
+      // Filter by category
+      if (bookingsCategoryFilter !== 'All' && b.category !== bookingsCategoryFilter) {
+        return false;
       }
-      if (bookingFilter === 'completed') {
-        return b.status === 'completed';
+
+      // Search matching across artisan name, service name, category, issue description, booking ID
+      if (bookingsSearchTrimmed) {
+        const matchesSearch = 
+          b.professionalName.toLowerCase().includes(bookingsSearchTrimmed) ||
+          b.serviceName.toLowerCase().includes(bookingsSearchTrimmed) ||
+          b.category.toLowerCase().includes(bookingsSearchTrimmed) ||
+          b.issueDescription.toLowerCase().includes(bookingsSearchTrimmed) ||
+          b.id.toLowerCase().includes(bookingsSearchTrimmed) ||
+          (b.neighborhood && b.neighborhood.toLowerCase().includes(bookingsSearchTrimmed));
+        if (!matchesSearch) return false;
       }
-      if (bookingFilter === 'issue_reported') {
-        return b.status === 'issue-reported';
-      }
-      if (bookingFilter === 'closed') {
-        return b.status === 'closed' || b.status === 'cancelled';
-      }
+
       return true;
     });
 
@@ -744,128 +776,111 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
           </span>
         </div>
 
-        {/* Filter Tabs: Clean, professional header with dynamic tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-3 no-scrollbar border-b border-slate-200 dark:border-slate-800 -mx-4 px-4 sm:mx-0 sm:px-0 scroll-smooth snap-x snap-mandatory">
-          {/* All Jobs */}
-          <button
-            type="button"
-            onClick={() => setBookingFilter('all')}
-            className={`px-4 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer shrink-0 flex items-center gap-2 select-none active:scale-[0.97] h-10 border ${
-              bookingFilter === 'all'
-                ? 'bg-navy-800 text-white border-navy-800 shadow-md shadow-navy-800/10'
-                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-850'
-            }`}
-          >
-            <span>All Jobs</span>
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-              bookingFilter === 'all' ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
-            }`}>
-              {bookings.length}
-            </span>
-          </button>
+        {/* Unified Search Banner & Filter System: Search Bar + 2 Filters (Jobs & Status) */}
+        <div className="p-2.5 sm:p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-3">
+          <div className="flex flex-col lg:flex-row gap-2">
+            {/* Search Bar */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                value={bookingsSearchTerm}
+                onChange={(e) => setBookingsSearchTerm(e.target.value)}
+                placeholder="Search bookings by artisan, service, issue, or job ID..."
+                className="w-full pl-10 pr-9 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-orange-500/50 focus:border-brand-orange-500"
+              />
+              {bookingsSearchTerm && (
+                <button
+                  onClick={() => setBookingsSearchTerm('')}
+                  className="absolute right-3 top-3 p-0.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
+                  title="Clear Search" aria-label="Clear Search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
 
-          {/* Active */}
-          <button
-            type="button"
-            onClick={() => setBookingFilter('active')}
-            className={`px-4 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer shrink-0 flex items-center gap-2 select-none active:scale-[0.97] h-10 border ${
-              bookingFilter === 'active'
-                ? 'bg-navy-800 text-white border-navy-800 shadow-md shadow-navy-800/10'
-                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-850'
-            }`}
-          >
-            <span className="w-2 h-2 rounded-full bg-brand-orange-500 animate-pulse" />
-            <span>Active</span>
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-              bookingFilter === 'active' ? 'bg-brand-orange-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
-            }`}>
-              {activeCount}
-            </span>
-          </button>
+            {/* 2 Filters beside Search Bar: 1. Jobs (Category) and 2. Terms (Status) */}
+            <div className="flex flex-col sm:flex-row lg:items-center gap-2 w-full lg:w-auto">
+              {/* Filter 1: Jobs (Defaults to All Jobs) */}
+              <CustomDropdown
+                value={bookingsCategoryFilter}
+                onChange={(val) => setBookingsCategoryFilter(val as Category | 'All')}
+                icon={<Briefcase className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
+                options={[
+                  { value: 'All', label: 'All Jobs' },
+                  ...CATEGORIES.map(cat => ({
+                    value: cat,
+                    label: cat,
+                    icon: React.createElement(getCategoryIcon(cat), { className: "w-3.5 h-3.5 text-brand-orange-500" })
+                  }))
+                ]}
+                placeholder="All Jobs"
+                className="w-full sm:w-auto lg:min-w-[170px]"
+                buttonClassName="py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-brand-orange-500/50"
+                dropdownWidth="w-64"
+              />
 
-          {/* Awaiting Completion - Only visible when count > 0 */}
-          {awaitingCompletionCount > 0 && (
-            <button
-              type="button"
-              onClick={() => setBookingFilter('awaiting_completion')}
-              className={`px-4 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer shrink-0 flex items-center gap-2 select-none active:scale-[0.97] h-10 border ${
-                bookingFilter === 'awaiting_completion'
-                  ? 'bg-navy-800 text-white border-navy-800 shadow-md shadow-navy-800/10'
-                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-850'
-              }`}
-            >
-              <Clock className="w-3.5 h-3.5 text-emerald-500" />
-              <span>Awaiting Completion</span>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                bookingFilter === 'awaiting_completion'
-                  ? 'bg-white/20 text-white'
-                  : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-extrabold border border-emerald-500/30'
-              }`}>
-                {awaitingCompletionCount}
-              </span>
-            </button>
+              {/* Filter 2: Terms / Status (Active, Awaiting, Completed, etc.) */}
+              <CustomDropdown
+                value={bookingFilter}
+                onChange={(val) => setBookingFilter(val as 'all' | 'active' | 'awaiting_completion' | 'completed' | 'issue_reported' | 'closed')}
+                icon={<Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
+                options={[
+                  { value: 'all', label: `All Status (${bookings.length})` },
+                  { value: 'active', label: `Active (${activeCount})` },
+                  { value: 'awaiting_completion', label: `Awaiting Completion (${awaitingCompletionCount})` },
+                  { value: 'completed', label: `Completed (${completedCount})` },
+                  { value: 'issue_reported', label: `Issue Reported (${issueReportedCount})` },
+                  { value: 'closed', label: `Closed (${closedCount})` },
+                ]}
+                placeholder="All Status"
+                className="w-full sm:w-auto lg:min-w-[190px]"
+                buttonClassName="py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-brand-orange-500/50"
+                dropdownWidth="w-60"
+                align="right"
+              />
+
+              {(bookingsSearchTerm || bookingsCategoryFilter !== 'All' || bookingFilter !== 'all') && (
+                <button
+                  onClick={() => {
+                    setBookingsSearchTerm('');
+                    setBookingsCategoryFilter('All');
+                    setBookingFilter('all');
+                  }}
+                  className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl text-xs font-bold bg-navy-800 hover:bg-navy-900 text-white shadow-xs transition-colors cursor-pointer shrink-0 text-center"
+                  title="Reset Filters"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Active Filters Summary */}
+          {(bookingsSearchTerm || bookingsCategoryFilter !== 'All' || bookingFilter !== 'all') && (
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs flex items-center flex-wrap gap-1.5">
+              <span className="font-extrabold text-navy-800 dark:text-navy-400 text-[11px]">Active:</span>
+              {bookingsSearchTerm && (
+                <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold flex items-center gap-1 text-[11px] text-slate-800 dark:text-slate-200">
+                  "{bookingsSearchTerm}"
+                  <X className="w-3 h-3 cursor-pointer text-slate-400 hover:text-rose-500" onClick={() => setBookingsSearchTerm('')} />
+                </span>
+              )}
+              {bookingsCategoryFilter !== 'All' && (
+                <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold flex items-center gap-1 text-[11px] text-slate-800 dark:text-slate-200">
+                  Job: {bookingsCategoryFilter}
+                  <X className="w-3 h-3 cursor-pointer text-slate-400 hover:text-rose-500" onClick={() => setBookingsCategoryFilter('All')} />
+                </span>
+              )}
+              {bookingFilter !== 'all' && (
+                <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold flex items-center gap-1 text-[11px] text-slate-800 dark:text-slate-200">
+                  Status: {bookingFilter === 'awaiting_completion' ? 'Awaiting Completion' : bookingFilter === 'issue_reported' ? 'Issue Reported' : bookingFilter.charAt(0).toUpperCase() + bookingFilter.slice(1)}
+                  <X className="w-3 h-3 cursor-pointer text-slate-400 hover:text-rose-500" onClick={() => setBookingFilter('all')} />
+                </span>
+              )}
+            </div>
           )}
-
-          {/* Completed */}
-          <button
-            type="button"
-            onClick={() => setBookingFilter('completed')}
-            className={`px-4 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer shrink-0 flex items-center gap-2 select-none active:scale-[0.97] h-10 border ${
-              bookingFilter === 'completed'
-                ? 'bg-navy-800 text-white border-navy-800 shadow-md shadow-navy-800/10'
-                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-850'
-            }`}
-          >
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-            <span>Completed</span>
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-              bookingFilter === 'completed' ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
-            }`}>
-              {completedCount}
-            </span>
-          </button>
-
-          {/* Issue Reported - Only visible when count > 0 */}
-          {issueReportedCount > 0 && (
-            <button
-              type="button"
-              onClick={() => setBookingFilter('issue_reported')}
-              className={`px-4 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer shrink-0 flex items-center gap-2 select-none active:scale-[0.97] h-10 border ${
-                bookingFilter === 'issue_reported'
-                  ? 'bg-navy-800 text-white border-navy-800 shadow-md shadow-navy-800/10'
-                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-850'
-              }`}
-            >
-              <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
-              <span>Issue Reported</span>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                bookingFilter === 'issue_reported'
-                  ? 'bg-white/20 text-white'
-                  : 'bg-rose-500/20 text-rose-700 dark:text-rose-300 font-extrabold border border-rose-500/30'
-              }`}>
-                {issueReportedCount}
-              </span>
-            </button>
-          )}
-
-          {/* Closed */}
-          <button
-            type="button"
-            onClick={() => setBookingFilter('closed')}
-            className={`px-4 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer shrink-0 flex items-center gap-2 select-none active:scale-[0.97] h-10 border ${
-              bookingFilter === 'closed'
-                ? 'bg-navy-800 text-white border-navy-800 shadow-md shadow-navy-800/10'
-                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-850'
-            }`}
-          >
-            <CheckCircle className="w-3.5 h-3.5 text-slate-400" />
-            <span>Closed</span>
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-              bookingFilter === 'closed' ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
-            }`}>
-              {closedCount}
-            </span>
-          </button>
         </div>
 
         {filteredBookingsList.length === 0 ? (
@@ -901,112 +916,202 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
               const isQuoteRequest = b.status === 'awaiting_quote' || (b.servicePricingType === 'quote_required' && b.status !== 'completed' && b.status !== 'closed' && !isCancelled);
               const { eligible, reason } = getCancelEligibility(b);
 
+              // Status configuration for single, clean status pill
+              const getStatusConfig = () => {
+                if (isAwaitingCompletion) {
+                  return {
+                    label: 'Awaiting Your Review',
+                    className: 'bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/80',
+                    dotColor: 'bg-emerald-500 animate-pulse',
+                    icon: <Clock className="w-3.5 h-3.5" />
+                  };
+                }
+                if (isCompleted) {
+                  return {
+                    label: 'Completed (Warranty Active)',
+                    className: 'bg-slate-100 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 border-slate-200 dark:border-slate-700',
+                    dotColor: 'bg-emerald-500',
+                    icon: <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                  };
+                }
+                if (isIssueReported) {
+                  return {
+                    label: 'Issue Reported',
+                    className: 'bg-rose-50 dark:bg-rose-950/70 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800/80',
+                    dotColor: 'bg-rose-500',
+                    icon: <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
+                  };
+                }
+                if (isClosed) {
+                  return {
+                    label: 'Closed & Archived',
+                    className: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700',
+                    dotColor: 'bg-slate-400',
+                    icon: <CheckCircle className="w-3.5 h-3.5 text-slate-400" />
+                  };
+                }
+                if (isCancelled) {
+                  return {
+                    label: 'Cancelled',
+                    className: 'bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800',
+                    dotColor: 'bg-rose-400',
+                    icon: <XCircle className="w-3.5 h-3.5 text-rose-400" />
+                  };
+                }
+                if (b.status === 'in-progress') {
+                  return {
+                    label: 'Work In Progress',
+                    className: 'bg-navy-50 dark:bg-navy-950/60 text-navy-800 dark:text-navy-300 border-navy-200/80 dark:border-navy-800',
+                    dotColor: 'bg-brand-orange-500 animate-pulse',
+                    icon: <Wrench className="w-3.5 h-3.5 text-brand-orange-500" />
+                  };
+                }
+                if (b.status === 'accepted') {
+                  return {
+                    label: 'Scheduled',
+                    className: 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+                    dotColor: 'bg-emerald-500',
+                    icon: <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+                  };
+                }
+                if (isQuoteRequest) {
+                  return {
+                    label: 'Quote Requested',
+                    className: 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+                    dotColor: 'bg-amber-500 animate-pulse',
+                    icon: <Clock className="w-3.5 h-3.5 text-amber-500" />
+                  };
+                }
+                return {
+                  label: 'Pending Response',
+                  className: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700',
+                  dotColor: 'bg-amber-500 animate-pulse',
+                  icon: <Clock className="w-3.5 h-3.5 text-amber-500" />
+                };
+              };
+
+              const statusConfig = getStatusConfig();
+
               return (
-                <div key={b.id} className={`p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border space-y-3 shadow-xs transition-all ${
-                  isAwaitingCompletion ? 'border-emerald-400 dark:border-emerald-500/40 bg-emerald-500/5' :
-                  isCompleted ? 'border-emerald-500/30 dark:border-emerald-500/20 bg-emerald-500/5' :
-                  isIssueReported ? 'border-rose-400 dark:border-rose-500/40 bg-rose-500/5' :
-                  isClosed ? 'border-slate-300 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50' :
-                  isCancelled ? 'border-rose-300 dark:border-rose-900 bg-slate-50/50 dark:bg-slate-900/50' :
-                  isQuoteRequest ? 'border-amber-400/50 dark:border-amber-500/30 bg-amber-50/20 dark:bg-amber-950/10' :
-                  'border-slate-200 dark:border-slate-800'
-                }`}>
-                  {/* Card Header: Professional, Service, Correct Status & Price */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
-                    <div className="flex items-center gap-3">
+                <div
+                  key={b.id}
+                  className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition-all space-y-3.5"
+                >
+                  {/* Tier 1: Card Header (Identity, Trade, Price & Single Status Pill) */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800/80 pb-3.5">
+                    <div className="flex items-center gap-3 min-w-0">
                       {pro ? (
-                        <img src={pro.avatar} alt={pro.name} className="w-12 h-12 rounded-2xl object-cover shrink-0 border border-slate-200 dark:border-slate-700 shadow-xs" />
+                        <img
+                          src={pro.avatar}
+                          alt={pro.name}
+                          className="w-12 h-12 rounded-xl object-cover shrink-0 border border-slate-200 dark:border-slate-700 shadow-xs"
+                        />
                       ) : (
-                        <div className="w-12 h-12 rounded-2xl bg-navy-800/10 dark:bg-navy-400/10 text-navy-800 dark:text-navy-300 flex items-center justify-center font-black text-base shrink-0">
+                        <div className="w-12 h-12 rounded-xl bg-navy-800/10 dark:bg-navy-400/10 text-navy-800 dark:text-navy-300 flex items-center justify-center font-black text-base shrink-0 border border-slate-200 dark:border-slate-700">
                           {b.professionalName.charAt(0)}
                         </div>
                       )}
-                      <div>
+                      <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="px-2.5 py-0.5 rounded-full bg-navy-800/10 text-navy-800 dark:text-navy-400 text-[10px] font-extrabold uppercase tracking-wide">
+                          <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-extrabold uppercase tracking-wide border border-slate-200/60 dark:border-slate-700">
                             {b.category}
                           </span>
-                          {isQuoteRequest ? (
-                            <span className="text-xs font-bold text-navy-800 dark:text-navy-400 bg-navy-50 dark:bg-navy-950 border border-navy-200/60 dark:border-navy-800 px-2.5 py-0.5 rounded-full">
-                              Quote Requested
+                          {pro && (
+                            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                              <span>{pro.rating.toFixed(1)}</span>
+                              <span className="text-slate-400">({pro.completedJobs})</span>
                             </span>
-                          ) : b.totalPrice && b.totalPrice > 0 ? (
-                            <span className="text-xs font-black text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full">
-                              {formatCurrency(b.totalPrice)}
-                            </span>
-                          ) : null}
+                          )}
                         </div>
-                        <h3 className="font-extrabold text-base text-slate-900 dark:text-slate-100 mt-0.5 flex items-center gap-1.5">
-                          {b.professionalName}
-                          {pro?.verified && <ShieldCheck className="w-4 h-4 text-navy-800 dark:text-navy-400 shrink-0" />}
+                        <h3 className="font-extrabold text-base text-slate-900 dark:text-slate-100 mt-0.5 flex items-center gap-1.5 truncate">
+                          <span>{b.professionalName}</span>
+                          {pro?.verified && <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />}
                         </h3>
-                        <p className="text-xs text-slate-500 font-medium">{b.selectedService || b.category}</p>
+                        <p className="text-xs text-slate-500 font-medium truncate">
+                          {b.selectedService || b.category}
+                        </p>
                       </div>
                     </div>
 
-                    {/* Status Badge */}
-                    <span className={`px-3.5 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wider flex items-center gap-1.5 shrink-0 self-start sm:self-auto ${
-                      b.status === 'accepted' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30' :
-                      b.status === 'in-progress' ? 'bg-navy-800/15 text-navy-800 dark:text-navy-300 border border-navy-800/30' :
-                      b.status === 'pending' ? 'bg-brand-orange-500/15 text-brand-orange-600 dark:text-brand-orange-400 border border-brand-orange-500/30' :
-                      b.status === 'awaiting_quote' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30' :
-                      isAwaitingCompletion ? 'bg-emerald-600 text-white shadow-xs animate-pulse' :
-                      isCompleted ? 'bg-emerald-600 text-white shadow-xs' :
-                      isIssueReported ? 'bg-rose-600 text-white shadow-xs' :
-                      isClosed ? 'bg-slate-700 dark:bg-slate-800 text-slate-100 border border-slate-600/50' :
-                      isCancelled ? 'bg-rose-500/10 text-rose-600 border border-rose-500/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
-                    }`}>
-                      {isCompleted && <CheckCircle2 className="w-3.5 h-3.5" />}
-                      {isClosed && <CheckCircle className="w-3.5 h-3.5 text-slate-300" />}
-                      {isAwaitingCompletion && <Clock className="w-3.5 h-3.5" />}
-                      {isIssueReported && <AlertCircle className="w-3.5 h-3.5" />}
-                      {
-                        isAwaitingCompletion ? 'Review Completion' :
-                        isCompleted ? 'Completed (4-Day Window Active)' :
-                        isIssueReported ? 'Issue Reported' :
-                        isClosed ? 'Closed & Finalized' :
-                        b.status === 'accepted' ? 'Accepted & Scheduled' :
-                        b.status === 'in-progress' ? 'Work In Progress' :
-                        b.status === 'pending' ? 'Pending Response' :
-                        b.status === 'awaiting_quote' ? 'Awaiting Quote' : b.status
-                      }
-                    </span>
-                  </div>
+                    {/* Right Side: Price / Escrow Amount & Status Badge */}
+                    <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2 shrink-0">
+                      {/* Price / Escrow Info */}
+                      <div>
+                        {isQuoteRequest ? (
+                          <span className="text-xs font-bold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/70 border border-amber-200 dark:border-amber-800/80 px-2.5 py-1 rounded-lg inline-block">
+                            Quote Pending
+                          </span>
+                        ) : b.totalPrice && b.totalPrice > 0 ? (
+                          <div className="text-right">
+                            <span className="text-sm sm:text-base font-black text-slate-900 dark:text-slate-100">
+                              {formatCurrency(b.totalPrice)}
+                            </span>
+                            <span className="hidden sm:block text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                              Escrow Secured
+                            </span>
+                          </div>
+                        ) : null}
+                      </div>
 
-                  {/* Booking Details Grid: Date, Address, Escrow */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-600 dark:text-slate-300">
-                    <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
-                      <Calendar className="w-4 h-4 text-navy-800 dark:text-navy-400 shrink-0" />
-                      <span className="truncate"><strong>Date:</strong> {b.date} ({b.timeSlot})</span>
-                    </div>
-                    <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
-                      <MapPin className="w-4 h-4 text-navy-800 dark:text-navy-400 shrink-0" />
-                      <span className="truncate"><strong>Location:</strong> {b.address}</span>
-                    </div>
-                    <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
-                      <ShieldCheck className="w-4 h-4 text-navy-800 dark:text-navy-400 shrink-0" />
-                      <span className="font-semibold text-navy-900 dark:text-navy-200">
-                        {isQuoteRequest ? 'Custom Quote Scope' : 'Escrow Secured'}
+                      {/* Unified Status Pill */}
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 border shadow-2xs ${statusConfig.className}`}>
+                        <span className={`w-2 h-2 rounded-full ${statusConfig.dotColor}`} />
+                        <span>{statusConfig.label}</span>
                       </span>
                     </div>
                   </div>
 
-                  {/* Service Issue Description */}
-                  <div className="text-xs bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-2xl text-slate-700 dark:text-slate-300 border border-slate-200/50 dark:border-slate-800 space-y-2">
-                    <div>
-                      <strong className="text-slate-900 dark:text-slate-100">
-                        {isQuoteRequest ? 'Quote Request Details:' : 'Service Request Description:'}
-                      </strong>{' '}
-                      {b.issueDescription}
+                  {/* Tier 2: Structured Metadata Strip (Date, Address, Escrow State) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+                    <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 px-3 py-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800/80 text-slate-700 dark:text-slate-300 min-w-0">
+                      <Calendar className="w-4 h-4 text-brand-orange-500 shrink-0" />
+                      <div className="truncate">
+                        <span className="text-slate-400 font-medium">Date: </span>
+                        <strong className="text-slate-800 dark:text-slate-200">{b.date}</strong>
+                        <span className="text-slate-500 text-[11px] ml-1">({b.timeSlot})</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 px-3 py-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800/80 text-slate-700 dark:text-slate-300 min-w-0">
+                      <MapPin className="w-4 h-4 text-brand-orange-500 shrink-0" />
+                      <div className="truncate">
+                        <span className="text-slate-400 font-medium">Location: </span>
+                        <strong className="text-slate-800 dark:text-slate-200" title={b.address}>{b.address}</strong>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 px-3 py-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800/80 text-slate-700 dark:text-slate-300 min-w-0">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <div className="truncate">
+                        <span className="text-slate-400 font-medium">Security: </span>
+                        <strong className="text-slate-800 dark:text-slate-200">
+                          {isQuoteRequest ? 'Direct Evaluation' : 'KaziHub Escrow'}
+                        </strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Problem / Job Scope Description */}
+                  <div className="text-xs bg-slate-50/70 dark:bg-slate-800/40 p-3 rounded-xl text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-800/60 space-y-2">
+                    <div className="leading-relaxed">
+                      <span className="font-bold text-slate-900 dark:text-slate-100">
+                        {isQuoteRequest ? 'Job Scope Request:' : 'Job Description:'}
+                      </span>{' '}
+                      <span className="text-slate-600 dark:text-slate-300">{b.issueDescription}</span>
                     </div>
 
                     {((b.problemImages && b.problemImages.length > 0) || b.problemImageUrl) && (
-                      <div className="flex items-center gap-2 pt-1">
-                        <span className="text-[11px] font-bold text-slate-400">Attached Job Photos:</span>
+                      <div className="flex items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-800/60">
+                        <span className="text-[11px] font-bold text-slate-400">Attached Photos:</span>
                         <div className="flex items-center gap-1.5">
                           {(b.problemImages || [b.problemImageUrl!]).map((img, i) => (
-                            <a key={i} href={img} target="_blank" rel="noopener noreferrer">
-                              <img src={img} alt="Job reference" className="w-8 h-8 rounded-lg object-cover border border-slate-200 dark:border-slate-700 hover:opacity-90" />
+                            <a key={i} href={img} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                              <img
+                                src={img}
+                                alt="Job reference"
+                                className="w-8 h-8 rounded-lg object-cover border border-slate-200 dark:border-slate-700 hover:opacity-80 transition-opacity"
+                              />
                             </a>
                           ))}
                         </div>
@@ -1014,53 +1119,40 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     )}
                   </div>
 
-                  {/* 1. Awaiting Completion: Submitted Proof Details & 4-Day Response Banner */}
+                  {/* Contextual Notification 1: Awaiting Completion Review Banner */}
                   {isAwaitingCompletion && b.completionDetails && (() => {
                     const submittedAtDate = b.completionDetails.submittedAt ? new Date(b.completionDetails.submittedAt) : new Date();
                     const deadlineDate = new Date(submittedAtDate.getTime() + 4 * 24 * 60 * 60 * 1000);
                     return (
-                      <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 space-y-3">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="p-3.5 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200/90 dark:border-emerald-800/70 space-y-2.5">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
                           <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 font-bold text-xs">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                            <span>Professional Has Submitted Work Completion Proof</span>
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            <span>Work Completed — Please Review Proof</span>
                           </div>
-                          <span className="text-[10px] text-slate-500 font-medium">
-                            Submitted: {submittedAtDate.toLocaleString()}
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                            Deadline: <strong className="text-slate-700 dark:text-slate-300">{deadlineDate.toLocaleDateString()}</strong>
                           </span>
                         </div>
 
-                        <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-900 dark:text-amber-300 flex items-start gap-2.5">
-                          <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                          <div className="space-y-1">
-                            <p className="font-bold">Action Needed: You have 4 days to review and respond.</p>
-                            <p className="text-[11px] text-amber-800/80 dark:text-amber-400/80">
-                              Deadline: <strong className="underline">{deadlineDate.toLocaleString()}</strong>. Confirm completion or report any issue. If no action is taken before deadline, the job automatically transitions to Completed.
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="text-xs text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-emerald-100 dark:border-emerald-900/30 space-y-1.5">
-                          <div><strong className="text-slate-900 dark:text-white">Service Delivered:</strong> {b.selectedService || b.category}</div>
-                          <div><strong className="text-slate-900 dark:text-white">Work Summary:</strong> {b.completionDetails.description}</div>
+                        <div className="text-xs text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900/90 p-3 rounded-lg border border-emerald-100 dark:border-emerald-900/40 space-y-1">
+                          <div><strong className="text-slate-900 dark:text-white">Summary:</strong> {b.completionDetails.description}</div>
                         </div>
 
                         {b.completionDetails.photos && b.completionDetails.photos.length > 0 && (
-                          <div>
-                            <p className="text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1.5">Submitted Work Photos:</p>
-                            <div className="flex flex-wrap gap-2">
-                              {b.completionDetails.photos.map((pUrl, idx) => (
-                                <a key={idx} href={pUrl} target="_blank" rel="noopener noreferrer">
-                                  <img src={pUrl} alt="Completion proof" className="w-20 h-20 rounded-xl object-cover border border-emerald-200 dark:border-emerald-800 hover:opacity-90 transition-opacity" />
-                                </a>
-                              ))}
-                            </div>
+                          <div className="flex items-center gap-2 flex-wrap pt-1">
+                            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">Proof Photos:</span>
+                            {b.completionDetails.photos.map((pUrl, idx) => (
+                              <a key={idx} href={pUrl} target="_blank" rel="noopener noreferrer">
+                                <img src={pUrl} alt="Completion proof" className="w-12 h-12 rounded-lg object-cover border border-emerald-200 dark:border-emerald-800 hover:opacity-90 transition-opacity" />
+                              </a>
+                            ))}
                           </div>
                         )}
                         {b.completionDetails.videoUrl && (
-                          <div className="text-xs pt-1">
+                          <div className="text-xs pt-0.5">
                             <a href={b.completionDetails.videoUrl} target="_blank" rel="noopener noreferrer" className="text-navy-800 dark:text-navy-400 font-bold hover:underline inline-flex items-center gap-1">
-                              <span>🎥 View Video Walkthrough Demo</span>
+                              <span>🎥 View Video Walkthrough</span>
                             </a>
                           </div>
                         )}
@@ -1068,7 +1160,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     );
                   })()}
 
-                  {/* 2. Completed Jobs: 4-Day Active Issue Window Banner */}
+                  {/* Contextual Notification 2: Completed Jobs 4-Day Warranty Status Strip */}
                   {isCompleted && (() => {
                     const completedAtDate = b.completedAt
                       ? new Date(b.completedAt)
@@ -1080,52 +1172,29 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     const hours = totalHours % 24;
 
                     const timeString = days > 0
-                      ? `${days} day${days > 1 ? 's' : ''}, ${hours} hour${hours !== 1 ? 's' : ''}`
-                      : `${totalHours} hour${totalHours !== 1 ? 's' : ''}`;
+                      ? `${days}d ${hours}h`
+                      : `${totalHours}h`;
 
                     return (
-                      <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 space-y-3">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 text-amber-900 dark:text-amber-300 font-extrabold text-xs">
-                            <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                            <span>Post-Completion 4-Day Issue Window Active</span>
-                          </div>
-                          <span className="text-[11px] font-extrabold text-amber-800 dark:text-amber-300 bg-amber-500/20 px-2.5 py-1 rounded-lg border border-amber-500/30 shrink-0">
-                            ⏰ {timeString} remaining
-                          </span>
+                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                        <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+                          <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          <span><strong>4-Day Warranty Window:</strong> You can report any defects until {deadlineDate.toLocaleDateString()}.</span>
                         </div>
-
-                        <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-                          This job is marked as <strong>Completed</strong>. You have <strong>4 days</strong> from completion to inspect the work and report any defects or issues.
-                          <span className="block text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-                            Deadline: <strong className="underline text-slate-700 dark:text-slate-200">{deadlineDate.toLocaleString()}</strong>. If no issue is reported before this deadline, the job automatically transitions to <strong>Closed</strong>.
-                          </span>
-                        </p>
-
-                        <div className="flex items-center gap-2 pt-1">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setComplaintModalBooking(b);
-                              setComplaintDetails('');
-                            }}
-                            className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
-                          >
-                            <ShieldAlert className="w-4 h-4" />
-                            <span>Report an Issue</span>
-                          </button>
-                        </div>
+                        <span className="text-[11px] font-extrabold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded-md border border-amber-200 dark:border-amber-800 shrink-0 self-start sm:self-auto">
+                          ⏰ {timeString} left
+                        </span>
                       </div>
                     );
                   })()}
 
-                  {/* 3. Issue Reported Banner */}
+                  {/* Contextual Notification 3: Issue Reported Banner */}
                   {isIssueReported && (
-                    <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 space-y-3">
-                      <div className="flex items-center justify-between gap-2 text-rose-800 dark:text-rose-300 font-bold text-xs">
+                    <div className="p-3.5 rounded-xl bg-rose-50/80 dark:bg-rose-950/40 border border-rose-200/90 dark:border-rose-800/70 space-y-2 text-xs">
+                      <div className="flex items-center justify-between gap-2 text-rose-800 dark:text-rose-300 font-bold">
                         <div className="flex items-center gap-2">
                           <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-                          <span>Issue Reported — Resolution Support Active</span>
+                          <span>Support Dispute Active</span>
                         </div>
                         {b.issueDetails?.reportedAt && (
                           <span className="text-[10px] text-rose-600/80 dark:text-rose-400/80 font-medium">
@@ -1134,105 +1203,52 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                         )}
                       </div>
                       {b.issueDetails && (
-                        <div className="space-y-2 bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-rose-100 dark:border-rose-900/30 text-xs">
-                          <p className="text-slate-700 dark:text-slate-300">
-                            <strong className="text-slate-900 dark:text-white block mb-1">Reported Issue Details:</strong>
-                            {b.issueDetails.description}
-                          </p>
-                          {b.issueDetails.evidencePhotos && b.issueDetails.evidencePhotos.length > 0 && (
-                            <div>
-                              <span className="text-[10px] font-bold text-slate-400 block mb-1">Evidence Attached:</span>
-                              <div className="flex gap-1.5">
-                                {b.issueDetails.evidencePhotos.map((url, i) => (
-                                  <a key={i} href={url} target="_blank" rel="noopener noreferrer">
-                                    <img src={url} alt="Evidence" className="w-12 h-12 rounded-lg object-cover border border-rose-200 dark:border-rose-900" />
-                                  </a>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
+                        <p className="text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-rose-100 dark:border-rose-900/40">
+                          <strong>Reason:</strong> {b.issueDetails.description}
+                        </p>
                       )}
-                      <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                        KaziHub support is actively reviewing this ticket. You can message the artisan directly to resolve minor details.
-                      </p>
                     </div>
                   )}
 
-                  {/* 4. Closed Jobs Banner: Finalized & History Retained */}
+                  {/* Contextual Notification 4: Closed Jobs */}
                   {isClosed && (
-                    <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-2">
-                      <div className="flex items-center justify-between gap-2 text-slate-800 dark:text-slate-200 font-extrabold text-xs">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-slate-500" />
-                          <span>Job Closed & Finalized</span>
-                        </div>
-                        {b.completedAt && (
-                          <span className="text-[10px] text-slate-500 font-medium">
-                            Finalized {new Date(b.completedAt).toLocaleDateString()}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                        This job is officially closed. The 4-day post-completion warranty window has concluded. All job details, service records, and completion history remain accessible below for your records.
-                      </p>
-                      {/* Completion details if recorded */}
-                      {b.completionDetails && (
-                        <div className="mt-2 text-xs text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1">
-                          <div><strong className="text-slate-900 dark:text-white">Completion Summary:</strong> {b.completionDetails.description}</div>
-                          {b.completionDetails.photos && b.completionDetails.photos.length > 0 && (
-                            <div className="flex gap-1.5 pt-1">
-                              {b.completionDetails.photos.map((pUrl, idx) => (
-                                <a key={idx} href={pUrl} target="_blank" rel="noopener noreferrer">
-                                  <img src={pUrl} alt="Archived completion proof" className="w-12 h-12 rounded-lg object-cover border border-slate-200 dark:border-slate-700 hover:opacity-90" />
-                                </a>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800 flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
+                      <CheckCircle2 className="w-4 h-4 text-slate-400 shrink-0" />
+                      <span>Job finalized and archived. 4-day warranty period concluded successfully.</span>
                     </div>
                   )}
 
-                  {/* Policy Footer - ONLY shown for active bookings / quote requests */}
+                  {/* Policy Footer - For active bookings / quote requests */}
                   {(b.status === 'pending' || b.status === 'awaiting_quote' || b.status === 'accepted' || b.status === 'in-progress') && (
-                    <div className={`flex items-start gap-2.5 p-3 rounded-2xl border text-xs ${
-                      isQuoteRequest
-                        ? 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-200/80 dark:border-amber-900/40 text-amber-900 dark:text-amber-300'
-                        : 'bg-blue-50/70 dark:bg-navy-950/40 border-blue-100 dark:border-navy-900/60 text-slate-600 dark:text-slate-400'
-                    }`}>
-                      <Info className="w-4 h-4 text-navy-800 dark:text-navy-400 shrink-0 mt-0.5" />
-                      <p className="text-[11px] leading-snug">
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800/60 text-xs text-slate-500 dark:text-slate-400">
+                      <Info className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400 shrink-0" />
+                      <p className="text-[11px] truncate">
                         {isQuoteRequest ? (
-                          <>
-                            <strong className="text-navy-950 dark:text-navy-200">Quote Evaluation:</strong> The professional is evaluating your specifications and will send you a price quote. You can message them directly to clarify details or negotiate.
-                          </>
+                          'Artisan is assessing job scope. Message them directly to discuss requirements.'
                         ) : (
-                          <>
-                            <strong className="text-navy-900 dark:text-navy-300">Cancellation Policy:</strong> Free cancellation is guaranteed up to 45 minutes prior to appointment time. {!eligible && b.status !== 'cancelled' && b.status !== 'completed' && b.status !== 'closed' && <span className="text-rose-600 font-bold ml-1">({reason})</span>}
-                          </>
+                          <>Free cancellation up to 45 mins prior to scheduled time. {!eligible && b.status !== 'cancelled' && <span className="text-rose-600 font-bold ml-1">({reason})</span>}</>
                         )}
                       </p>
                     </div>
                   )}
 
-                  {/* Organized Action Buttons Footer */}
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-                    {/* Message Artisan */}
+                  {/* Tier 3: Action Buttons Footer with Strict Visual Hierarchy */}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800/80">
+                    {/* Left: Message Artisan (Secondary Action) */}
                     <button
                       type="button"
                       onClick={() => {
                         if (pro) onOpenChat(pro);
                       }}
-                      className="px-4 py-2.5 rounded-xl border border-navy-800/30 text-navy-800 dark:text-navy-300 hover:bg-navy-50 dark:hover:bg-navy-950 text-xs font-bold cursor-pointer flex items-center justify-center gap-2 transition-all shadow-2xs"
+                      className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold cursor-pointer flex items-center justify-center gap-1.5 transition-all"
                     >
-                      <MessageSquare className="w-4 h-4 text-navy-800 dark:text-navy-400" />
+                      <MessageSquare className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400" />
                       <span>Message Artisan</span>
                     </button>
 
-                    {/* Status-specific Action Controls */}
-                    <div className="flex flex-wrap items-center gap-2 shrink-0 w-full sm:w-auto justify-start sm:justify-end">
-                      {/* Active / Pending / Quote Request: Cancel button with confirmation modal */}
+                    {/* Right: Contextual Primary & High-Priority Actions */}
+                    <div className="flex flex-wrap items-center gap-2 shrink-0 justify-end">
+                      {/* Active / Pending / Quote Request: Cancel Option */}
                       {(b.status === 'pending' || b.status === 'awaiting_quote' || b.status === 'accepted' || b.status === 'in-progress') && (
                         <button
                           type="button"
@@ -1241,16 +1257,26 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                             e.stopPropagation();
                             setCancelModalBooking(b);
                           }}
-                          className="px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 bg-rose-500/10 hover:bg-rose-600 hover:text-white text-rose-600 dark:text-rose-400 cursor-pointer border border-rose-500/30"
+                          className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-all cursor-pointer border border-transparent hover:border-rose-200 dark:hover:border-rose-800"
                         >
-                          <XCircle className="w-4 h-4" />
-                          <span>{isQuoteRequest || b.status === 'pending' ? 'Cancel Request' : 'Cancel Booking'}</span>
+                          {isQuoteRequest || b.status === 'pending' ? 'Cancel Request' : 'Cancel Booking'}
                         </button>
                       )}
 
-                      {/* Awaiting Completion specific actions */}
+                      {/* Awaiting Completion Actions */}
                       {isAwaitingCompletion && (
-                        <div className="flex flex-wrap items-center gap-2">
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setComplaintModalBooking(b);
+                              setComplaintDetails('');
+                            }}
+                            className="px-3.5 py-2 rounded-xl border border-rose-200 dark:border-rose-800/80 bg-rose-50/50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/60 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                          >
+                            <ShieldAlert className="w-3.5 h-3.5" />
+                            <span>Report Issue</span>
+                          </button>
                           <button
                             type="button"
                             onClick={() => {
@@ -1258,28 +1284,17 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                                 onUpdateBookingStatus(b.id, 'completed', { completedAt: new Date().toISOString() });
                               }
                             }}
-                            className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer transition-all"
+                            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer transition-all"
                           >
-                            <CheckCircle2 className="w-4 h-4" />
-                            <span>Confirm Completion</span>
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Confirm & Release Escrow</span>
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setComplaintModalBooking(b);
-                              setComplaintDetails('');
-                            }}
-                            className="px-4 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-600 hover:text-white text-rose-600 dark:text-rose-400 border border-rose-500/30 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
-                          >
-                            <ShieldAlert className="w-4 h-4" />
-                            <span>Report an Issue</span>
-                          </button>
-                        </div>
+                        </>
                       )}
 
-                      {/* Completed / Closed Booking specific actions */}
+                      {/* Completed / Closed Booking Actions */}
                       {(isCompleted || isClosed) && (
-                        <div className="flex flex-wrap items-center gap-2">
+                        <>
                           {isCompleted && (
                             <button
                               type="button"
@@ -1287,10 +1302,10 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                                 setComplaintModalBooking(b);
                                 setComplaintDetails('');
                               }}
-                              className="px-4 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-600 hover:text-white text-rose-600 dark:text-rose-400 border border-rose-500/30 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                              className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-300 dark:hover:border-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
                             >
-                              <ShieldAlert className="w-4 h-4" />
-                              <span>Report an Issue</span>
+                              <ShieldAlert className="w-3.5 h-3.5" />
+                              <span>Report Defect</span>
                             </button>
                           )}
                           <button
@@ -1303,15 +1318,15 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                                 onTabChange('home');
                               }
                             }}
-                            className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer transition-all"
+                            className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer transition-all"
                           >
                             <RotateCcw className="w-3.5 h-3.5 text-white" />
-                            <span>Rehire</span>
+                            <span>Rehire Artisan</span>
                             {(pro?.isAvailableNow || (professionals.find(p => p.id === b.professionalId)?.isAvailableNow)) && (
-                              <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse ml-0.5" title="Available Now" aria-label="Available Now"></span>
+                              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-0.5" title="Available Now" aria-label="Available Now" />
                             )}
                           </button>
-                        </div>
+                        </>
                       )}
                     </div>
                   </div>
@@ -1325,60 +1340,299 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   }
 
   if (activeTab === 'messages') {
+    const messagesSearchTrimmed = messagesSearchTerm.trim().toLowerCase();
+    const chatPros = professionals.slice(0, 5); // Available conversation threads
+    const filteredChatPros = chatPros.filter(pro => {
+      if (messagesCategoryFilter !== 'All' && pro.category !== messagesCategoryFilter) {
+        return false;
+      }
+      if (messagesSearchTrimmed) {
+        const matches = 
+          pro.name.toLowerCase().includes(messagesSearchTrimmed) ||
+          pro.category.toLowerCase().includes(messagesSearchTrimmed) ||
+          pro.neighborhood.toLowerCase().includes(messagesSearchTrimmed) ||
+          pro.tagline.toLowerCase().includes(messagesSearchTrimmed);
+        if (!matches) return false;
+      }
+      return true;
+    });
+
     return (
       <div className="w-full max-w-none space-y-6 animate-in fade-in duration-300">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100">Messages & Chats</h1>
+            <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <span>Messages & Chats</span>
+              <span className="px-2.5 py-0.5 rounded-full bg-brand-orange-500 text-white text-xs font-bold shadow-xs">
+                {chatPros.length} Active
+              </span>
+            </h1>
             <p className="text-xs text-slate-500">Secure real-time conversations with your booked professionals.</p>
           </div>
         </div>
 
-        <div className="space-y-3">
-          {professionals.slice(0, 3).map((pro) => (
-            <div
-              key={pro.id}
-              onClick={() => onOpenChat(pro)}
-              className="p-3 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 sm:gap-4 hover:border-navy-600 transition-all cursor-pointer shadow-xs"
-            >
-              <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                <img src={pro.avatar} alt={pro.name} className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl object-cover shrink-0" />
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm truncate">{pro.name}</h3>
-                    {pro.verified && <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-navy-800 dark:text-navy-400 fill-navy-800/10 shrink-0" />}
-                  </div>
-                  <p className="text-[10px] sm:text-xs text-slate-500 truncate">{pro.category} • {pro.neighborhood}</p>
-                </div>
-              </div>
-              <button className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-[10px] sm:text-xs shadow-xs cursor-pointer shrink-0">
-                Open Chat
-              </button>
+        {/* Unified Search Banner & Filter System */}
+        <div className="p-2.5 sm:p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-3">
+          <div className="flex flex-col lg:flex-row gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                value={messagesSearchTerm}
+                onChange={(e) => setMessagesSearchTerm(e.target.value)}
+                placeholder="Search conversations by artisan name, trade, or location..."
+                className="w-full pl-10 pr-9 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-orange-500/50 focus:border-brand-orange-500"
+              />
+              {messagesSearchTerm && (
+                <button
+                  onClick={() => setMessagesSearchTerm('')}
+                  className="absolute right-3 top-3 p-0.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
+                  title="Clear Search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
-          ))}
+
+            <div className="flex flex-col sm:flex-row lg:items-center gap-2 w-full lg:w-auto">
+              <CustomDropdown
+                value={messagesCategoryFilter}
+                onChange={(val) => setMessagesCategoryFilter(val as Category | 'All')}
+                icon={<Briefcase className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
+                options={[
+                  { value: 'All', label: 'All Categories' },
+                  ...CATEGORIES.map(cat => ({
+                    value: cat,
+                    label: cat,
+                    icon: React.createElement(getCategoryIcon(cat), { className: "w-3.5 h-3.5 text-brand-orange-500" })
+                  }))
+                ]}
+                placeholder="All Categories"
+                className="w-full sm:w-auto lg:min-w-[190px]"
+                buttonClassName="py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-brand-orange-500/50"
+                dropdownWidth="w-64"
+              />
+
+              {(messagesSearchTerm || messagesCategoryFilter !== 'All') && (
+                <button
+                  onClick={() => {
+                    setMessagesSearchTerm('');
+                    setMessagesCategoryFilter('All');
+                  }}
+                  className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl text-xs font-bold bg-navy-800 hover:bg-navy-900 text-white shadow-xs transition-colors cursor-pointer shrink-0 text-center"
+                  title="Reset Filters"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Active Filters Summary */}
+          {(messagesSearchTerm || messagesCategoryFilter !== 'All') && (
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs flex items-center flex-wrap gap-1.5">
+              <span className="font-extrabold text-navy-800 dark:text-navy-400 text-[11px]">Active:</span>
+              {messagesSearchTerm && (
+                <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold flex items-center gap-1 text-[11px]">
+                  "{messagesSearchTerm}"
+                  <X className="w-3 h-3 cursor-pointer text-slate-400 hover:text-rose-500" onClick={() => setMessagesSearchTerm('')} />
+                </span>
+              )}
+              {messagesCategoryFilter !== 'All' && (
+                <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold flex items-center gap-1 text-[11px]">
+                  {messagesCategoryFilter}
+                  <X className="w-3 h-3 cursor-pointer text-slate-400 hover:text-rose-500" onClick={() => setMessagesCategoryFilter('All')} />
+                </span>
+              )}
+            </div>
+          )}
         </div>
+
+        {filteredChatPros.length === 0 ? (
+          <div className="text-center py-10 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 space-y-4">
+            <MessageSquare className="w-12 h-12 text-slate-400 mx-auto" />
+            <h3 className="font-bold text-slate-800 dark:text-slate-200 text-base">No messages found</h3>
+            <p className="text-xs text-slate-500">No chat threads match your current search query or filter.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredChatPros.map((pro) => (
+              <div
+                key={pro.id}
+                onClick={() => onOpenChat(pro)}
+                className="p-3 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 sm:gap-4 hover:border-brand-orange-500/50 dark:hover:border-brand-orange-500/50 transition-all cursor-pointer shadow-xs active:scale-[0.99]"
+              >
+                <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                  <img src={pro.avatar} alt={pro.name} className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl object-cover shrink-0" />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm truncate">{pro.name}</h3>
+                      {pro.verified && <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-navy-800 dark:text-navy-400 fill-navy-800/10 shrink-0" />}
+                    </div>
+                    <p className="text-[10px] sm:text-xs text-slate-500 truncate">{pro.category} • {pro.neighborhood}</p>
+                  </div>
+                </div>
+                <button className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-[10px] sm:text-xs shadow-xs cursor-pointer shrink-0 transition-colors">
+                  Open Chat
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   }
 
   if (activeTab === 'saved') {
+    const savedSearchTrimmed = savedSearchTerm.trim().toLowerCase();
+    const filteredSavedPros = savedPros.filter(pro => {
+      if (savedCategoryFilter !== 'All' && pro.category !== savedCategoryFilter) {
+        return false;
+      }
+      if (savedNeighborhoodFilter !== 'All' && pro.neighborhood !== savedNeighborhoodFilter && pro.location !== savedNeighborhoodFilter) {
+        return false;
+      }
+      if (savedSearchTrimmed) {
+        const matches = 
+          pro.name.toLowerCase().includes(savedSearchTrimmed) ||
+          pro.category.toLowerCase().includes(savedSearchTrimmed) ||
+          pro.tagline.toLowerCase().includes(savedSearchTrimmed) ||
+          pro.neighborhood.toLowerCase().includes(savedSearchTrimmed) ||
+          pro.bio.toLowerCase().includes(savedSearchTrimmed);
+        if (!matches) return false;
+      }
+      return true;
+    });
+
     return (
       <div className="w-full max-w-none space-y-6 animate-in fade-in duration-300">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100">Saved Professionals</h1>
-          <p className="text-xs text-slate-500">Your favorite artisans and home repair experts for quick booking.</p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <span>Saved Professionals</span>
+              <span className="px-2.5 py-0.5 rounded-full bg-brand-orange-500 text-white text-xs font-bold shadow-xs">
+                {savedPros.length}
+              </span>
+            </h1>
+            <p className="text-xs text-slate-500">Your favorite artisans and home repair experts for quick booking.</p>
+          </div>
         </div>
 
-        {savedPros.length === 0 ? (
+        {/* Unified Search Banner & Filter System */}
+        <div className="p-2.5 sm:p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-3">
+          <div className="flex flex-col lg:flex-row gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                value={savedSearchTerm}
+                onChange={(e) => setSavedSearchTerm(e.target.value)}
+                placeholder="Search saved artisans by name, specialty, or area..."
+                className="w-full pl-10 pr-9 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-orange-500/50 focus:border-brand-orange-500"
+              />
+              {savedSearchTerm && (
+                <button
+                  onClick={() => setSavedSearchTerm('')}
+                  className="absolute right-3 top-3 p-0.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
+                  title="Clear Search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex flex-col sm:flex-row lg:items-center gap-2 w-full lg:w-auto">
+              <CustomDropdown
+                value={savedCategoryFilter}
+                onChange={(val) => setSavedCategoryFilter(val as Category | 'All')}
+                icon={<Briefcase className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
+                options={[
+                  { value: 'All', label: 'All Categories' },
+                  ...CATEGORIES.map(cat => ({
+                    value: cat,
+                    label: cat,
+                    icon: React.createElement(getCategoryIcon(cat), { className: "w-3.5 h-3.5 text-brand-orange-500" })
+                  }))
+                ]}
+                placeholder="All Categories"
+                className="w-full sm:w-auto lg:min-w-[190px]"
+                buttonClassName="py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-brand-orange-500/50"
+                dropdownWidth="w-64"
+              />
+
+              <CustomDropdown
+                value={savedNeighborhoodFilter}
+                onChange={(val) => setSavedNeighborhoodFilter(val)}
+                icon={<MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
+                options={neighborhoods.map(n => ({
+                  value: n,
+                  label: n === 'All' ? 'All Neighborhoods' : n
+                }))}
+                placeholder="All Neighborhoods"
+                className="w-full sm:w-auto lg:min-w-[175px]"
+                buttonClassName="py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-brand-orange-500/50"
+                dropdownWidth="w-56 sm:w-60"
+                align="right"
+              />
+
+              {(savedSearchTerm || savedCategoryFilter !== 'All' || savedNeighborhoodFilter !== 'All') && (
+                <button
+                  onClick={() => {
+                    setSavedSearchTerm('');
+                    setSavedCategoryFilter('All');
+                    setSavedNeighborhoodFilter('All');
+                  }}
+                  className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl text-xs font-bold bg-navy-800 hover:bg-navy-900 text-white shadow-xs transition-colors cursor-pointer shrink-0 text-center"
+                  title="Reset Filters"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Active Filters Summary */}
+          {(savedSearchTerm || savedCategoryFilter !== 'All' || savedNeighborhoodFilter !== 'All') && (
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs flex items-center flex-wrap gap-1.5">
+              <span className="font-extrabold text-navy-800 dark:text-navy-400 text-[11px]">Active:</span>
+              {savedSearchTerm && (
+                <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold flex items-center gap-1 text-[11px]">
+                  "{savedSearchTerm}"
+                  <X className="w-3 h-3 cursor-pointer text-slate-400 hover:text-rose-500" onClick={() => setSavedSearchTerm('')} />
+                </span>
+              )}
+              {savedCategoryFilter !== 'All' && (
+                <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold flex items-center gap-1 text-[11px]">
+                  {savedCategoryFilter}
+                  <X className="w-3 h-3 cursor-pointer text-slate-400 hover:text-rose-500" onClick={() => setSavedCategoryFilter('All')} />
+                </span>
+              )}
+              {savedNeighborhoodFilter !== 'All' && (
+                <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold flex items-center gap-1 text-[11px]">
+                  {savedNeighborhoodFilter}
+                  <X className="w-3 h-3 cursor-pointer text-slate-400 hover:text-rose-500" onClick={() => setSavedNeighborhoodFilter('All')} />
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {filteredSavedPros.length === 0 ? (
           <div className="text-center py-10 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 space-y-4">
             <Bookmark className="w-12 h-12 text-slate-400 mx-auto" />
-            <h3 className="font-bold text-slate-800 dark:text-slate-200 text-base">No saved professionals</h3>
-            <p className="text-xs text-slate-500">Click the bookmark icon on any professional card to save them here.</p>
+            <h3 className="font-bold text-slate-800 dark:text-slate-200 text-base">
+              {savedPros.length === 0 ? 'No saved professionals' : 'No matching saved professionals'}
+            </h3>
+            <p className="text-xs text-slate-500">
+              {savedPros.length === 0 
+                ? 'Click the bookmark icon on any professional card to save them here.' 
+                : 'Try adjusting your search query or category filters above.'}
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {savedPros.map(pro => (
-              <div key={pro.id} onClick={() => onSelectProForProfile(pro)} className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-xs cursor-pointer hover:border-navy-600 dark:hover:border-navy-400 hover:shadow-md transition-all active:scale-[0.99] focus-within:ring-2 focus-within:ring-navy-800/30">
+            {filteredSavedPros.map(pro => (
+              <div key={pro.id} onClick={() => onSelectProForProfile(pro)} className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-xs cursor-pointer hover:border-navy-600 dark:hover:border-navy-400 hover:shadow-md transition-all active:scale-[0.99] focus-within:ring-2 focus-within:ring-brand-orange-500/40">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     <img src={pro.avatar} alt={pro.name} className="w-14 h-14 rounded-2xl object-cover" />
@@ -1415,6 +1669,24 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
     const notificationsList = customerNotifications !== undefined ? customerNotifications : notifications;
     const unreadCount = notificationsList.filter(n => !n.read && !n.isRead).length;
 
+    const notifSearchTrimmed = notificationsSearchTerm.trim().toLowerCase();
+    const filteredNotifications = notificationsList.filter(n => {
+      // Filter by type
+      if (notificationsFilterType === 'unread') {
+        if (n.read || n.isRead) return false;
+      } else if (notificationsFilterType !== 'All') {
+        if (n.type !== notificationsFilterType) return false;
+      }
+
+      // Search matching across title, description
+      if (notifSearchTrimmed) {
+        const text = `${n.title} ${n.desc || n.description || ''}`.toLowerCase();
+        if (!text.includes(notifSearchTrimmed)) return false;
+      }
+
+      return true;
+    });
+
     return (
       <div className="w-full max-w-none space-y-6 animate-in fade-in duration-300">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1422,7 +1694,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
             <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2.5">
               <span>Notifications & Alerts</span>
               {unreadCount > 0 && (
-                <span className="px-2.5 py-0.5 rounded-full bg-navy-800 text-white dark:bg-navy-400 dark:text-navy-950 text-xs font-extrabold shadow-xs">
+                <span className="px-2.5 py-0.5 rounded-full bg-brand-orange-500 text-white text-xs font-bold shadow-xs flex items-center justify-center text-center">
                   {unreadCount} unread
                 </span>
               )}
@@ -1448,17 +1720,96 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
           )}
         </div>
 
-        {notificationsList.length === 0 ? (
+        {/* Unified Search Banner & Filter System */}
+        <div className="p-2.5 sm:p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-3">
+          <div className="flex flex-col lg:flex-row gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                value={notificationsSearchTerm}
+                onChange={(e) => setNotificationsSearchTerm(e.target.value)}
+                placeholder="Search alerts by artisan, status, keyword, or service..."
+                className="w-full pl-10 pr-9 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-orange-500/50 focus:border-brand-orange-500"
+              />
+              {notificationsSearchTerm && (
+                <button
+                  onClick={() => setNotificationsSearchTerm('')}
+                  className="absolute right-3 top-3 p-0.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
+                  title="Clear Search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex flex-col sm:flex-row lg:items-center gap-2 w-full lg:w-auto">
+              <CustomDropdown
+                value={notificationsFilterType}
+                onChange={(val) => setNotificationsFilterType(val)}
+                icon={<Bell className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
+                options={[
+                  { value: 'All', label: 'All Notifications' },
+                  { value: 'unread', label: 'Unread Only' },
+                  { value: 'booking', label: 'Bookings' },
+                  { value: 'completion', label: 'Completions' },
+                  { value: 'payment', label: 'Payments & Escrow' },
+                  { value: 'warranty', label: 'Warranties' }
+                ]}
+                placeholder="All Notifications"
+                className="w-full sm:w-auto lg:min-w-[190px]"
+                buttonClassName="py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-brand-orange-500/50"
+                dropdownWidth="w-56"
+              />
+
+              {(notificationsSearchTerm || notificationsFilterType !== 'All') && (
+                <button
+                  onClick={() => {
+                    setNotificationsSearchTerm('');
+                    setNotificationsFilterType('All');
+                  }}
+                  className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl text-xs font-bold bg-navy-800 hover:bg-navy-900 text-white shadow-xs transition-colors cursor-pointer shrink-0 text-center"
+                  title="Reset Filters"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Active Filters Summary */}
+          {(notificationsSearchTerm || notificationsFilterType !== 'All') && (
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs flex items-center flex-wrap gap-1.5">
+              <span className="font-extrabold text-navy-800 dark:text-navy-400 text-[11px]">Active:</span>
+              {notificationsSearchTerm && (
+                <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold flex items-center gap-1 text-[11px]">
+                  "{notificationsSearchTerm}"
+                  <X className="w-3 h-3 cursor-pointer text-slate-400 hover:text-rose-500" onClick={() => setNotificationsSearchTerm('')} />
+                </span>
+              )}
+              {notificationsFilterType !== 'All' && (
+                <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold flex items-center gap-1 text-[11px]">
+                  {notificationsFilterType === 'unread' ? 'Unread Only' : notificationsFilterType}
+                  <X className="w-3 h-3 cursor-pointer text-slate-400 hover:text-rose-500" onClick={() => setNotificationsFilterType('All')} />
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {filteredNotifications.length === 0 ? (
           <div className="p-12 text-center rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
             <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto">
               <Bell className="w-6 h-6" />
             </div>
-            <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">No Notifications</h3>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto">You're all caught up! Updates regarding your service requests, estimates, and bookings will appear here.</p>
+            <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">No Notifications Found</h3>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+              {notificationsList.length === 0 ? "You're all caught up! Updates regarding your service requests, estimates, and bookings will appear here." : "No notifications match your search query or filter."}
+            </p>
           </div>
         ) : (
           <div className="space-y-3">
-            {notificationsList.map(n => {
+            {filteredNotifications.map(n => {
               const isUnread = !n.read && !n.isRead;
               return (
                 <div
@@ -1526,140 +1877,201 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   }
 
   if (activeTab === 'settings') {
+    const settingsSearchTrimmed = settingsSearchTerm.trim().toLowerCase();
+
+    const showSecurity = !settingsSearchTrimmed || 'security privacy two-factor authentication 2fa otp push notifications'.includes(settingsSearchTrimmed);
+    const showPassword = !settingsSearchTrimmed || 'change password update security credentials'.includes(settingsSearchTrimmed);
+    const showServiceArea = !settingsSearchTrimmed || 'service area default neighborhood location city state bodija ibadan'.includes(settingsSearchTrimmed);
+    const showAccountActions = !settingsSearchTrimmed || 'account actions logout log out deactivate account delete remove'.includes(settingsSearchTrimmed);
+
+    const noResults = !showSecurity && !showPassword && !showServiceArea && !showAccountActions;
+
     return (
-      <div className="w-full max-w-none space-y-4 animate-in fade-in duration-300">
+      <div className="w-full max-w-none space-y-6 animate-in fade-in duration-300">
         <div>
           <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100">Account Settings</h1>
           <p className="text-xs text-slate-500">Manage your security preferences, notifications, password, and account actions.</p>
         </div>
 
-        <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4 shadow-xs">
-          <div className="space-y-4">
-            <h3 className="font-bold text-sm uppercase tracking-wider text-slate-400">Security & Privacy</h3>
-            <div className="flex items-center justify-between py-3 border-b border-slate-100 dark:border-slate-800">
-              <div>
-                <p className="text-xs font-bold text-slate-900 dark:text-slate-100">Two-Factor Authentication (2FA)</p>
-                <p className="text-[11px] text-slate-500">Require OTP verification upon signing in</p>
-              </div>
-              <input type="checkbox" defaultChecked className="w-4 h-4 accent-navy-800 cursor-pointer" />
-            </div>
-            <div className="flex items-center justify-between py-3">
-              <div>
-                <p className="text-xs font-bold text-slate-900 dark:text-slate-100">Push Notifications for Bookings</p>
-                <p className="text-[11px] text-slate-500">Receive instant updates when pros accept your requests</p>
-              </div>
-              <input type="checkbox" defaultChecked className="w-4 h-4 accent-navy-800 cursor-pointer" />
-            </div>
-          </div>
-
-          {/* Change Password Section */}
-          <form onSubmit={handlePasswordChange} className="pt-6 border-t border-slate-200 dark:border-slate-800 space-y-4">
-            <h3 className="font-bold text-sm uppercase tracking-wider text-slate-400">Change Password</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Current Password</label>
-                <input
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">New Password</label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Confirm New Password</label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                className="px-5 py-2.5 rounded-xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-extrabold text-xs shadow-xs cursor-pointer"
-              >
-                Update Password
-              </button>
-            </div>
-          </form>
-
-          <div className="pt-6 border-t border-slate-200 dark:border-slate-800 space-y-4">
-            <h3 className="font-bold text-sm uppercase tracking-wider text-slate-400">Service Area Default</h3>
-            <div>
-              <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Default Neighborhood</label>
-              <CustomDropdown
-                value={defaultNeighborhood}
-                onChange={(val) => setDefaultNeighborhood(val)}
-                options={[
-                  { value: 'Bodija, Ibadan', label: 'Bodija, Ibadan' },
-                  { value: 'Ring Road, Ibadan', label: 'Ring Road, Ibadan' },
-                  { value: 'Dugbe, Ibadan', label: 'Dugbe, Ibadan' },
-                  { value: 'UI / Agbowo, Ibadan', label: 'UI / Agbowo, Ibadan' },
-                  { value: 'Oluyole Estate, Ibadan', label: 'Oluyole Estate, Ibadan' },
-                  { value: 'Challenge, Ibadan', label: 'Challenge, Ibadan' },
-                  { value: 'Akobo, Ibadan', label: 'Akobo, Ibadan' },
-                  { value: 'Iyaganku GRA, Ibadan', label: 'Iyaganku GRA, Ibadan' },
-                  { value: 'Ogbomoso, Oyo State', label: 'Ogbomoso, Oyo State' },
-                  { value: 'Oyo Town, Oyo State', label: 'Oyo Town, Oyo State' }
-                ]}
-                className="w-full"
-                buttonClassName="py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+        {/* Unified Search Banner */}
+        <div className="p-2.5 sm:p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-3">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                value={settingsSearchTerm}
+                onChange={(e) => setSettingsSearchTerm(e.target.value)}
+                placeholder="Search settings (password, security, notifications, neighborhood, logout)..."
+                className="w-full pl-10 pr-9 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-orange-500/50 focus:border-brand-orange-500"
               />
+              {settingsSearchTerm && (
+                <button
+                  onClick={() => setSettingsSearchTerm('')}
+                  className="absolute right-3 top-3 p-0.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
+                  title="Clear Search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
-          </div>
 
-          {/* Account Management Actions */}
-          <div className="pt-6 border-t border-slate-200 dark:border-slate-800 space-y-4">
-            <h3 className="font-bold text-sm uppercase tracking-wider text-rose-500">Account Actions</h3>
-            <div className="flex flex-wrap items-center gap-3">
+            {settingsSearchTerm && (
               <button
-                type="button"
-                onClick={() => {
-                  if (onLogout) onLogout();
-                }}
-                className="px-5 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs cursor-pointer transition-all"
+                onClick={() => setSettingsSearchTerm('')}
+                className="px-4 py-2.5 rounded-xl text-xs font-bold bg-navy-800 hover:bg-navy-900 text-white shadow-xs transition-colors cursor-pointer shrink-0 text-center"
               >
-                Log Out
+                Reset
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (window.confirm('Are you sure you want to deactivate your account? You can reactivate anytime by logging back in.')) {
-                    if (onDeactivateAccount) onDeactivateAccount();
-                  }
-                }}
-                className="px-5 py-3 rounded-xl bg-brand-orange-500/10 hover:bg-brand-orange-500/20 text-brand-orange-600 dark:text-brand-orange-400 font-bold text-xs cursor-pointer transition-all border border-brand-orange-500/20"
-              >
-                Deactivate Account
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (window.confirm('Are you sure you want to permanently delete your KaziHub account? All bookings and history will be removed.')) {
-                    if (onDeleteAccount) onDeleteAccount();
-                  }
-                }}
-                className="px-5 py-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-400 font-bold text-xs cursor-pointer transition-all border border-rose-500/20"
-              >
-                Delete Account
-              </button>
-            </div>
+            )}
           </div>
         </div>
+
+        {noResults ? (
+          <div className="p-12 text-center rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
+            <Settings className="w-10 h-10 text-slate-400 mx-auto" />
+            <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">No settings found</h3>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+              No preferences match "{settingsSearchTerm}". Try searching for "password", "security", or "neighborhood".
+            </p>
+          </div>
+        ) : (
+          <div className="p-4 sm:p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-6 shadow-xs">
+            {showSecurity && (
+              <div className="space-y-4">
+                <h3 className="font-bold text-sm uppercase tracking-wider text-slate-400">Security & Privacy</h3>
+                <div className="flex items-center justify-between py-3 border-b border-slate-100 dark:border-slate-800">
+                  <div>
+                    <p className="text-xs font-bold text-slate-900 dark:text-slate-100">Two-Factor Authentication (2FA)</p>
+                    <p className="text-[11px] text-slate-500">Require OTP verification upon signing in</p>
+                  </div>
+                  <input type="checkbox" defaultChecked className="w-4 h-4 accent-brand-orange-500 cursor-pointer focus:ring-2 focus:ring-brand-orange-500/50" />
+                </div>
+                <div className="flex items-center justify-between py-3">
+                  <div>
+                    <p className="text-xs font-bold text-slate-900 dark:text-slate-100">Push Notifications for Bookings</p>
+                    <p className="text-[11px] text-slate-500">Receive instant updates when pros accept your requests</p>
+                  </div>
+                  <input type="checkbox" defaultChecked className="w-4 h-4 accent-brand-orange-500 cursor-pointer focus:ring-2 focus:ring-brand-orange-500/50" />
+                </div>
+              </div>
+            )}
+
+            {/* Change Password Section */}
+            {showPassword && (
+              <form onSubmit={handlePasswordChange} className={`${showSecurity ? 'pt-6 border-t border-slate-200 dark:border-slate-800' : ''} space-y-4`}>
+                <h3 className="font-bold text-sm uppercase tracking-wider text-slate-400">Change Password</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Current Password</label>
+                    <input
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-orange-500/50 focus:border-brand-orange-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">New Password</label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-orange-500/50 focus:border-brand-orange-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Confirm New Password</label>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-orange-500/50 focus:border-brand-orange-500"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-extrabold text-xs shadow-xs cursor-pointer transition-colors"
+                  >
+                    Update Password
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {showServiceArea && (
+              <div className={`${(showSecurity || showPassword) ? 'pt-6 border-t border-slate-200 dark:border-slate-800' : ''} space-y-4`}>
+                <h3 className="font-bold text-sm uppercase tracking-wider text-slate-400">Service Area Default</h3>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Default Neighborhood</label>
+                  <CustomDropdown
+                    value={defaultNeighborhood}
+                    onChange={(val) => setDefaultNeighborhood(val)}
+                    options={[
+                      { value: 'Bodija, Ibadan', label: 'Bodija, Ibadan' },
+                      { value: 'Ring Road, Ibadan', label: 'Ring Road, Ibadan' },
+                      { value: 'Dugbe, Ibadan', label: 'Dugbe, Ibadan' },
+                      { value: 'UI / Agbowo, Ibadan', label: 'UI / Agbowo, Ibadan' },
+                      { value: 'Oluyole Estate, Ibadan', label: 'Oluyole Estate, Ibadan' },
+                      { value: 'Challenge, Ibadan', label: 'Challenge, Ibadan' },
+                      { value: 'Akobo, Ibadan', label: 'Akobo, Ibadan' },
+                      { value: 'Iyaganku GRA, Ibadan', label: 'Iyaganku GRA, Ibadan' },
+                      { value: 'Ogbomoso, Oyo State', label: 'Ogbomoso, Oyo State' },
+                      { value: 'Oyo Town, Oyo State', label: 'Oyo Town, Oyo State' }
+                    ]}
+                    className="w-full"
+                    buttonClassName="py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-brand-orange-500/50"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Account Management Actions */}
+            {showAccountActions && (
+              <div className={`${(showSecurity || showPassword || showServiceArea) ? 'pt-6 border-t border-slate-200 dark:border-slate-800' : ''} space-y-4`}>
+                <h3 className="font-bold text-sm uppercase tracking-wider text-rose-500">Account Actions</h3>
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onLogout) onLogout();
+                    }}
+                    className="px-5 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs cursor-pointer transition-all"
+                  >
+                    Log Out
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm('Are you sure you want to deactivate your account? You can reactivate anytime by logging back in.')) {
+                        if (onDeactivateAccount) onDeactivateAccount();
+                      }
+                    }}
+                    className="px-5 py-3 rounded-xl bg-brand-orange-500/10 hover:bg-brand-orange-500/20 text-brand-orange-600 dark:text-brand-orange-400 font-bold text-xs cursor-pointer transition-all border border-brand-orange-500/20"
+                  >
+                    Deactivate Account
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm('Are you sure you want to permanently delete your KaziHub account? All bookings and history will be removed.')) {
+                        if (onDeleteAccount) onDeleteAccount();
+                      }
+                    }}
+                    className="px-5 py-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-400 font-bold text-xs cursor-pointer transition-all border border-rose-500/20"
+                  >
+                    Delete Account
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   }
@@ -1692,43 +2104,19 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
             <Bookmark className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400" />
             <span>Saved</span>
             {savedProIds.length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full bg-navy-800 text-white text-[10px] font-black">
-                {savedProIds.length}
+              <span className="min-w-4 h-4 px-1 rounded-full bg-brand-orange-500 text-white text-[9px] font-bold flex items-center justify-center text-center leading-none shadow-xs">
+                <span className="flex items-center justify-center text-center">{savedProIds.length}</span>
               </span>
             )}
           </button>
         </div>
       </div>
 
-      {/* Sleek AI Diagnosis Callout Card */}
-      <div className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-navy-900 via-navy-800 to-slate-900 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs border border-navy-700/60">
-        <div>
-          <h3 className="text-xs sm:text-sm font-bold text-white">
-            Not sure what is broken? AI Diagnostic Assistant
-          </h3>
-          <p className="text-[11px] text-slate-300">
-            Describe symptoms to identify the root cause and match specialists.
-          </p>
-        </div>
-        <button
-          onClick={() => {
-            if (onOpenAIDiagnosis) {
-              onOpenAIDiagnosis();
-            } else {
-              setIsAIDiagnosisOpen(true);
-            }
-          }}
-          className="px-3.5 py-1.5 rounded-xl bg-brand-orange-500 hover:bg-brand-orange-600 text-white font-bold text-xs transition-all cursor-pointer shrink-0 shadow-xs self-end sm:self-center"
-        >
-          <span>Diagnose Issue</span>
-        </button>
-      </div>
-
       {/* Unified Discovery & Artisan Feed (Search + Categories + Status Filter + Listings) */}
       <div className="space-y-4">
         
         {/* Unified Search & Discovery Console */}
-        <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-3.5">
+        <div className="p-2.5 sm:p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-3">
           
           {/* Search Input, All Categories Dropdown & Neighborhood Dropdown */}
           <div className="flex flex-col lg:flex-row gap-2">
@@ -1739,7 +2127,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search specialty, trade, or issue (e.g. Plumber, AC Repair, Electrician)..."
-                className="w-full pl-10 pr-9 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-800/40"
+                className="w-full pl-10 pr-9 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-orange-500/50 focus:border-brand-orange-500"
               />
               {searchTerm && (
                 <button
@@ -1771,7 +2159,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 ]}
                 placeholder="All Categories"
                 className="w-full sm:w-auto lg:min-w-[190px]"
-                buttonClassName="py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-navy-800/50"
+                buttonClassName="py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-brand-orange-500/50"
                 dropdownWidth="w-64"
               />
 
@@ -1785,7 +2173,9 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 }))}
                 placeholder="All Neighborhoods"
                 className="w-full sm:w-auto lg:min-w-[175px]"
-                buttonClassName="py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-navy-800/50"
+                buttonClassName="py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-brand-orange-500/50"
+                dropdownWidth="w-56 sm:w-60"
+                align="right"
               />
 
               {(selectedCategoryFilter !== 'All' || selectedNeighborhood !== 'All' || searchTerm || searchMinRating > 0 || searchMinExperience > 0 || searchAvailabilityOnly) && (
@@ -1836,33 +2226,33 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
               <div className="flex items-center flex-wrap gap-1.5 text-slate-700 dark:text-slate-300">
                 <span className="font-extrabold text-navy-800 dark:text-navy-400 text-xs">Active:</span>
                 {searchTerm && (
-                  <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold flex items-center gap-1 text-[11px]">
+                  <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold flex items-center gap-1 text-[11px] text-slate-800 dark:text-slate-200">
                     "{searchTerm}"
                     <X className="w-3 h-3 cursor-pointer text-slate-400 hover:text-rose-500" onClick={() => setSearchTerm('')} />
                   </span>
                 )}
                 {selectedCategoryFilter !== 'All' && (
-                  <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold flex items-center gap-1 text-[11px]">
+                  <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold flex items-center gap-1 text-[11px] text-slate-800 dark:text-slate-200">
                     {selectedCategoryFilter}
                     <X className="w-3 h-3 cursor-pointer text-slate-400 hover:text-rose-500" onClick={() => onSelectCategoryFilter('All')} />
                   </span>
                 )}
                 {selectedNeighborhood !== 'All' && (
-                  <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold flex items-center gap-1 text-[11px]">
+                  <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold flex items-center gap-1 text-[11px] text-slate-800 dark:text-slate-200">
                     {selectedNeighborhood}
                     <X className="w-3 h-3 cursor-pointer text-slate-400 hover:text-rose-500" onClick={() => setSelectedNeighborhood('All')} />
                   </span>
                 )}
                 {searchAvailabilityOnly && (
-                  <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold flex items-center gap-1 text-[11px] text-emerald-600">
+                  <span className="px-2 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-800/80 font-bold flex items-center gap-1 text-[11px] text-emerald-700 dark:text-emerald-400">
                     Available Now
-                    <X className="w-3 h-3 cursor-pointer text-slate-400 hover:text-rose-500" onClick={() => setSearchAvailabilityOnly(false)} />
+                    <X className="w-3 h-3 cursor-pointer text-emerald-500 hover:text-rose-500" onClick={() => setSearchAvailabilityOnly(false)} />
                   </span>
                 )}
                 {searchMinRating > 0 && (
-                  <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold flex items-center gap-1 text-[11px] text-amber-600">
+                  <span className="px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/80 border border-amber-200 dark:border-amber-800/80 font-bold flex items-center gap-1 text-[11px] text-amber-700 dark:text-amber-400">
                     {searchMinRating}+ Stars
-                    <X className="w-3 h-3 cursor-pointer text-slate-400 hover:text-rose-500" onClick={() => setSearchMinRating(0)} />
+                    <X className="w-3 h-3 cursor-pointer text-amber-500 hover:text-rose-500" onClick={() => setSearchMinRating(0)} />
                   </span>
                 )}
               </div>
@@ -1895,25 +2285,23 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
             </button>
             <button
               onClick={() => setProViewFilter('available')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                 proViewFilter === 'available'
                   ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              <span>Available Now</span>
+              Available Now
             </button>
             <button
               onClick={() => setProViewFilter('topRated')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                 proViewFilter === 'topRated'
-                  ? 'bg-white dark:bg-slate-800 text-amber-500 shadow-xs'
+                  ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
-              <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-              <span>Top Rated</span>
+              Top Rated
             </button>
           </div>
         </div>
@@ -1944,7 +2332,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
               <div
                 key={pro.id}
                 onClick={() => onSelectProForProfile(pro)}
-                className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/90 dark:border-slate-800 flex flex-col justify-between shadow-xs cursor-pointer hover:border-navy-600 dark:hover:border-navy-400 hover:shadow-md transition-all active:scale-[0.99] focus-within:ring-2 focus-within:ring-navy-800/30 group"
+                className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/90 dark:border-slate-800 flex flex-col justify-between shadow-xs cursor-pointer hover:border-brand-orange-500/60 dark:hover:border-brand-orange-400 hover:shadow-md transition-all active:scale-[0.99] focus-within:ring-2 focus-within:ring-brand-orange-500/40 group"
               >
                 <div className="space-y-2.5">
                   {/* Top card header */}
@@ -1984,7 +2372,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
 
                     <button
                       onClick={(e) => toggleSavePro(pro.id, e)}
-                      className="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer shrink-0"
+                      className="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer shrink-0"
                       title={savedProIds.includes(pro.id) ? "Remove from saved" : "Save professional"} aria-label={savedProIds.includes(pro.id) ? "Remove from saved" : "Save professional"}
                     >
                       <Bookmark className={`w-3.5 h-3.5 ${savedProIds.includes(pro.id) ? 'fill-navy-800 text-navy-800 dark:fill-navy-400 dark:text-navy-400' : ''}`} />
@@ -1997,12 +2385,15 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                   </p>
 
                   {/* Single Clean Trust & Rating Strip */}
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 py-1.5 px-2.5 rounded-xl bg-slate-50 dark:bg-slate-850/60 border border-slate-100 dark:border-slate-800">
-                    <span className="font-bold text-amber-500 flex items-center gap-1">
-                      <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
-                      {pro.rating} <span className="text-slate-400 font-normal">({pro.reviewCount})</span>
+                  <div className="flex items-center justify-between text-[11px] py-1.5 px-2.5 rounded-xl bg-slate-100/90 dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700/80 transition-colors">
+                    <span className="font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                      <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500 dark:fill-amber-400 dark:text-amber-400 stroke-1 shrink-0" />
+                      <span>{pro.rating}</span>
+                      <span className="text-slate-500 dark:text-slate-400 font-normal">({pro.reviewCount})</span>
                     </span>
-                    <span className="font-semibold text-slate-700 dark:text-slate-300">{pro.completedJobs}+ jobs completed</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                      {pro.completedJobs}+ jobs completed
+                    </span>
                   </div>
                 </div>
 
@@ -2021,7 +2412,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                         e.stopPropagation();
                         onOpenChat(pro);
                       }}
-                      className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors cursor-pointer flex items-center gap-1"
+                      className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer flex items-center gap-1"
                     >
                       <MessageSquare className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400" /> Chat
                     </button>
@@ -2399,7 +2790,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                       setAiSymptomInput(chip.text);
                       handleRunAIDiagnosis(chip.text);
                     }}
-                    className="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-[11px] font-medium text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 transition-all cursor-pointer text-left"
+                    className="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[11px] font-medium text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 transition-all cursor-pointer text-left"
                   >
                     {chip.label}
                   </button>
@@ -2424,7 +2815,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     }
                   }}
                   placeholder="e.g. Toilet tank won't stop filling, or solar battery draining in 20 mins..."
-                  className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-800/40"
+                  className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-orange-500/50 focus:border-brand-orange-500"
                 />
                 <button
                   type="button"

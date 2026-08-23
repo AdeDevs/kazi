@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Role, Professional, Booking, Category } from '../types';
 import { Language, t } from '../translations';
 import { 
@@ -50,6 +50,11 @@ export const AppShell: React.FC<AppShellProps> = ({
 }) => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
+  // Scroll to top whenever activeTab changes so new views don't inherit previous page scroll position
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
+  }, [activeTab]);
+
   const pendingCount = bookings.filter(b => b.status === 'pending').length;
   const activeCount = bookings.filter(b => b.status === 'accepted' || b.status === 'in-progress').length;
 
@@ -78,7 +83,7 @@ export const AppShell: React.FC<AppShellProps> = ({
 
         {/* ================= LEFT SIDEBAR ================= */}
         <aside
-          className={`flex flex-col border-r border-zinc-200 dark:border-zinc-800 fixed inset-y-0 left-0 md:sticky top-0 h-screen overflow-hidden shrink-0 z-50 md:z-30 bg-white dark:bg-zinc-950 group w-72 max-w-[85vw] md:w-[68px] md:hover:w-64 transition-transform md:transition-[width] duration-300 ease-in-out ${
+          className={`flex flex-col border-r border-zinc-200 dark:border-zinc-800 fixed inset-y-0 left-0 md:sticky top-0 h-[100dvh] max-h-[100dvh] md:h-screen overflow-hidden shrink-0 z-50 md:z-30 bg-white dark:bg-zinc-950 group w-72 max-w-[85vw] md:w-[68px] md:hover:w-64 transition-transform md:transition-[width] duration-300 ease-in-out ${
             isMobileSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'
           }`}
         >
@@ -120,7 +125,7 @@ export const AppShell: React.FC<AppShellProps> = ({
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col justify-between p-3.5">
+          <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar flex flex-col justify-between p-3.5 pb-4 md:pb-3.5">
             {/* Navigation Links */}
             <nav className="space-y-1">
               {navItems.map((item) => {
@@ -152,10 +157,10 @@ export const AppShell: React.FC<AppShellProps> = ({
                       {item.label}
                     </span>
                     {item.badge !== undefined && (
-                      <span className={`absolute right-3 top-1/2 -translate-y-1/2 min-w-4 h-4 px-1 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0 transition-opacity duration-200 ${
+                      <span className={`absolute right-3 top-1/2 -translate-y-1/2 min-w-4.5 h-4.5 px-1 rounded-full text-[10px] font-bold flex items-center justify-center text-center shrink-0 transition-opacity duration-200 leading-none ${
                         isMobileSidebarOpen ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
-                      } bg-brand-orange-600 text-white`}>
-                        {item.badge}
+                      } bg-brand-orange-500 text-white shadow-xs`}>
+                        <span className="flex items-center justify-center text-center">{item.badge}</span>
                       </span>
                     )}
                   </button>
@@ -164,7 +169,7 @@ export const AppShell: React.FC<AppShellProps> = ({
             </nav>
 
             {/* Bottom Controls & Profile */}
-            <div className="pt-3 mt-auto border-t border-zinc-200 dark:border-zinc-800 space-y-1.5 shrink-0 overflow-hidden">
+            <div className="pt-3 mt-auto border-t border-zinc-200 dark:border-zinc-800 space-y-1.5 shrink-0 overflow-hidden pb-4 md:pb-0">
               <div className="md:hidden space-y-1.5">
                 {/* Theme Toggle Button */}
                 <button
@@ -223,11 +228,13 @@ export const AppShell: React.FC<AppShellProps> = ({
                 aria-label="View Profile"
               >
                 <div className="w-10 h-10 flex items-center justify-center shrink-0 absolute left-0 top-0">
-                  <img
-                    src={currentRole === 'customer' ? customerAvatar : activeProfessional.avatar}
-                    alt="User"
-                    className="w-7 h-7 rounded-xl object-cover border border-zinc-200 dark:border-zinc-700 shrink-0"
-                  />
+                  <div className="w-7 h-7 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700 shrink-0 flex items-center justify-center bg-zinc-100 dark:bg-zinc-800">
+                    <img
+                      src={currentRole === 'customer' ? customerAvatar : activeProfessional.avatar}
+                      alt="User"
+                      className="w-full h-full rounded-lg object-cover"
+                    />
+                  </div>
                 </div>
                 <div className={`pl-12 pr-2 whitespace-nowrap overflow-hidden text-left transition-opacity duration-200 ${
                   isMobileSidebarOpen ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
@@ -283,20 +290,8 @@ export const AppShell: React.FC<AppShellProps> = ({
               </h2>
             </div>
 
-            {/* Desktop View: Search Bar directly beside Dark Mode & Notifications (Same Parent) */}
-            <div className="hidden md:flex items-center gap-2 shrink-0 ml-auto">
-              {activeTab !== 'explore' && (
-                <div className="relative w-60 lg:w-72 group">
-                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-brand-orange-600 transition-colors" strokeWidth={2} />
-                  <input 
-                    type="text" 
-                    placeholder={`Search in ${activeTab}...`}
-                    aria-label={`Search in ${activeTab}`}
-                    className="w-full bg-zinc-100/50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 text-sm px-9 py-2 rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-orange-500 focus:bg-white dark:focus:bg-zinc-950 transition-all text-navy-900 dark:text-navy-100"
-                  />
-                </div>
-              )}
-
+            {/* Desktop View: Top Actions (Theme Toggle & Notifications) directly beside navigation */}
+            <div className="flex items-center gap-2 shrink-0 ml-auto">
               <button
                 type="button"
                 onClick={onToggleDarkMode}
@@ -316,8 +311,8 @@ export const AppShell: React.FC<AppShellProps> = ({
               >
                 <Bell className="w-4 h-4" strokeWidth={1.5} />
                 {(notificationsUnreadCount || 0) > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-3.5 h-3.5 px-0.5 rounded-full bg-brand-orange-600 text-white font-bold text-[9px] flex items-center justify-center">
-                    {notificationsUnreadCount}
+                  <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-brand-orange-500 text-white font-bold text-[9px] flex items-center justify-center text-center leading-none shadow-xs">
+                    <span className="flex items-center justify-center text-center">{notificationsUnreadCount}</span>
                   </span>
                 )}
               </button>

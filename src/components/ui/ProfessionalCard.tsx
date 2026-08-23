@@ -53,13 +53,15 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({
         <div className="px-4 pb-3">
           <p className="text-xs text-zinc-600 dark:text-zinc-300 line-clamp-2 mb-3 leading-relaxed">{professional.tagline}</p>
           
-          <div className="flex items-center justify-between gap-2 py-2 px-2.5 bg-zinc-50 dark:bg-zinc-800/60 rounded-none text-xs border border-zinc-200 dark:border-zinc-700/60">
-            <span className="flex items-center gap-1 font-semibold text-zinc-800 dark:text-zinc-200">
-              <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" strokeWidth={1.5} />
-              {professional.rating} <span className="text-zinc-400 font-normal">({professional.reviewCount})</span>
+          <div className="flex items-center justify-between gap-2 py-2 px-2.5 bg-zinc-100/90 dark:bg-zinc-800 rounded-lg text-xs border border-zinc-200 dark:border-zinc-700">
+            <span className="flex items-center gap-1 font-bold text-amber-600 dark:text-amber-400">
+              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500 dark:fill-amber-400 dark:text-amber-400 stroke-1 shrink-0" strokeWidth={1} />
+              {professional.rating} <span className="text-zinc-500 dark:text-zinc-400 font-normal">({professional.reviewCount})</span>
             </span>
-            <span className="text-zinc-500 dark:text-zinc-400 text-[11px]">{professional.completedJobs} jobs</span>
-            <span className="font-semibold text-zinc-900 dark:text-zinc-100">{formatCurrency(professional.hourlyRate)}/hr</span>
+            <span className="text-zinc-800 dark:text-zinc-200 text-[11px] font-semibold">
+              {professional.completedJobs}+ jobs
+            </span>
+            <span className="font-extrabold text-zinc-900 dark:text-zinc-100">{formatCurrency(professional.hourlyRate)}/hr</span>
           </div>
         </div>
       </div>

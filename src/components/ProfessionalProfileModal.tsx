@@ -196,7 +196,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                   ).map((svc: ServiceItem) => (
                     <div
                       key={svc.id}
-                      className="p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-850/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-navy-500/50 transition-colors"
+                      className="p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-navy-500/50 transition-colors"
                     >
                       <div className="space-y-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -390,7 +390,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                       value={newComment}
                       onChange={(e) => setNewComment(e.target.value)}
                       placeholder="Share your experience working with this professional..."
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-navy-800 outline-hidden"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-orange-500/50 focus:border-brand-orange-500 outline-hidden"
                     />
                   </div>
 

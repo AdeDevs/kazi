@@ -47,8 +47,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <MessageSquare className="w-4 h-4" strokeWidth={1.5} />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-brand-orange-600 text-white text-[10px] flex items-center justify-center font-bold">
-                {unreadCount}
+              <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-brand-orange-500 text-white text-[9px] flex items-center justify-center text-center font-bold leading-none shadow-xs">
+                <span className="flex items-center justify-center text-center">{unreadCount}</span>
               </span>
             )}
           </button>

@@ -18,8 +18,55 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<string>('explore');
   const previousTabRef = useRef<string>('explore');
+  const pageScrollPositionsRef = useRef<Record<string, number>>({});
+
+  // Continuously record scroll position for the current page
+  useEffect(() => {
+    const handleScroll = () => {
+      const pageKey = `${currentRole}_${activeTab}`;
+      pageScrollPositionsRef.current[pageKey] = window.scrollY || document.documentElement.scrollTop || 0;
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [currentRole, activeTab]);
+
+  // Restore or reset scroll position when page/tab changes
+  useEffect(() => {
+    const pageKey = `${currentRole}_${activeTab}`;
+    const targetY = pageScrollPositionsRef.current[pageKey] ?? 0;
+
+    // Immediately reset/restore window scroll
+    window.scrollTo({ top: targetY, left: 0, behavior: 'instant' });
+
+    // Handle asynchronous DOM rendering
+    const rafId = requestAnimationFrame(() => {
+      window.scrollTo({ top: targetY, left: 0, behavior: 'instant' });
+    });
+
+    const timerId = setTimeout(() => {
+      window.scrollTo({ top: targetY, left: 0, behavior: 'instant' });
+    }, 40);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      clearTimeout(timerId);
+    };
+  }, [activeTab, currentRole]);
 
   const handleTabChange = useCallback((tab: string, customerId?: string) => {
+    const currentKey = `${currentRole}_${activeTab}`;
+    pageScrollPositionsRef.current[currentKey] = window.scrollY || document.documentElement.scrollTop || 0;
+
+    // If clicking on the same tab, smooth scroll to top
+    if (tab === activeTab && !customerId) {
+      pageScrollPositionsRef.current[currentKey] = 0;
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+      return;
+    }
+
     setActiveTab(current => {
       if (tab === 'notifications' && current === 'notifications') {
         return previousTabRef.current;
@@ -33,7 +80,7 @@ export default function App() {
     if (customerId) {
       setSelectedMessageCustomerId(customerId);
     }
-  }, []);
+  }, [currentRole, activeTab]);
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     const saved = localStorage.getItem('kazihub_dark_mode_v2');
     return saved !== null ? saved === 'true' : false;

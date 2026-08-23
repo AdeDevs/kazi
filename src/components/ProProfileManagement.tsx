@@ -670,7 +670,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
                   onChange={(e) => setNewSkillInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSkill())}
                   placeholder="Add skill (e.g. Solar Conduit, Generator Interlock)..."
-                  className="flex-1 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs focus:outline-none focus:ring-2 focus:ring-navy-800"
+                  className="flex-1 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs focus:outline-none focus:ring-2 focus:ring-brand-orange-500/50 focus:border-brand-orange-500"
                 />
                 <button
                   type="button"
@@ -891,7 +891,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
                   type="text"
                   value={primaryLocation}
                   onChange={(e) => setPrimaryLocation(e.target.value)}
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-navy-800"
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-orange-500/50 focus:border-brand-orange-500"
                 />
                 <button
                   type="button"
@@ -963,7 +963,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
                 onChange={(e) => setNewAreaInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddArea())}
                 placeholder="Add neighborhood (e.g. Jericho, Akobo, Oluyole)..."
-                className="flex-1 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs focus:outline-none focus:ring-2 focus:ring-navy-800"
+                className="flex-1 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs focus:outline-none focus:ring-2 focus:ring-brand-orange-500/50 focus:border-brand-orange-500"
               />
               <button
                 type="button"

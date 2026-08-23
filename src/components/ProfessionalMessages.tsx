@@ -348,7 +348,7 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
               placeholder="Search conversations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-navy-800/20"
+              className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-orange-500/50 focus:border-brand-orange-500"
             />
           </div>
         </div>
@@ -398,8 +398,8 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
                             : conv.lastMessage.message}
                         </p>
                         {conv.unreadCount > 0 && (
-                          <span className="shrink-0 w-4 h-4 rounded-full bg-brand-orange-600 flex items-center justify-center text-[9px] font-bold text-white">
-                            {conv.unreadCount}
+                          <span className="shrink-0 min-w-4 h-4 px-1 rounded-full bg-brand-orange-500 flex items-center justify-center text-center text-[9px] font-bold text-white leading-none shadow-xs">
+                            <span className="flex items-center justify-center text-center">{conv.unreadCount}</span>
                           </span>
                         )}
                       </div>
@@ -699,7 +699,7 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
                   </button>
 
                   {/* Main Input Textarea */}
-                  <div className="flex-1 bg-slate-100 dark:bg-slate-800 rounded-2xl border border-transparent focus-within:border-navy-800/30 dark:focus-within:border-navy-400/30 overflow-hidden">
+                  <div className="flex-1 bg-slate-100 dark:bg-slate-800 rounded-2xl border border-transparent focus-within:border-brand-orange-500 focus-within:ring-2 focus-within:ring-brand-orange-500/50 overflow-hidden">
                     <textarea
                       ref={textareaRef}
                       value={inputText}

@@ -16,6 +16,7 @@ interface CustomDropdownProps<T extends string | number> {
   className?: string;
   buttonClassName?: string;
   dropdownWidth?: string;
+  align?: 'left' | 'right' | 'auto';
 }
 
 export function CustomDropdown<T extends string | number>({
@@ -26,12 +27,33 @@ export function CustomDropdown<T extends string | number>({
   icon,
   className = '',
   buttonClassName = '',
-  dropdownWidth = 'w-full'
+  dropdownWidth = 'w-full',
+  align = 'auto'
 }: CustomDropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
+  const [alignRight, setAlignRight] = useState(align === 'right');
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const selectedOption = options.find((opt) => opt.value === value);
+
+  useEffect(() => {
+    if (isOpen && containerRef.current) {
+      if (align === 'right') {
+        setAlignRight(true);
+      } else if (align === 'left') {
+        setAlignRight(false);
+      } else {
+        const rect = containerRef.current.getBoundingClientRect();
+        // If the right edge of container plus menu buffer overflows viewport or is in right 40% of screen
+        const spaceOnRight = window.innerWidth - rect.left;
+        if (spaceOnRight < 240 || rect.right > window.innerWidth - 60) {
+          setAlignRight(true);
+        } else {
+          setAlignRight(false);
+        }
+      }
+    }
+  }, [isOpen, align]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -49,8 +71,8 @@ export function CustomDropdown<T extends string | number>({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full flex items-center justify-between gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-2.5 rounded-xl border text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-navy-800/40 dark:focus:ring-navy-400/40 transition-all cursor-pointer shadow-xs ${
-          buttonClassName || 'border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 hover:border-navy-700/50 dark:hover:border-navy-400/50'
+        className={`w-full flex items-center justify-between gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-2.5 rounded-xl border text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-orange-500/50 dark:focus:ring-brand-orange-400/50 transition-all cursor-pointer shadow-xs ${
+          buttonClassName || 'border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 hover:border-brand-orange-500/50 dark:hover:border-brand-orange-400/50'
         }`}
       >
         <div className="flex items-center gap-1.5 sm:gap-2 truncate min-w-0">
@@ -62,7 +84,7 @@ export function CustomDropdown<T extends string | number>({
 
       {/* Dropdown Options Popup */}
       {isOpen && (
-        <div className={`absolute left-0 mt-1.5 min-w-[200px] sm:min-w-[220px] max-w-[85vw] sm:max-w-none ${dropdownWidth} z-50 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xl p-1.5 space-y-0.5 max-h-64 overflow-y-auto no-scrollbar animate-in fade-in zoom-in-95 duration-100`}>
+        <div className={`absolute ${alignRight ? 'right-0 left-auto' : 'left-0 right-auto'} mt-1.5 min-w-[200px] sm:min-w-[220px] max-w-[calc(100vw-24px)] ${dropdownWidth} z-50 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xl p-1.5 space-y-0.5 max-h-64 overflow-y-auto no-scrollbar animate-in fade-in zoom-in-95 duration-100`}>
           {options.map((opt) => {
             const isSelected = opt.value === value;
             return (
