@@ -6,9 +6,10 @@ import {
   CheckCheck, Check, Clock, User, MessageSquare,
   X, Paperclip, Mic, Play, Pause, MapPin, Navigation, 
   Video, ExternalLink, Square, ShieldCheck, Star, 
-  Calendar, Briefcase, Phone, AlertCircle,
+  Calendar, Briefcase, Phone, AlertCircle, Volume2,
   Trash2
 } from 'lucide-react';
+import { DecibelAudioPlayer } from './DecibelAudioPlayer';
 
 interface CustomerMessagesProps {
   professionals: Professional[];
@@ -61,12 +62,26 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
   // Rich Attachments & Audio
   const [showAttachmentMenu, setShowAttachmentMenu] = useState<boolean>(false);
   const [selectedLightboxImage, setSelectedLightboxImage] = useState<string | null>(null);
+  
+  // Real voice recording states
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [recordingSeconds, setRecordingSeconds] = useState<number>(0);
+  const [recordingError, setRecordingError] = useState<string | null>(null);
+  const [liveWaveform, setLiveWaveform] = useState<number[]>(new Array(36).fill(6));
+  
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
-  const [isLocating, setIsLocating] = useState<boolean>(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const animFrameRef = useRef<number | null>(null);
+  const recordingStartTimeRef = useRef<number>(0);
 
+  // Active voice playback state (tracked globally so only one audio note plays at a time)
+  const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
+
+  const [isLocating, setIsLocating] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -80,20 +95,195 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
     }
   }, [inputText]);
 
-  // Voice recording timer
+  // Clean up recording and audio playback resources on unmount
   useEffect(() => {
-    if (isRecording) {
-      recordingTimerRef.current = setInterval(() => {
-        setRecordingSeconds(prev => prev + 1);
-      }, 1000);
-    } else {
-      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
-      setRecordingSeconds(0);
-    }
     return () => {
       if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach(t => t.stop());
+      }
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        audioContextRef.current.close().catch(() => {});
+      }
     };
-  }, [isRecording]);
+  }, []);
+
+  // Real Hardware Microphone Recording Flow
+  const startRecording = async () => {
+    setRecordingError(null);
+    setPlayingAudioId(null);
+
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setRecordingError("Microphone access is not supported by your browser environment.");
+        return;
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
+
+      mediaStreamRef.current = stream;
+      audioChunksRef.current = [];
+
+      // Determine supported mimeType across Chrome/Firefox/Safari
+      let options: MediaRecorderOptions = {};
+      if (typeof MediaRecorder !== 'undefined') {
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+          options = { mimeType: 'audio/webm;codecs=opus' };
+        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+          options = { mimeType: 'audio/mp4' };
+        } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
+          options = { mimeType: 'audio/ogg' };
+        }
+      }
+
+      const recorder = new MediaRecorder(stream, options);
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+
+      recorder.start(100);
+      setIsRecording(true);
+      setRecordingSeconds(0);
+      recordingStartTimeRef.current = Date.now();
+
+      // Recording elapsed duration timer
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingSeconds(Math.max(1, Math.round((Date.now() - recordingStartTimeRef.current) / 1000)));
+      }, 1000);
+
+      // Web Audio API: Real-time AudioContext & AnalyserNode for frequency waveform
+      try {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioCtx) {
+          const audioCtx = new AudioCtx();
+          audioContextRef.current = audioCtx;
+          const source = audioCtx.createMediaStreamSource(stream);
+          const analyser = audioCtx.createAnalyser();
+          analyser.fftSize = 64;
+          analyser.smoothingTimeConstant = 0.65;
+          source.connect(analyser);
+          analyserRef.current = analyser;
+
+          const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+          const updateLiveWaveform = () => {
+            if (!analyserRef.current) return;
+            analyserRef.current.getByteFrequencyData(dataArray);
+
+            const numBars = 36;
+            const bars: number[] = [];
+            for (let i = 0; i < numBars; i++) {
+              const idx = Math.floor((i / numBars) * (dataArray.length * 0.75));
+              const val = dataArray[idx] || 0;
+              // Map energy to height between 4px and 26px
+              const h = Math.max(4, Math.min(26, Math.round((val / 255) * 26) + 4));
+              bars.push(h);
+            }
+            setLiveWaveform(bars);
+            animFrameRef.current = requestAnimationFrame(updateLiveWaveform);
+          };
+
+          animFrameRef.current = requestAnimationFrame(updateLiveWaveform);
+        }
+      } catch (err) {
+        console.warn("Live frequency analyser note:", err);
+      }
+
+    } catch (err: any) {
+      console.error("Microphone recording error:", err);
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setRecordingError("Microphone access was denied. Please allow microphone permissions in your browser.");
+      } else if (err.name === 'NotFoundError') {
+        setRecordingError("No microphone was detected on this device.");
+      } else {
+        setRecordingError("Microphone initialization error: " + (err.message || "Unknown error"));
+      }
+      setIsRecording(false);
+    }
+  };
+
+  // Helper to cleanup hardware streams & analyzers
+  const cleanupHardwareStreams = () => {
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
+    }
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach(t => t.stop());
+      mediaStreamRef.current = null;
+    }
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      audioContextRef.current.close().catch(() => {});
+      audioContextRef.current = null;
+    }
+    mediaRecorderRef.current = null;
+    audioChunksRef.current = [];
+    setLiveWaveform(new Array(36).fill(6));
+  };
+
+  // Stop recording and send real audio note
+  const handleSendVoiceNote = () => {
+    const recorder = mediaRecorderRef.current;
+    if (!recorder || !selectedProId || !onSendMessage) {
+      cleanupHardwareStreams();
+      setIsRecording(false);
+      return;
+    }
+
+    const duration = Math.max(1, Math.round((Date.now() - recordingStartTimeRef.current) / 1000));
+
+    recorder.onstop = () => {
+      const mimeType = recorder.mimeType || 'audio/webm';
+      const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+
+      // Convert audio Blob into base64 Data URL for instant in-browser playback & state persistence
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64Audio = reader.result as string;
+        onSendMessage(selectedProId, 'Voice Note', {
+          mediaType: 'audio',
+          mediaUrl: base64Audio,
+          duration: duration,
+          status: 'sent'
+        });
+        cleanupHardwareStreams();
+        setIsRecording(false);
+      };
+      reader.readAsDataURL(audioBlob);
+    };
+
+    if (recorder.state !== 'inactive') {
+      recorder.stop();
+    }
+  };
+
+  // Cancel and discard recorded audio
+  const handleCancelVoiceRecording = () => {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== 'inactive') {
+      recorder.onstop = null;
+      recorder.stop();
+    }
+    cleanupHardwareStreams();
+    setIsRecording(false);
+    setRecordingError(null);
+    setShowAttachmentMenu(false);
+  };
 
   // Assemble conversations for professionals who actually have messages or active bookings
   const conversations = useMemo(() => {
@@ -222,19 +412,6 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
       }
     };
     reader.readAsDataURL(file);
-  };
-
-  const handleSendVoiceNote = () => {
-    if (!selectedProId || !onSendMessage) return;
-    const duration = Math.max(1, recordingSeconds);
-    setIsRecording(false);
-    onSendMessage(selectedProId, 'Voice Note', {
-      mediaType: 'audio',
-      mediaUrl: 'simulated_audio_url',
-      duration,
-      status: 'sent'
-    });
-    setShowAttachmentMenu(false);
   };
 
   const handleShareLocation = () => {
@@ -429,28 +606,16 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
                         </div>
                       )}
 
-                      {/* Voice Note */}
+                      {/* WhatsApp / Instagram Style Decibel Voice Note Player */}
                       {msg.mediaType === 'audio' && (
-                        <div className="flex items-center gap-3 py-1">
-                          <button
-                            type="button"
-                            onClick={() => setPlayingAudioId(playingAudioId === msg.id ? null : msg.id)}
-                            className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer shadow-xs shrink-0 ${
-                              isCustomer ? 'bg-white text-navy-900' : 'bg-navy-900 text-white'
-                            }`}
-                          >
-                            {playingAudioId === msg.id ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 ml-0.5" />}
-                          </button>
-                          <div className="flex-1 space-y-1">
-                            <div className="h-1.5 rounded-full bg-slate-300/40 overflow-hidden">
-                              <div className={`h-full ${isCustomer ? 'bg-white' : 'bg-navy-800'} ${playingAudioId === msg.id ? 'w-3/4 animate-pulse' : 'w-1/3'}`} />
-                            </div>
-                            <div className="flex justify-between text-[10px] opacity-80 font-mono">
-                              <span>0:{msg.duration ? String(msg.duration).padStart(2, '0') : '05'}</span>
-                              <span>Voice Note</span>
-                            </div>
-                          </div>
-                        </div>
+                        <DecibelAudioPlayer
+                          msgId={msg.id}
+                          mediaUrl={msg.mediaUrl}
+                          duration={msg.duration || 5}
+                          isCustomer={isCustomer}
+                          activePlayingId={playingAudioId}
+                          onPlayStateChange={(id) => setPlayingAudioId(id)}
+                        />
                       )}
 
                       {/* Location Pin */}
@@ -573,38 +738,54 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
               </div>
             )}
 
-            {/* Voice Recording Bar with WhatsApp-style Full-Width Waveform */}
-            {isRecording ? (
-              <div className="flex items-center justify-between gap-2 sm:gap-3 p-2 sm:p-2.5 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700">
-                {/* Timer */}
-                <span className="text-xs font-mono font-bold text-slate-800 dark:text-slate-200 shrink-0 pl-1">
-                  0:{String(recordingSeconds).padStart(2, '0')}
-                </span>
+            {/* Voice Recording Error Alert if blocked */}
+            {recordingError && (
+              <div className="mb-2 p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 flex items-center justify-between text-xs text-rose-700 dark:text-rose-300">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                  <span>{recordingError}</span>
+                </div>
+                <button onClick={() => setRecordingError(null)} className="text-rose-500 hover:text-rose-800 p-0.5">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
 
-                {/* WhatsApp-Style Full Width Waveform Bar */}
+            {/* Voice Recording Bar with Real-Time Audio Decibel Waveform */}
+            {isRecording ? (
+              <div className="flex items-center justify-between gap-2 sm:gap-3 p-2 sm:p-2.5 bg-slate-50 dark:bg-slate-800/90 rounded-xl border border-emerald-300 dark:border-emerald-700/60 shadow-xs animate-in fade-in duration-150">
+                {/* Live Recording Indicator & Timer */}
+                <div className="flex items-center gap-2 shrink-0 pl-1">
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping shrink-0" />
+                  <span className="text-xs font-mono font-black text-slate-900 dark:text-slate-100">
+                    0:{String(recordingSeconds).padStart(2, '0')}
+                  </span>
+                </div>
+
+                {/* Real-time Frequency Analyser Waveform Bars */}
                 <div className="flex-1 flex items-center justify-center gap-0.5 sm:gap-1 h-7 px-1.5 overflow-hidden">
-                  {waveformBars.map((height, i) => (
+                  {liveWaveform.map((height, i) => (
                     <span
                       key={i}
-                      className="w-1 min-w-[2px] bg-emerald-500 rounded-full transition-all duration-150"
+                      className="w-1 min-w-[2px] bg-emerald-500 rounded-full transition-all duration-75"
                       style={{
-                        height: `${Math.max(4, ((height + (recordingSeconds * 7) + (i * 3)) % 22) + 4)}px`,
-                        opacity: 0.45 + (((i + recordingSeconds) % 6) * 0.1)
+                        height: `${height}px`,
+                        opacity: Math.max(0.4, height / 26)
                       }}
                     />
                   ))}
                 </div>
 
-                {/* Cancel (Red Trash/Cancel) & Send (Green) */}
+                {/* Cancel & Send Actions */}
                 <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                   <button
                     type="button"
-                    onClick={() => setIsRecording(false)}
+                    onClick={handleCancelVoiceRecording}
                     className="p-2 sm:px-3 sm:py-2 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-800 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
                     title="Cancel recording"
                   >
                     <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                    <span className="hidden sm:inline">Cancel</span>
+                    <span className="hidden sm:inline">Discard</span>
                   </button>
 
                   <button
@@ -614,7 +795,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
                     title="Send audio"
                   >
                     <SendHorizontal className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                    <span className="hidden sm:inline">Send</span>
+                    <span className="hidden sm:inline">Send Voice</span>
                   </button>
                 </div>
               </div>
@@ -636,9 +817,9 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => setIsRecording(true)}
-                  className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer shrink-0 flex items-center justify-center"
-                  title="Record Voice Note"
+                  onClick={startRecording}
+                  className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/40 dark:hover:text-emerald-400 transition-colors cursor-pointer shrink-0 flex items-center justify-center"
+                  title="Record Live Voice Note"
                 >
                   <Mic className="w-4 h-4" />
                 </button>

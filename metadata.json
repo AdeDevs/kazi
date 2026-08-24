@@ -1,6 +1,6 @@
 {
   "name": "KaziHub",
   "description": "Location-based marketplace connecting customers with trusted skilled professionals",
-  "requestFramePermissions": ["geolocation"],
+  "requestFramePermissions": ["geolocation", "microphone"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
