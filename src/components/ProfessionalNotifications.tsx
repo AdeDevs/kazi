@@ -85,8 +85,8 @@ export const ProfessionalNotifications: React.FC<ProfessionalNotificationsProps>
 
   return (
     <div className="w-full max-w-none space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      {/* Page Header - Mobile Only */}
+      <div className="flex md:hidden flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2.5">
             <h1 id="notifications-title" className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
@@ -114,6 +114,20 @@ export const ProfessionalNotifications: React.FC<ProfessionalNotificationsProps>
           </button>
         )}
       </div>
+
+      {/* Desktop Quick Action Bar */}
+      {unreadCount > 0 && onMarkAllAsRead && (
+        <div className="hidden md:flex items-center justify-end">
+          <button
+            type="button"
+            onClick={onMarkAllAsRead}
+            className="px-4 py-2 text-xs font-bold text-navy-800 dark:text-navy-300 hover:text-white bg-white hover:bg-navy-800 dark:bg-slate-900 dark:hover:bg-navy-800 border border-slate-200/80 dark:border-slate-800 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+          >
+            <CheckCheck className="w-4 h-4 text-navy-800 dark:text-navy-400 group-hover:text-white" />
+            <span>Mark all as read</span>
+          </button>
+        </div>
+      )}
 
       {/* Notifications Container */}
       {notifications.length === 0 ? (

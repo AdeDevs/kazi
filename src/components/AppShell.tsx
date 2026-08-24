@@ -283,11 +283,40 @@ export const AppShell: React.FC<AppShellProps> = ({
               </div>
             </div>
 
-            {/* Desktop View: Dynamic Title */}
+            {/* Desktop View: Dynamic Title & Contextual Badges */}
             <div className="hidden md:flex items-center gap-3 shrink-0">
               <h2 className="text-[19px] sm:text-xl font-bold tracking-tight text-navy-900 dark:text-zinc-100 capitalize">
-                {activeTab === 'explore' ? t('nav.home', currentLanguage) : activeTab}
+                {activeTab === 'explore' ? t('nav.home', currentLanguage) : 
+                 activeTab === 'bookings' ? (currentRole === 'customer' ? 'My Bookings & Jobs' : 'Service Jobs') :
+                 activeTab === 'jobs' ? 'Service Jobs' :
+                 activeTab === 'messages' ? 'Messages & Inquiries' :
+                 activeTab === 'notifications' ? 'Notifications & Alerts' :
+                 activeTab === 'settings' ? 'Account Settings' :
+                 activeTab === 'saved' ? 'Saved Professionals' :
+                 activeTab === 'profile' ? 'Profile & Preferences' : activeTab}
               </h2>
+
+              {/* Header Status Badges for Active Tab */}
+              {activeTab === 'messages' && unreadCount > 0 && (
+                <span className="px-2.5 py-0.5 rounded-full bg-brand-orange-500 text-white text-xs font-bold shadow-xs">
+                  {unreadCount} new
+                </span>
+              )}
+              {activeTab === 'notifications' && (notificationsUnreadCount || 0) > 0 && (
+                <span className="px-2.5 py-0.5 rounded-full bg-brand-orange-500 text-white text-xs font-bold shadow-xs">
+                  {notificationsUnreadCount} unread
+                </span>
+              )}
+              {activeTab === 'bookings' && (
+                <span className="px-2.5 py-0.5 rounded-full bg-navy-800/10 text-navy-800 dark:bg-navy-900/40 dark:text-navy-300 text-xs font-bold border border-navy-800/20">
+                  {bookings.length} {bookings.length === 1 ? 'Job' : 'Jobs'}
+                </span>
+              )}
+              {activeTab === 'jobs' && (
+                <span className="px-2.5 py-0.5 rounded-full bg-navy-800/10 text-navy-800 dark:bg-navy-900/40 dark:text-navy-300 text-xs font-bold border border-navy-800/20">
+                  {bookings.length} {bookings.length === 1 ? 'Job' : 'Jobs'}
+                </span>
+              )}
             </div>
 
             {/* Desktop View: Top Actions (Theme Toggle & Notifications) directly beside navigation */}

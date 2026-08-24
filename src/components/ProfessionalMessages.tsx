@@ -335,12 +335,14 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
   };
 
   return (
-    <div className="w-full max-w-none h-[calc(100vh-110px)] sm:h-[calc(100vh-140px)] min-h-[450px] flex gap-6 animate-in fade-in duration-300">
+    <div className="w-full max-w-none h-[calc(100vh-85px)] md:h-[calc(100vh-100px)] min-h-[450px] flex gap-4 lg:gap-6 animate-in fade-in duration-300">
       
       {/* Left Panel: Conversation List */}
-      <div className={`w-full lg:w-1/3 flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden ${selectedCustomerId ? 'hidden lg:flex' : 'flex'}`}>
-        <div className="p-4 border-b border-slate-200 dark:border-slate-800 space-y-4">
-          <h2 className="text-xl font-black text-slate-900 dark:text-white">Messages</h2>
+      <div className={`w-full lg:w-80 xl:w-96 flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden ${selectedCustomerId ? 'hidden lg:flex' : 'flex'}`}>
+        <div className="p-3.5 sm:p-4 border-b border-slate-200 dark:border-slate-800 space-y-3">
+          <div className="flex md:hidden items-center justify-between">
+            <h2 className="text-xl font-black text-slate-900 dark:text-white">Messages</h2>
+          </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input

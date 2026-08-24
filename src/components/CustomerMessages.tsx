@@ -462,7 +462,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
   // =========================================================================
   if (selectedProId && activeConversation) {
     return (
-      <div className="w-full max-w-5xl mx-auto flex flex-col h-[calc(100vh-100px)] md:h-[calc(100vh-112px)] space-y-2 animate-in fade-in duration-200 overflow-hidden">
+      <div className="w-full flex flex-col h-[calc(100vh-85px)] md:h-[calc(100vh-100px)] space-y-2 animate-in fade-in duration-200 overflow-hidden">
         {/* Navigation Breadcrumb / Back Action */}
         <div className="flex items-center justify-between shrink-0">
           <button
@@ -883,9 +883,9 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
   // VIEW 1: DEDICATED FULL-WIDTH INBOX LIST (LEVEL 1)
   // =========================================================================
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-5 animate-in fade-in duration-200">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="w-full space-y-5 animate-in fade-in duration-200">
+      {/* Header - Mobile Only */}
+      <div className="flex md:hidden flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2.5">
             <span>Messages</span>

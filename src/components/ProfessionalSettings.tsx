@@ -56,8 +56,8 @@ export const ProfessionalSettings: React.FC<ProfessionalSettingsProps> = ({
 
   return (
     <div className="w-full max-w-none space-y-6 animate-in fade-in duration-300">
-      {/* Page Header */}
-      <div className="space-y-1">
+      {/* Page Header - Mobile Only */}
+      <div className="space-y-1 md:hidden">
         <h1 id="settings-title" className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
           Settings
         </h1>

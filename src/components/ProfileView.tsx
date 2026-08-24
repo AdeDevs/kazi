@@ -182,10 +182,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   // CUSTOMER ACCOUNT HUB (Exact 7-section hierarchy)
   // =========================================================================
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-6 pb-16 animate-in fade-in duration-300">
+    <div className="w-full max-w-none space-y-6 pb-16 animate-in fade-in duration-300">
       
-      {/* Title Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* Title Header - Mobile Only */}
+      <div className="flex md:hidden flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">{t('profile.title', activeLang)}</h1>
           <p className="text-xs text-slate-500 dark:text-slate-400">{t('profile.subtitle', activeLang)}</p>

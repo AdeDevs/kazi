@@ -775,7 +775,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
           </div>
         )}
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex md:hidden flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">My Service Bookings & Jobs</h1>
             <p className="text-xs text-slate-500">Track active jobs, review completed work, inspect warranty windows, or rehire past experts.</p>
@@ -1381,7 +1381,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
 
     return (
       <div className="w-full max-w-none space-y-6 animate-in fade-in duration-300">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex md:hidden flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <span>Saved Professionals</span>
@@ -1564,7 +1564,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
 
     return (
       <div className="w-full max-w-none space-y-6 animate-in fade-in duration-300">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex md:hidden flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2.5">
               <span>Notifications & Alerts</span>
@@ -1594,6 +1594,27 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
             </button>
           )}
         </div>
+
+        {/* Desktop Quick Action Bar for Notifications (Mark all as read) */}
+        {unreadCount > 0 && (
+          <div className="hidden md:flex items-center justify-end pb-1">
+            <button
+              type="button"
+              onClick={() => {
+                const updated = notificationsList.map(n => ({ ...n, read: true, isRead: true }));
+                if (onUpdateCustomerNotifications) {
+                  onUpdateCustomerNotifications(updated);
+                } else {
+                  setNotifications(updated);
+                }
+              }}
+              className="px-4 py-2 rounded-xl bg-white hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+            >
+              <CheckCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span>Mark all as read</span>
+            </button>
+          </div>
+        )}
 
         {/* Unified Search Banner & Filter System */}
         <div className="p-2.5 sm:p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-3">
@@ -1763,7 +1784,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
 
     return (
       <div className="w-full max-w-none space-y-6 animate-in fade-in duration-300">
-        <div>
+        <div className="md:hidden">
           <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100">Account Settings</h1>
           <p className="text-xs text-slate-500">Manage your security preferences, notifications, password, and account actions.</p>
         </div>

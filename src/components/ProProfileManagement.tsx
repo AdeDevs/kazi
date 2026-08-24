@@ -400,7 +400,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-16 animate-in fade-in">
+    <div className="w-full max-w-none space-y-8 pb-16 animate-in fade-in">
       {/* Toast Notification */}
       {saveToast && (
         <div className="fixed top-5 right-5 z-50 px-4 py-3 rounded-2xl bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 font-bold text-xs shadow-2xl flex items-center gap-2 border border-slate-700 animate-in slide-in-from-top-2">
@@ -418,8 +418,8 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
         className="hidden"
       />
 
-      {/* Title Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Title Header - Mobile Only */}
+      <div className="flex md:hidden flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-navy-800/10 text-navy-800 dark:text-navy-300 text-xs font-bold mb-1">
             <Briefcase className="w-3.5 h-3.5" />
@@ -451,6 +451,26 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
             <span>Edit Profile</span>
           </button>
         </div>
+      </div>
+
+      {/* Desktop Quick Actions Bar */}
+      <div className="hidden md:flex items-center justify-end gap-2.5">
+        <button
+          type="button"
+          onClick={() => setShowPublicProfileModal(true)}
+          className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-200 font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center gap-2"
+        >
+          <Eye className="w-4 h-4 text-navy-800 dark:text-navy-400" />
+          <span>View Public Profile</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowEditInfoModal(true)}
+          className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-black text-xs shadow-md transition-all cursor-pointer flex items-center gap-2"
+        >
+          <Edit3 className="w-4 h-4" />
+          <span>Edit Profile</span>
+        </button>
       </div>
 
       {/* 1. PROFILE HEADER CARD */}
