@@ -21,15 +21,15 @@ export const Navbar: React.FC<NavbarProps> = ({
         
         {/* Brand Logo */}
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-none bg-navy-900 dark:bg-navy-100 flex items-center justify-center text-white dark:text-navy-900 border border-navy-900 dark:border-navy-100">
+          <div className="w-8 h-8 rounded-xl bg-navy-900 flex items-center justify-center text-white border border-navy-900 shadow-xs">
             <Wrench className="w-4 h-4" strokeWidth={1.5} />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-base font-bold tracking-tight text-navy-900 dark:text-navy-100">
+              <span className="text-base font-bold tracking-tight text-navy-900 dark:text-zinc-100">
                 Kazi<span className="text-brand-orange-600">Hub</span>
               </span>
-              <span className="hidden sm:inline-flex items-center px-1.5 py-0.2 text-[10px] font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+              <span className="hidden sm:inline-flex items-center px-1.5 py-0.2 text-[10px] font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 rounded-md">
                 Trade Marketplace
               </span>
             </div>
@@ -42,7 +42,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Messages Button */}
           <button
             onClick={onOpenChats}
-            className="relative p-2 rounded-none border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+            className="relative p-2 rounded-xl border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
             title="Messages" aria-label="Messages"
           >
             <MessageSquare className="w-4 h-4" strokeWidth={1.5} />
@@ -54,13 +54,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           {/* Role Switcher */}
-          <div className="flex items-center p-0.5 bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700">
+          <div className="flex items-center p-0.5 bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl">
             <button
               onClick={() => onSwitchRole('customer')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold transition-colors cursor-pointer rounded-none ${
+              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold transition-colors cursor-pointer rounded-lg ${
                 currentRole === 'customer'
-                  ? 'bg-navy-900 dark:bg-navy-100 text-white dark:text-navy-900'
-                  : 'text-zinc-600 dark:text-zinc-400 hover:text-navy-900 dark:hover:text-navy-200'
+                  ? 'bg-navy-900 text-white shadow-xs'
+                  : 'text-zinc-600 dark:text-zinc-400 hover:text-navy-900 dark:hover:text-zinc-200'
               }`}
             >
               <User className="w-3.5 h-3.5" strokeWidth={1.5} />
@@ -68,10 +68,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
             <button
               onClick={() => onSwitchRole('professional')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold transition-colors cursor-pointer rounded-none ${
+              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold transition-colors cursor-pointer rounded-lg ${
                 currentRole === 'professional'
-                  ? 'bg-navy-900 dark:bg-navy-100 text-white dark:text-navy-900'
-                  : 'text-zinc-600 dark:text-zinc-400 hover:text-navy-900 dark:hover:text-navy-200'
+                  ? 'bg-navy-900 text-white shadow-xs'
+                  : 'text-zinc-600 dark:text-zinc-400 hover:text-navy-900 dark:hover:text-zinc-200'
               }`}
             >
               <Briefcase className="w-3.5 h-3.5" strokeWidth={1.5} />

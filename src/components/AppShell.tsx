@@ -98,7 +98,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                     setIsMobileSidebarOpen(false);
                   }
                 }}
-                className="w-10 h-10 rounded-xl bg-navy-900 dark:bg-navy-100 flex items-center justify-center text-white dark:text-navy-900 border border-navy-900 dark:border-navy-100 shrink-0 cursor-pointer"
+                className="w-10 h-10 rounded-xl bg-navy-900 text-white border border-navy-900 shrink-0 cursor-pointer flex items-center justify-center shadow-xs"
                 title="KaziHub Home"
                 aria-label="KaziHub Home"
               >
@@ -107,7 +107,7 @@ export const AppShell: React.FC<AppShellProps> = ({
               <div className={`pl-2.5 whitespace-nowrap overflow-hidden transition-opacity duration-200 ${
                 isMobileSidebarOpen ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
               }`}>
-                <h1 className="text-[17px] font-bold tracking-tight text-navy-900 dark:text-navy-100">
+                <h1 className="text-[17px] font-bold tracking-tight text-navy-900 dark:text-zinc-100">
                   Kazi<span className="text-brand-orange-600">Hub</span>
                 </h1>
               </div>
@@ -140,10 +140,10 @@ export const AppShell: React.FC<AppShellProps> = ({
                         setIsMobileSidebarOpen(false);
                       }
                     }}
-                    className={`w-full relative flex items-center h-10 rounded-xl font-medium text-sm transition-colors cursor-pointer group/link ${
+                    className={`w-full relative flex items-center h-10 rounded-xl font-medium text-sm transition-all cursor-pointer group/link ${
                       isActive
-                        ? 'bg-navy-900 text-white dark:bg-navy-100 dark:text-navy-900 font-semibold'
-                        : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900 hover:text-navy-900 dark:hover:text-navy-100'
+                        ? 'bg-navy-900 text-white font-semibold shadow-xs'
+                        : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900/90 hover:text-navy-900 dark:hover:text-zinc-100'
                     }`}
                     title={item.label}
                     aria-label={item.label}
@@ -221,7 +221,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                 }}
                 className={`w-full relative flex items-center h-10 rounded-xl transition-all cursor-pointer select-none group/profile ${
                   activeTab === 'profile'
-                    ? 'bg-navy-900 text-white dark:bg-navy-100 dark:text-navy-900 font-semibold shadow-xs'
+                    ? 'bg-navy-900 text-white font-semibold shadow-xs'
                     : 'bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700'
                 }`}
                 title="View Profile"
@@ -240,19 +240,19 @@ export const AppShell: React.FC<AppShellProps> = ({
                   isMobileSidebarOpen ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
                 }`}>
                   <h4 className={`font-semibold text-xs truncate ${
-                    activeTab === 'profile' ? 'text-white dark:text-navy-900' : 'text-navy-900 dark:text-navy-100'
+                    activeTab === 'profile' ? 'text-white dark:text-white' : 'text-navy-900 dark:text-zinc-100'
                   }`}>
                     {currentRole === 'customer' ? 'Nneka Okonkwo' : activeProfessional.name}
                   </h4>
                   {currentRole === 'professional' ? (
                     <p className={`text-[10px] capitalize truncate ${
-                      activeTab === 'profile' ? 'text-zinc-300 dark:text-navy-700' : 'text-zinc-500 dark:text-zinc-400'
+                      activeTab === 'profile' ? 'text-zinc-300 dark:text-zinc-400' : 'text-zinc-500 dark:text-zinc-400'
                     }`}>
                       {activeProfessional.category}
                     </p>
                   ) : (
                     <p className={`text-[10px] truncate ${
-                      activeTab === 'profile' ? 'text-zinc-300 dark:text-navy-700' : 'text-zinc-500 dark:text-zinc-400'
+                      activeTab === 'profile' ? 'text-zinc-300 dark:text-zinc-400' : 'text-zinc-500 dark:text-zinc-400'
                     }`}>
                       Customer Profile
                     </p>
@@ -279,13 +279,13 @@ export const AppShell: React.FC<AppShellProps> = ({
                 <Menu className="w-5 h-5" strokeWidth={1.5} />
               </button>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-[17px] text-navy-900 dark:text-navy-100">Kazi<span className="text-brand-orange-600">Hub</span></span>
+                <span className="font-bold text-[17px] text-navy-900 dark:text-zinc-100">Kazi<span className="text-brand-orange-600">Hub</span></span>
               </div>
             </div>
 
             {/* Desktop View: Dynamic Title */}
             <div className="hidden md:flex items-center gap-3 shrink-0">
-              <h2 className="text-[19px] sm:text-xl font-bold tracking-tight text-navy-900 dark:text-navy-100 capitalize">
+              <h2 className="text-[19px] sm:text-xl font-bold tracking-tight text-navy-900 dark:text-zinc-100 capitalize">
                 {activeTab === 'explore' ? t('nav.home', currentLanguage) : activeTab}
               </h2>
             </div>

@@ -503,7 +503,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
               icon={<MapPin className="w-4 h-4 text-slate-300" />}
               options={neighborhoods.map(n => ({ value: n, label: n === 'All' ? 'All Neighborhoods' : n }))}
               className="min-w-[210px]"
-              buttonClassName="py-3 rounded-2xl bg-navy-900 border border-navy-700 text-white hover:border-brand-orange-500/50 focus:border-brand-orange-500 focus:ring-2 focus:ring-brand-orange-500/50 transition-colors"
+              buttonClassName="py-3 rounded-2xl bg-navy-900 border border-navy-700 text-white hover:border-navy-600 focus:border-navy-500 focus:ring-2 focus:ring-navy-500/50 transition-colors"
             />
           </div>
 
@@ -659,7 +659,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
             </div>
           ) : (
             filteredProfessionals.map(pro => (
-              <div key={pro.id} onClick={() => onSelectProForProfile(pro)} className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-xs flex flex-col justify-between group cursor-pointer hover:border-brand-orange-500/60 dark:hover:border-brand-orange-400 hover:shadow-md transition-all active:scale-[0.99] focus-within:ring-2 focus-within:ring-brand-orange-500/40">
+              <div key={pro.id} onClick={() => onSelectProForProfile(pro)} className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-xs flex flex-col justify-between group cursor-pointer hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md transition-all active:scale-[0.99]">
                 <div className="space-y-3">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
@@ -817,7 +817,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 ]}
                 placeholder="All Jobs"
                 className="w-full sm:w-auto lg:min-w-[170px]"
-                buttonClassName="py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-brand-orange-500/50"
+                buttonClassName="py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-slate-300 dark:hover:border-slate-600"
                 dropdownWidth="w-64"
               />
 
@@ -836,7 +836,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 ]}
                 placeholder="All Status"
                 className="w-full sm:w-auto lg:min-w-[190px]"
-                buttonClassName="py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-brand-orange-500/50"
+                buttonClassName="py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-slate-300 dark:hover:border-slate-600"
                 dropdownWidth="w-60"
                 align="right"
               />
@@ -1404,7 +1404,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 ]}
                 placeholder="All Categories"
                 className="w-full sm:w-auto lg:min-w-[190px]"
-                buttonClassName="py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-brand-orange-500/50"
+                buttonClassName="py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-slate-300 dark:hover:border-slate-600"
                 dropdownWidth="w-64"
               />
 
@@ -1455,7 +1455,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
               <div
                 key={pro.id}
                 onClick={() => onOpenChat(pro)}
-                className="p-3 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 sm:gap-4 hover:border-brand-orange-500/50 dark:hover:border-brand-orange-500/50 transition-all cursor-pointer shadow-xs active:scale-[0.99]"
+                className="p-3 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 sm:gap-4 hover:border-slate-300 dark:hover:border-slate-700 transition-all cursor-pointer shadow-xs active:scale-[0.99]"
               >
                 <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                   <img src={pro.avatar} alt={pro.name} className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl object-cover shrink-0" />
@@ -1551,7 +1551,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 ]}
                 placeholder="All Categories"
                 className="w-full sm:w-auto lg:min-w-[190px]"
-                buttonClassName="py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-brand-orange-500/50"
+                buttonClassName="py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-slate-300 dark:hover:border-slate-600"
                 dropdownWidth="w-64"
               />
 
@@ -1565,7 +1565,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 }))}
                 placeholder="All Neighborhoods"
                 className="w-full sm:w-auto lg:min-w-[175px]"
-                buttonClassName="py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-brand-orange-500/50"
+                buttonClassName="py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-slate-300 dark:hover:border-slate-600"
                 dropdownWidth="w-56 sm:w-60"
                 align="right"
               />
@@ -1627,7 +1627,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredSavedPros.map(pro => (
-              <div key={pro.id} onClick={() => onSelectProForProfile(pro)} className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-xs cursor-pointer hover:border-navy-600 dark:hover:border-navy-400 hover:shadow-md transition-all active:scale-[0.99] focus-within:ring-2 focus-within:ring-brand-orange-500/40">
+              <div key={pro.id} onClick={() => onSelectProForProfile(pro)} className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-xs cursor-pointer hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md transition-all active:scale-[0.99]">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     <img src={pro.avatar} alt={pro.name} className="w-14 h-14 rounded-2xl object-cover" />
@@ -1753,7 +1753,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 ]}
                 placeholder="All Notifications"
                 className="w-full sm:w-auto lg:min-w-[190px]"
-                buttonClassName="py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-brand-orange-500/50"
+                buttonClassName="py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-slate-300 dark:hover:border-slate-600"
                 dropdownWidth="w-56"
               />
 
@@ -2020,7 +2020,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                       { value: 'Oyo Town, Oyo State', label: 'Oyo Town, Oyo State' }
                     ]}
                     className="w-full"
-                    buttonClassName="py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-brand-orange-500/50"
+                    buttonClassName="py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
                   />
                 </div>
               </div>
@@ -2154,7 +2154,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 ]}
                 placeholder="All Categories"
                 className="w-full sm:w-auto lg:min-w-[190px]"
-                buttonClassName="py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-brand-orange-500/50"
+                buttonClassName="py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-slate-300 dark:hover:border-slate-600"
                 dropdownWidth="w-64"
               />
 
@@ -2168,7 +2168,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 }))}
                 placeholder="All Neighborhoods"
                 className="w-full sm:w-auto lg:min-w-[175px]"
-                buttonClassName="py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-brand-orange-500/50"
+                buttonClassName="py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-slate-300 dark:hover:border-slate-600"
                 dropdownWidth="w-56 sm:w-60"
                 align="right"
               />
@@ -2327,7 +2327,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
               <div
                 key={pro.id}
                 onClick={() => onSelectProForProfile(pro)}
-                className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/90 dark:border-slate-800 flex flex-col justify-between shadow-xs cursor-pointer hover:border-brand-orange-500/60 dark:hover:border-brand-orange-400 hover:shadow-md transition-all active:scale-[0.99] focus-within:ring-2 focus-within:ring-brand-orange-500/40 group"
+                className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/90 dark:border-slate-800 flex flex-col justify-between shadow-xs cursor-pointer hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md transition-all active:scale-[0.99] group"
               >
                 <div className="space-y-2.5">
                   {/* Top card header */}
