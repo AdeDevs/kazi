@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Professional, Category, Booking, ChatMessage } from '../types';
 import { CATEGORIES, CATEGORY_SERVICES_CATALOG } from '../mockData';
 import { CustomDropdown } from './CustomDropdown';
+import { CustomerMessages } from './CustomerMessages';
 import { formatCurrency, formatServicePrice } from '../utils';
 import { 
   Search, MapPin, Star, ShieldCheck, Sparkles, Filter, CheckCircle2, 
@@ -14,6 +15,9 @@ import {
 interface CustomerDashboardProps {
   professionals: Professional[];
   bookings: Booking[];
+  messages?: ChatMessage[];
+  onSendMessage?: (proId: string, text: string, mediaProps?: Partial<ChatMessage>) => void;
+  onMarkAsRead?: (proId: string) => void;
   onSelectProForProfile: (pro: Professional) => void;
   onOpenBooking: (pro: Professional) => void;
   onOpenChat: (pro: Professional) => void;
@@ -30,11 +34,15 @@ interface CustomerDashboardProps {
   onDeactivateAccount?: () => void;
   customerNotifications?: any[];
   onUpdateCustomerNotifications?: (notifs: any[]) => void;
+  initialMessageProId?: string;
 }
 
 export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   professionals,
   bookings,
+  messages = [],
+  onSendMessage,
+  onMarkAsRead,
   onSelectProForProfile,
   onOpenBooking,
   onOpenChat,
@@ -50,7 +58,8 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   onDeleteAccount,
   onDeactivateAccount,
   customerNotifications,
-  onUpdateCustomerNotifications
+  onUpdateCustomerNotifications,
+  initialMessageProId
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedNeighborhood, setSelectedNeighborhood] = useState<string>('All');
@@ -1335,146 +1344,17 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   }
 
   if (activeTab === 'messages') {
-    const messagesSearchTrimmed = messagesSearchTerm.trim().toLowerCase();
-    const chatPros = professionals.slice(0, 5); // Available conversation threads
-    const filteredChatPros = chatPros.filter(pro => {
-      if (messagesCategoryFilter !== 'All' && pro.category !== messagesCategoryFilter) {
-        return false;
-      }
-      if (messagesSearchTrimmed) {
-        const matches = 
-          pro.name.toLowerCase().includes(messagesSearchTrimmed) ||
-          pro.category.toLowerCase().includes(messagesSearchTrimmed) ||
-          pro.neighborhood.toLowerCase().includes(messagesSearchTrimmed) ||
-          pro.tagline.toLowerCase().includes(messagesSearchTrimmed);
-        if (!matches) return false;
-      }
-      return true;
-    });
-
     return (
-      <div className="w-full max-w-none space-y-6 animate-in fade-in duration-300">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <span>Messages & Chats</span>
-              <span className="px-2.5 py-0.5 rounded-full bg-brand-orange-500 text-white text-xs font-bold shadow-xs">
-                {chatPros.length} Active
-              </span>
-            </h1>
-            <p className="text-xs text-slate-500">Secure real-time conversations with your booked professionals.</p>
-          </div>
-        </div>
-
-        {/* Unified Search Banner & Filter System */}
-        <div className="p-2.5 sm:p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-3">
-          <div className="flex flex-col lg:flex-row gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                value={messagesSearchTerm}
-                onChange={(e) => setMessagesSearchTerm(e.target.value)}
-                placeholder="Search conversations by artisan name, trade, or location..."
-                className="w-full pl-10 pr-9 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-orange-500/50 focus:border-brand-orange-500"
-              />
-              {messagesSearchTerm && (
-                <button
-                  onClick={() => setMessagesSearchTerm('')}
-                  className="absolute right-3 top-3 p-0.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
-                  title="Clear Search"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-
-            <div className="flex flex-col sm:flex-row lg:items-center gap-2 w-full lg:w-auto">
-              <CustomDropdown
-                value={messagesCategoryFilter}
-                onChange={(val) => setMessagesCategoryFilter(val as Category | 'All')}
-                icon={<Briefcase className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
-                options={[
-                  { value: 'All', label: 'All Categories' },
-                  ...CATEGORIES.map(cat => ({
-                    value: cat,
-                    label: cat,
-                    icon: React.createElement(getCategoryIcon(cat), { className: "w-3.5 h-3.5 text-brand-orange-500" })
-                  }))
-                ]}
-                placeholder="All Categories"
-                className="w-full sm:w-auto lg:min-w-[190px]"
-                buttonClassName="py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-slate-300 dark:hover:border-slate-600"
-                dropdownWidth="w-64"
-              />
-
-              {(messagesSearchTerm || messagesCategoryFilter !== 'All') && (
-                <button
-                  onClick={() => {
-                    setMessagesSearchTerm('');
-                    setMessagesCategoryFilter('All');
-                  }}
-                  className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl text-xs font-bold bg-navy-800 hover:bg-navy-900 text-white shadow-xs transition-colors cursor-pointer shrink-0 text-center"
-                  title="Reset Filters"
-                >
-                  Reset
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Active Filters Summary */}
-          {(messagesSearchTerm || messagesCategoryFilter !== 'All') && (
-            <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs flex items-center flex-wrap gap-1.5">
-              <span className="font-extrabold text-navy-800 dark:text-navy-400 text-[11px]">Active:</span>
-              {messagesSearchTerm && (
-                <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold flex items-center gap-1 text-[11px]">
-                  "{messagesSearchTerm}"
-                  <X className="w-3 h-3 cursor-pointer text-slate-400 hover:text-rose-500" onClick={() => setMessagesSearchTerm('')} />
-                </span>
-              )}
-              {messagesCategoryFilter !== 'All' && (
-                <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold flex items-center gap-1 text-[11px]">
-                  {messagesCategoryFilter}
-                  <X className="w-3 h-3 cursor-pointer text-slate-400 hover:text-rose-500" onClick={() => setMessagesCategoryFilter('All')} />
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-
-        {filteredChatPros.length === 0 ? (
-          <div className="text-center py-10 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 space-y-4">
-            <MessageSquare className="w-12 h-12 text-slate-400 mx-auto" />
-            <h3 className="font-bold text-slate-800 dark:text-slate-200 text-base">No messages found</h3>
-            <p className="text-xs text-slate-500">No chat threads match your current search query or filter.</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {filteredChatPros.map((pro) => (
-              <div
-                key={pro.id}
-                onClick={() => onOpenChat(pro)}
-                className="p-3 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 sm:gap-4 hover:border-slate-300 dark:hover:border-slate-700 transition-all cursor-pointer shadow-xs active:scale-[0.99]"
-              >
-                <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                  <img src={pro.avatar} alt={pro.name} className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl object-cover shrink-0" />
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm truncate">{pro.name}</h3>
-                      {pro.verified && <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-navy-800 dark:text-navy-400 fill-navy-800/10 shrink-0" />}
-                    </div>
-                    <p className="text-[10px] sm:text-xs text-slate-500 truncate">{pro.category} • {pro.neighborhood}</p>
-                  </div>
-                </div>
-                <button className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-[10px] sm:text-xs shadow-xs cursor-pointer shrink-0 transition-colors">
-                  Open Chat
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      <CustomerMessages
+        professionals={professionals}
+        bookings={bookings}
+        messages={messages}
+        onSendMessage={onSendMessage}
+        onMarkAsRead={onMarkAsRead}
+        onOpenBooking={onOpenBooking}
+        onSelectProForProfile={onSelectProForProfile}
+        initialProId={initialMessageProId}
+      />
     );
   }
 

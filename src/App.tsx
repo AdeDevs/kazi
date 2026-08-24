@@ -563,6 +563,35 @@ export default function App() {
     setMessages(prev => [...prev, newMsg]);
   };
 
+  const handleCustomerSendMessage = (proId: string, text: string, mediaProps?: Partial<ChatMessage>) => {
+    const newMsg: ChatMessage = {
+      id: `m-${Date.now()}`,
+      senderId: 'c1',
+      senderName: 'Nneka Okonkwo',
+      senderRole: 'customer',
+      recipientId: proId,
+      message: text,
+      timestamp: new Date().toISOString(),
+      status: 'sent',
+      ...mediaProps
+    };
+    setMessages(prev => [...prev, newMsg]);
+  };
+
+  const handleCustomerMarkAsRead = useCallback((proId: string) => {
+    setMessages(prev => {
+      let changed = false;
+      const next = prev.map(m => {
+        if (m.senderId === proId && m.recipientId === 'c1' && m.status !== 'read') {
+          changed = true;
+          return { ...m, status: 'read' as const };
+        }
+        return m;
+      });
+      return changed ? next : prev;
+    });
+  }, []);
+
   return (
     <AppShell
       currentRole={currentRole}
@@ -612,9 +641,15 @@ export default function App() {
         <CustomerDashboard
           professionals={professionals}
           bookings={bookings.filter(b => b.customerId === 'c1')}
+          messages={messages}
+          onSendMessage={handleCustomerSendMessage}
+          onMarkAsRead={handleCustomerMarkAsRead}
           onSelectProForProfile={(pro) => setSelectedProForProfile(pro)}
           onOpenBooking={(pro) => setBookingTargetPro(pro)}
-          onOpenChat={(pro) => setChatTargetPro(pro)}
+          onOpenChat={(pro) => {
+            setChatTargetPro(pro);
+            handleTabChange('messages');
+          }}
           selectedCategoryFilter={selectedCategoryFilter}
           onSelectCategoryFilter={setSelectedCategoryFilter}
           onCancelBooking={handleCancelBooking}
@@ -627,6 +662,7 @@ export default function App() {
           onDeactivateAccount={handleDeactivateAccount}
           customerNotifications={customerNotifications}
           onUpdateCustomerNotifications={setCustomerNotifications}
+          initialMessageProId={chatTargetPro?.id}
         />
       ) : activeTab === 'notifications' ? (
         <ProfessionalNotifications
@@ -687,7 +723,7 @@ export default function App() {
       />
 
       <ChatModal
-        isOpen={!!chatTargetPro}
+        isOpen={!!chatTargetPro && activeTab !== 'messages'}
         onClose={() => setChatTargetPro(null)}
         professional={chatTargetPro}
         messages={currentChatMessages}

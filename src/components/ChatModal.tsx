@@ -493,7 +493,7 @@ export const ChatModal: React.FC<ChatModalProps> = ({
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div className="relative shrink-0">
-              <img src={professional.avatar} alt={professional.name} className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl object-cover shadow-xs border border-navy-800/30" />
+              <img src={professional.avatar} alt={professional.name} className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl object-cover shadow-xs border border-slate-200/80 dark:border-slate-700/80" />
               {professional.isAvailableNow && (
                 <span className="absolute bottom-0 right-0 w-3 h-3 sm:w-3.5 sm:h-3.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full animate-pulse"></span>
               )}
