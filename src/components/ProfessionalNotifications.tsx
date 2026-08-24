@@ -115,19 +115,27 @@ export const ProfessionalNotifications: React.FC<ProfessionalNotificationsProps>
         )}
       </div>
 
-      {/* Desktop Quick Action Bar */}
-      {unreadCount > 0 && onMarkAllAsRead && (
-        <div className="hidden md:flex items-center justify-end">
+      {/* Notifications List Header & Actions */}
+      <div className="flex items-center justify-between px-1">
+        <div className="text-xs font-bold text-slate-600 dark:text-slate-400">
+          {notifications.length} {notifications.length === 1 ? 'Notification' : 'Notifications'}
+          {unreadCount > 0 && (
+            <span className="ml-2 font-normal text-slate-400 dark:text-slate-500">
+              ({unreadCount} unread)
+            </span>
+          )}
+        </div>
+        {unreadCount > 0 && onMarkAllAsRead && (
           <button
             type="button"
             onClick={onMarkAllAsRead}
-            className="px-4 py-2 text-xs font-bold text-navy-800 dark:text-navy-300 hover:text-white bg-white hover:bg-navy-800 dark:bg-slate-900 dark:hover:bg-navy-800 border border-slate-200/80 dark:border-slate-800 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+            className="px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-brand-orange-600 dark:hover:text-brand-orange-400 bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
           >
-            <CheckCheck className="w-4 h-4 text-navy-800 dark:text-navy-400 group-hover:text-white" />
+            <CheckCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
             <span>Mark all as read</span>
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Notifications Container */}
       {notifications.length === 0 ? (

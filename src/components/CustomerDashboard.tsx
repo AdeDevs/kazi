@@ -1595,27 +1595,6 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
           )}
         </div>
 
-        {/* Desktop Quick Action Bar for Notifications (Mark all as read) */}
-        {unreadCount > 0 && (
-          <div className="hidden md:flex items-center justify-end pb-1">
-            <button
-              type="button"
-              onClick={() => {
-                const updated = notificationsList.map(n => ({ ...n, read: true, isRead: true }));
-                if (onUpdateCustomerNotifications) {
-                  onUpdateCustomerNotifications(updated);
-                } else {
-                  setNotifications(updated);
-                }
-              }}
-              className="px-4 py-2 rounded-xl bg-white hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
-            >
-              <CheckCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span>Mark all as read</span>
-            </button>
-          </div>
-        )}
-
         {/* Unified Search Banner & Filter System */}
         <div className="p-2.5 sm:p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-3">
           <div className="flex flex-col lg:flex-row gap-2">
@@ -1657,6 +1636,25 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 buttonClassName="py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-slate-300 dark:hover:border-slate-600"
                 dropdownWidth="w-56"
               />
+
+              {unreadCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updated = notificationsList.map(n => ({ ...n, read: true, isRead: true }));
+                    if (onUpdateCustomerNotifications) {
+                      onUpdateCustomerNotifications(updated);
+                    } else {
+                      setNotifications(updated);
+                    }
+                  }}
+                  className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+                  title="Mark all notifications as read"
+                >
+                  <CheckCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <span className="whitespace-nowrap">Mark all read</span>
+                </button>
+              )}
 
               {(notificationsSearchTerm || notificationsFilterType !== 'All') && (
                 <button
