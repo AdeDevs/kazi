@@ -3,13 +3,18 @@ import { Role, Professional, Booking, Category } from '../types';
 import { Language, t } from '../translations';
 import { 
   Wrench, Home, Calendar, MessageSquare,
-  Moon, Sun, Bell, Settings, Briefcase, LogOut,
-  Menu, Search, X
+  Moon, Sun, Bell, Settings, Briefcase, LogOut, User,
+  Menu, Search, X, LogIn, ShieldCheck, CheckCircle2, Layers
 } from 'lucide-react';
+import { ConfirmationModal } from './ui/ConfirmationModal';
+import { UserAvatar } from './ui/UserAvatar';
+import { useAuth } from '../context/AuthContext';
+import { AuthModal } from './AuthModal';
 
 interface AppShellProps {
   currentRole: Role;
   onSwitchRole: (role: Role) => void;
+  onOpenAuthPage?: (view?: 'signin' | 'signup') => void;
   unreadCount: number;
   notificationsUnreadCount?: number;
   onOpenChats: () => void;
@@ -31,6 +36,7 @@ interface AppShellProps {
 export const AppShell: React.FC<AppShellProps> = ({
   currentRole,
   onSwitchRole,
+  onOpenAuthPage,
   unreadCount,
   notificationsUnreadCount = 0,
   onOpenChats,
@@ -48,7 +54,9 @@ export const AppShell: React.FC<AppShellProps> = ({
   currentLanguage = 'English (Nigeria)' as Language,
   children
 }) => {
+  const { user, isAuthenticated, openAuthModal, logout: authLogout, loginAsDemo } = useAuth();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // Scroll to top whenever activeTab changes so new views don't inherit previous page scroll position
   useEffect(() => {
@@ -58,13 +66,27 @@ export const AppShell: React.FC<AppShellProps> = ({
   const pendingCount = bookings.filter(b => b.status === 'pending').length;
   const activeCount = bookings.filter(b => b.status === 'accepted' || b.status === 'in-progress').length;
 
+  const displayName = user 
+    ? `${user.first_name} ${user.last_name}`.trim() || user.email.split('@')[0]
+    : (currentRole === 'customer' ? 'Guest Client' : 'Guest Artisan');
+
+  const displayLocation = user?.state ? `${user.state}, Nigeria` : (currentRole === 'customer' ? 'Oyo, Nigeria' : activeProfessional.location);
+
+  const handleLogoutAction = () => {
+    authLogout();
+    if (onLogout) onLogout();
+  };
+
   const navItems = [
     { id: 'explore', label: t('nav.home', currentLanguage), icon: Home },
-    ...(currentRole === 'professional' ? [{ id: 'jobs', label: t('nav.jobs', currentLanguage), icon: Briefcase, badge: pendingCount > 0 ? pendingCount : undefined }] : []),
+    ...(currentRole === 'professional' ? [
+      { id: 'jobs', label: t('nav.jobs', currentLanguage), icon: Briefcase, badge: pendingCount > 0 ? pendingCount : undefined },
+      { id: 'gigs', label: 'My Gigs', icon: Layers }
+    ] : []),
     ...(currentRole === 'customer' ? [{ id: 'bookings', label: t('nav.bookings', currentLanguage), icon: Calendar }] : []),
     { id: 'messages', label: t('nav.messages', currentLanguage), icon: MessageSquare, badge: unreadCount > 0 ? unreadCount : undefined },
     { id: 'notifications', label: t('nav.notifications', currentLanguage), icon: Bell, badge: notificationsUnreadCount > 0 ? notificationsUnreadCount : undefined },
-    { id: 'settings', label: t('nav.settings', currentLanguage), icon: Settings },
+    { id: 'settings', label: 'Account Settings', icon: Settings },
   ];
 
   return (
@@ -190,11 +212,11 @@ export const AppShell: React.FC<AppShellProps> = ({
                 </button>
               </div>
   
-              {/* Logout Button */}
+              {/* Logout Button with slide up Confirmation Modal */}
               {onLogout && (
                 <button
                   type="button"
-                  onClick={onLogout}
+                  onClick={() => setShowLogoutConfirm(true)}
                   className="w-full relative flex items-center h-10 rounded-xl font-medium text-sm transition-colors cursor-pointer text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
                   title="Sign Out"
                   aria-label="Sign Out"
@@ -211,54 +233,66 @@ export const AppShell: React.FC<AppShellProps> = ({
               )}
 
               {/* User Profile Info Navigator Button */}
-              <button
-                type="button"
-                onClick={() => {
-                  onTabChange('profile');
-                  if (window.innerWidth < 768) {
-                    setIsMobileSidebarOpen(false);
-                  }
-                }}
-                className={`w-full relative flex items-center h-10 rounded-xl transition-all cursor-pointer select-none group/profile ${
-                  activeTab === 'profile'
-                    ? 'bg-navy-900 text-white font-semibold shadow-xs'
-                    : 'bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700'
-                }`}
-                title="View Profile"
-                aria-label="View Profile"
-              >
-                <div className="w-10 h-10 flex items-center justify-center shrink-0 absolute left-0 top-0">
-                  <div className="w-7 h-7 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700 shrink-0 flex items-center justify-center bg-zinc-100 dark:bg-zinc-800">
-                    <img
+              {user ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onTabChange('profile');
+                    if (window.innerWidth < 768) {
+                      setIsMobileSidebarOpen(false);
+                    }
+                  }}
+                  className={`w-full relative flex items-center h-10 rounded-xl transition-all cursor-pointer select-none group/profile ${
+                    activeTab === 'profile'
+                      ? 'bg-navy-900 text-white font-semibold shadow-xs'
+                      : 'bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700'
+                  }`}
+                  title="View Profile"
+                  aria-label="View Profile"
+                >
+                  <div className="w-10 h-10 flex items-center justify-center shrink-0 absolute left-0 top-0">
+                    <UserAvatar
                       src={currentRole === 'customer' ? customerAvatar : activeProfessional.avatar}
-                      alt="User"
-                      className="w-full h-full rounded-lg object-cover"
+                      name={displayName}
+                      sizeClassName="w-7 h-7 sm:w-8 sm:h-8"
+                      textClassName="text-[11px] font-black"
+                      roundedClassName="rounded-lg"
+                      verified={Boolean(user?.is_email_verified)}
                     />
                   </div>
-                </div>
-                <div className={`pl-12 pr-2 whitespace-nowrap overflow-hidden text-left transition-opacity duration-200 ${
-                  isMobileSidebarOpen ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
-                }`}>
-                  <h4 className={`font-semibold text-xs truncate ${
-                    activeTab === 'profile' ? 'text-white dark:text-white' : 'text-navy-900 dark:text-zinc-100'
+                  <div className={`pl-12 pr-2 whitespace-nowrap overflow-hidden text-left transition-opacity duration-200 ${
+                    isMobileSidebarOpen ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
                   }`}>
-                    {currentRole === 'customer' ? 'Nneka Okonkwo' : activeProfessional.name}
-                  </h4>
-                  {currentRole === 'professional' ? (
-                    <p className={`text-[10px] capitalize truncate ${
-                      activeTab === 'profile' ? 'text-zinc-300 dark:text-zinc-400' : 'text-zinc-500 dark:text-zinc-400'
-                    }`}>
-                      {activeProfessional.category}
-                    </p>
-                  ) : (
+                    <div className="flex items-center gap-1">
+                      <h4 className={`font-bold text-xs truncate ${
+                        activeTab === 'profile' ? 'text-white' : 'text-navy-900 dark:text-zinc-100'
+                      }`}>
+                        {displayName}
+                      </h4>
+                    </div>
                     <p className={`text-[10px] truncate ${
-                      activeTab === 'profile' ? 'text-zinc-300 dark:text-zinc-400' : 'text-zinc-500 dark:text-zinc-400'
+                      activeTab === 'profile' ? 'text-zinc-300' : 'text-zinc-500 dark:text-zinc-400'
                     }`}>
-                      Customer Profile
+                      {user.role === 'artisan' ? `Artisan • ${user.state || 'Oyo'}` : `Client • ${user.state || 'Oyo'}`}
                     </p>
-                  )}
-                </div>
-              </button>
+                  </div>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => openAuthModal('login')}
+                  className="w-full relative flex items-center h-10 rounded-xl bg-navy-900 hover:bg-navy-800 text-white font-bold text-xs transition-colors cursor-pointer justify-center shadow-xs"
+                >
+                  <div className="w-10 h-10 flex items-center justify-center shrink-0 absolute left-0 top-0">
+                    <LogIn className="w-4 h-4" />
+                  </div>
+                  <span className={`pl-10 whitespace-nowrap overflow-hidden text-left transition-opacity duration-200 ${
+                    isMobileSidebarOpen ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
+                  }`}>
+                    Sign In / Register
+                  </span>
+                </button>
+              )}
             </div>
           </div>
         </aside>
@@ -319,8 +353,19 @@ export const AppShell: React.FC<AppShellProps> = ({
               )}
             </div>
 
-            {/* Desktop View: Top Actions (Theme Toggle & Notifications) directly beside navigation */}
+            {/* Desktop View: Top Actions (Theme Toggle & Notifications) */}
             <div className="flex items-center gap-2 shrink-0 ml-auto">
+              {!user && (
+                <button
+                  type="button"
+                  onClick={() => onOpenAuthPage ? onOpenAuthPage('signin') : openAuthModal('login')}
+                  className="px-3.5 py-1.5 rounded-xl bg-navy-900 hover:bg-navy-800 text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>Sign In</span>
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={onToggleDarkMode}
@@ -354,6 +399,21 @@ export const AppShell: React.FC<AppShellProps> = ({
           </div>
         </main>
       </div>
+
+      {/* Universal Slide-Up Log Out Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={handleLogoutAction}
+        title="Sign Out of KaziHub"
+        description="Are you sure you want to sign out of your account on this device?"
+        confirmText="Yes, Sign Out"
+        cancelText="Stay Signed In"
+        type="logout"
+      />
+
+      {/* Global Auth Modal */}
+      <AuthModal />
     </div>
   );
 };

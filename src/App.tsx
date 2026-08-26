@@ -6,15 +6,32 @@ import { AppShell } from './components/AppShell';
 import { CustomerDashboard } from './components/CustomerDashboard';
 import { ProfessionalDashboard } from './components/ProfessionalDashboard';
 import { ProfileView } from './components/ProfileView';
+import { SettingsView } from './components/SettingsView';
 import { ProfessionalNotifications } from './components/ProfessionalNotifications';
 import { ProfessionalProfileModal } from './components/ProfessionalProfileModal';
 import { BookingModal } from './components/BookingModal';
-import { ChatModal } from './components/ChatModal';
+import { AuthPage } from './components/AuthPage';
+import { useAuth } from './context/AuthContext';
 
 export default function App() {
+  const { user, loginAsDemo } = useAuth();
+
   const [currentRole, setCurrentRole] = useState<Role>(() => {
     return (localStorage.getItem('kazihub_role') as Role) || 'customer';
   });
+
+  // Track if full-page auth portal is active
+  const [showFullAuthPage, setShowFullAuthPage] = useState<boolean>(false);
+  const [authPageInitialView, setAuthPageInitialView] = useState<'signin' | 'signup'>('signin');
+
+  // Sync role whenever auth user role changes
+  useEffect(() => {
+    if (user && user.role) {
+      const mappedRole: Role = user.role === 'artisan' ? 'professional' : 'customer';
+      setCurrentRole(mappedRole);
+      localStorage.setItem('kazihub_role', mappedRole);
+    }
+  }, [user]);
 
   const [activeTab, setActiveTab] = useState<string>('explore');
   const previousTabRef = useRef<string>('explore');
@@ -135,9 +152,65 @@ export default function App() {
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<Category | 'All'>('All');
   const [selectedMessageCustomerId, setSelectedMessageCustomerId] = useState<string | undefined>(undefined);
 
-  // Currently logged in professional partner view (default to p1 Babatunde Adebayo for testing Pro role)
+  // Currently logged in professional partner view
   const [activeProId, setActiveProId] = useState<string>('p1');
-  const activeProfessional = professionals.find(p => p.id === activeProId) || professionals[0];
+  const rawPro = professionals.find(p => p.id === activeProId) || professionals[0];
+
+  const [customerAvatar, setCustomerAvatar] = useState<string>(() => {
+    let avatarUrl = '';
+    if (user?.id) {
+      avatarUrl = localStorage.getItem(`kazihub_avatar_${user.id}`) || '';
+    } else {
+      avatarUrl = localStorage.getItem('kazihub_customer_avatar') || '';
+    }
+    if (avatarUrl.includes('images.unsplash.com/photo-1531746020798-e6953c6e8e04')) {
+      return '';
+    }
+    return avatarUrl;
+  });
+
+  useEffect(() => {
+    let stored = '';
+    if (user?.id) {
+      stored = localStorage.getItem(`kazihub_avatar_${user.id}`) || '';
+    } else {
+      stored = localStorage.getItem('kazihub_customer_avatar') || '';
+    }
+    if (stored.includes('images.unsplash.com/photo-1531746020798-e6953c6e8e04')) {
+      stored = '';
+    }
+    setCustomerAvatar(stored);
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user?.id) {
+      localStorage.setItem(`kazihub_avatar_${user.id}`, customerAvatar);
+    } else {
+      localStorage.setItem('kazihub_customer_avatar', customerAvatar);
+    }
+  }, [customerAvatar, user?.id]);
+
+  // Dynamically compute active professional details from logged-in user when in artisan mode
+  const activeProfessional: Professional = React.useMemo(() => {
+    if (user && user.role === 'artisan') {
+      let userCustomAvatar = customerAvatar || localStorage.getItem(`kazihub_avatar_${user.id}`) || '';
+      if (userCustomAvatar.includes('images.unsplash.com/photo-1531746020798-e6953c6e8e04')) {
+        userCustomAvatar = '';
+      }
+      return {
+        ...rawPro,
+        id: user.id || rawPro.id,
+        name: `${user.first_name} ${user.last_name}`.trim() || rawPro.name,
+        email: user.email || rawPro.email,
+        phone: user.phone_number || rawPro.phone,
+        location: user.state ? `${user.state}, Nigeria` : rawPro.location,
+        nin: user.nin || rawPro.nin,
+        verified: user.is_email_verified ?? rawPro.verified,
+        avatar: userCustomAvatar,
+      };
+    }
+    return rawPro;
+  }, [user, rawPro, customerAvatar]);
 
   const [notifications, setNotifications] = useState<Notification[]>(() => {
     const saved = localStorage.getItem(`kazihub_notifications_${activeProId}`);
@@ -249,14 +322,6 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(`kazihub_notifications_${activeProId}`, JSON.stringify(notifications));
   }, [notifications, activeProId]);
-
-  const [customerAvatar, setCustomerAvatar] = useState<string>(() => {
-    return localStorage.getItem('kazihub_customer_avatar') || 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=300';
-  });
-
-  useEffect(() => {
-    localStorage.setItem('kazihub_customer_avatar', customerAvatar);
-  }, [customerAvatar]);
 
   const [currentLanguage, setCurrentLanguage] = useState<Language>(() => {
     const saved = localStorage.getItem('kazihub_language');
@@ -437,12 +502,13 @@ export default function App() {
   const handleSendMessage = (text: string, mediaProps?: Partial<ChatMessage>) => {
     if (!chatTargetPro) return;
     const isCustomer = currentRole === 'customer';
+    const clientFullName = user ? `${user.first_name} ${user.last_name}`.trim() || user.email.split('@')[0] : 'Client';
     const newMsg: ChatMessage = {
       id: `m-${Date.now()}`,
-      senderId: isCustomer ? 'c1' : chatTargetPro.id,
-      senderName: isCustomer ? 'Nneka Okonkwo' : chatTargetPro.name,
+      senderId: isCustomer ? (user?.id || 'c1') : chatTargetPro.id,
+      senderName: isCustomer ? clientFullName : chatTargetPro.name,
       senderRole: currentRole,
-      recipientId: isCustomer ? chatTargetPro.id : 'c1',
+      recipientId: isCustomer ? chatTargetPro.id : (user?.id || 'c1'),
       message: text,
       timestamp: new Date().toISOString(),
       status: 'sent',
@@ -498,12 +564,13 @@ export default function App() {
   };
 
   const handleAddReview = (proId: string, rating: number, comment: string) => {
+    const clientFullName = user ? `${user.first_name} ${user.last_name}`.trim() || user.email.split('@')[0] : 'Client';
     setProfessionals(prev => prev.map(pro => {
       if (pro.id !== proId) return pro;
       const newReview = {
         id: `rev-${Date.now()}`,
-        customerId: 'c1',
-        customerName: 'Nneka Okonkwo',
+        customerId: user?.id || 'c1',
+        customerName: clientFullName,
         rating,
         comment,
         date: new Date().toISOString().split('T')[0]
@@ -536,6 +603,10 @@ export default function App() {
   };
 
   const handleUpdateProfile = (updated: Partial<Professional>) => {
+    if (updated.avatar && user?.id) {
+      localStorage.setItem(`kazihub_avatar_${user.id}`, updated.avatar);
+      setCustomerAvatar(updated.avatar);
+    }
     setProfessionals(prev => prev.map(p => {
       if (p.id === activeProfessional.id) {
         return { ...p, ...updated };
@@ -564,10 +635,11 @@ export default function App() {
   };
 
   const handleCustomerSendMessage = (proId: string, text: string, mediaProps?: Partial<ChatMessage>) => {
+    const clientFullName = user ? `${user.first_name} ${user.last_name}`.trim() || user.email.split('@')[0] : 'Client';
     const newMsg: ChatMessage = {
       id: `m-${Date.now()}`,
-      senderId: 'c1',
-      senderName: 'Nneka Okonkwo',
+      senderId: user?.id || 'c1',
+      senderName: clientFullName,
       senderRole: 'customer',
       recipientId: proId,
       message: text,
@@ -592,11 +664,44 @@ export default function App() {
     });
   }, []);
 
+  // 1. Strict Authentication Check: If user is signed out, render AuthPage directly
+  if (!user) {
+    return (
+      <AuthPage
+        initialView="signin"
+        onAuthSuccess={(role) => {
+          const mappedRole: Role = role === 'artisan' ? 'professional' : 'customer';
+          handleSwitchRole(mappedRole);
+          setActiveTab('explore');
+        }}
+      />
+    );
+  }
+
+  // 2. Explicit Full Auth Page view (if opened manually)
+  if (showFullAuthPage) {
+    return (
+      <AuthPage
+        initialView={authPageInitialView}
+        onAuthSuccess={(role) => {
+          const mappedRole: Role = role === 'artisan' ? 'professional' : 'customer';
+          handleSwitchRole(mappedRole);
+          setShowFullAuthPage(false);
+          setActiveTab('explore');
+        }}
+      />
+    );
+  }
+
   return (
     <AppShell
       currentRole={currentRole}
       currentLanguage={currentLanguage}
       onSwitchRole={handleSwitchRole}
+      onOpenAuthPage={(view) => {
+        setAuthPageInitialView(view || 'signin');
+        setShowFullAuthPage(true);
+      }}
       unreadCount={messages.filter(m => m.recipientId === (currentRole === 'customer' ? 'c1' : activeProfessional.id) && m.status !== 'read').length}
       notificationsUnreadCount={
         currentRole === 'customer'
@@ -620,6 +725,25 @@ export default function App() {
     >
       {activeTab === 'profile' ? (
         <ProfileView
+          currentRole={currentRole}
+          activeProfessional={activeProfessional}
+          bookings={bookings.filter(b => currentRole === 'customer' ? b.customerId === 'c1' : b.professionalId === activeProfessional.id)}
+          customerAvatar={customerAvatar}
+          onUpdateCustomerAvatar={setCustomerAvatar}
+          onUpdateProfile={handleUpdateProfile}
+          darkMode={darkMode}
+          onToggleDarkMode={() => setDarkMode(!darkMode)}
+          currentLanguage={currentLanguage}
+          onLanguageChange={setCurrentLanguage}
+          onLogout={handleLogout}
+          onDeleteAccount={() => {
+            if (window.confirm('Are you sure you want to permanently delete your KaziHub account? All bookings and history will be removed.')) {
+              handleLogout();
+            }
+          }}
+        />
+      ) : activeTab === 'settings' ? (
+        <SettingsView
           currentRole={currentRole}
           activeProfessional={activeProfessional}
           bookings={bookings.filter(b => currentRole === 'customer' ? b.customerId === 'c1' : b.professionalId === activeProfessional.id)}
@@ -663,6 +787,8 @@ export default function App() {
           customerNotifications={customerNotifications}
           onUpdateCustomerNotifications={setCustomerNotifications}
           initialMessageProId={chatTargetPro?.id}
+          darkMode={darkMode}
+          onToggleDarkMode={() => setDarkMode(!darkMode)}
         />
       ) : activeTab === 'notifications' ? (
         <ProfessionalNotifications
@@ -710,7 +836,11 @@ export default function App() {
         isOpen={!!selectedProForProfile}
         onClose={() => setSelectedProForProfile(null)}
         onOpenBooking={(pro) => setBookingTargetPro(pro)}
-        onOpenChat={(pro) => setChatTargetPro(pro)}
+        onOpenChat={(pro) => {
+          setSelectedProForProfile(null);
+          setChatTargetPro(pro);
+          handleTabChange('messages');
+        }}
         onAddReview={handleAddReview}
       />
 
@@ -719,17 +849,11 @@ export default function App() {
         isOpen={!!bookingTargetPro}
         onClose={() => setBookingTargetPro(null)}
         onSubmitBooking={handleCreateBooking}
-        onOpenChatWithPro={(pro) => setChatTargetPro(pro)}
-      />
-
-      <ChatModal
-        isOpen={!!chatTargetPro && activeTab !== 'messages'}
-        onClose={() => setChatTargetPro(null)}
-        professional={chatTargetPro}
-        messages={currentChatMessages}
-        onSendMessage={handleSendMessage}
-        currentUserRole={currentRole}
-        onMarkAsRead={handleMarkMessagesAsRead}
+        onOpenChatWithPro={(pro) => {
+          setBookingTargetPro(null);
+          setChatTargetPro(pro);
+          handleTabChange('messages');
+        }}
       />
     </AppShell>
   );

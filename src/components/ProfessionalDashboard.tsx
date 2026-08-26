@@ -5,7 +5,7 @@ import { CustomDropdown } from './CustomDropdown';
 import { formatCurrency } from '../utils';
 import { ProfessionalMessages } from './ProfessionalMessages';
 import { ProfessionalNotifications } from './ProfessionalNotifications';
-import { ProfessionalSettings } from './ProfessionalSettings';
+import { ProfessionalGigs } from './ProfessionalGigs';
 import { 
   Briefcase, DollarSign, Star, CheckCircle2, Clock, Plus, Trash2, 
   MapPin, ShieldCheck, User, Settings, Image as ImageIcon, Calendar, 
@@ -248,22 +248,10 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
     );
   }
 
-  // ================= RENDER DEDICATED SETTINGS PAGE =================
-  if (activeTab === 'settings') {
-    return (
-      <ProfessionalSettings
-        professional={professional}
-        darkMode={darkMode}
-        onToggleDarkMode={onToggleDarkMode}
-        onEditProfile={() => {
-          if (onTabChange) {
-            setHomeSubTab('profile');
-            onTabChange('explore');
-          }
-        }}
-        onLogout={onLogout || (() => {})}
-      />
-    );
+
+  // ================= RENDER DEDICATED GIGS PAGE =================
+  if (activeTab === 'gigs') {
+    return <ProfessionalGigs />;
   }
 
   // ================= RENDER DEDICATED JOBS PAGE =================
@@ -277,7 +265,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
         </div>
 
         {/* Page Navigation Tabs (Requests, Active, Completed) */}
-        <div className="flex overflow-x-auto no-scrollbar border-b border-slate-200 dark:border-slate-800 -mx-4 px-4 sm:mx-0 sm:px-0 gap-1">
+        <div className="flex overflow-x-auto no-scrollbar border-b border-slate-200 dark:border-slate-800 w-full gap-1">
           <button
             onClick={() => setJobsSubTab('requests')}
             className={`pb-3 pt-2.5 px-5 font-bold text-sm border-b-2 transition-colors cursor-pointer flex items-center gap-2 whitespace-nowrap select-none active:scale-95 shrink-0 ${
@@ -760,8 +748,14 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
 
         {/* View Details Modal */}
         {selectedBookingForDetails && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
-            <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-4 sm:p-5 space-y-4 shadow-2xl border border-slate-200 dark:border-slate-800 relative animate-in fade-in zoom-in-95 duration-200 my-8">
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto"
+            onClick={() => setSelectedBookingForDetails(null)}
+          >
+            <div 
+              className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-4 sm:p-5 space-y-4 shadow-2xl border border-slate-200 dark:border-slate-800 relative animate-in fade-in zoom-in-95 duration-200 my-8"
+              onClick={(e) => e.stopPropagation()}
+            >
               <button
                 onClick={() => setSelectedBookingForDetails(null)}
                 className="absolute top-6 right-6 p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white cursor-pointer"
@@ -852,8 +846,14 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
 
         {/* Job Completion Submission Modal */}
         {completingJob && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
-            <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-4 sm:p-5 space-y-4 shadow-2xl border border-slate-200 dark:border-slate-800 relative animate-in fade-in zoom-in-95 duration-200 my-8">
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto"
+            onClick={() => setCompletingJob(null)}
+          >
+            <div 
+              className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-4 sm:p-5 space-y-4 shadow-2xl border border-slate-200 dark:border-slate-800 relative animate-in fade-in zoom-in-95 duration-200 my-8"
+              onClick={(e) => e.stopPropagation()}
+            >
               <button
                 onClick={() => setCompletingJob(null)}
                 className="absolute top-6 right-6 p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white cursor-pointer"
@@ -1138,7 +1138,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
       </div>
 
       {/* Home Tabs */}
-      <div className="flex overflow-x-auto no-scrollbar border-b border-slate-200 dark:border-slate-800 -mx-4 px-4 sm:mx-0 sm:px-0 gap-1">
+      <div className="flex overflow-x-auto no-scrollbar border-b border-slate-200 dark:border-slate-800 w-full gap-1">
         <button
           onClick={() => setHomeSubTab('overview')}
           className={`pb-3 pt-2.5 px-5 font-bold text-sm border-b-2 transition-colors cursor-pointer whitespace-nowrap select-none active:scale-95 shrink-0 flex items-center gap-2 ${

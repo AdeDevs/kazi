@@ -55,6 +55,14 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
 }) => {
   // Selected conversation (null = Inbox list view, string = dedicated Full-Screen Chat page)
   const [selectedProId, setSelectedProId] = useState<string | null>(initialProId || null);
+
+  // Sync selectedProId whenever initialProId prop changes (e.g. clicking Message from explore/booking cards)
+  useEffect(() => {
+    if (initialProId) {
+      setSelectedProId(initialProId);
+    }
+  }, [initialProId]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTab, setFilterTab] = useState<'all' | 'unread' | 'active_jobs'>('all');
   const [inputText, setInputText] = useState('');
@@ -285,7 +293,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
     setShowAttachmentMenu(false);
   };
 
-  // Assemble conversations for professionals who actually have messages or active bookings
+  // Assemble conversations for professionals who have messages, active bookings, or is currently selected to chat
   const conversations = useMemo(() => {
     return professionals
       .map(pro => {
@@ -308,8 +316,10 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
           relatedBooking
         } as ConversationItem;
       })
-      .filter(conv => conv.lastMessage !== null || conv.relatedBooking !== undefined)
+      .filter(conv => conv.lastMessage !== null || conv.relatedBooking !== undefined || conv.proId === selectedProId)
       .sort((a, b) => {
+        if (a.proId === selectedProId && b.proId !== selectedProId) return -1;
+        if (b.proId === selectedProId && a.proId !== selectedProId) return 1;
         const timeA = a.lastMessage ? new Date(a.lastMessage.timestamp).getTime() : 0;
         const timeB = b.lastMessage ? new Date(b.lastMessage.timestamp).getTime() : 0;
         if (timeA !== timeB) return timeB - timeA;
@@ -317,7 +327,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
         if (!a.relatedBooking && b.relatedBooking) return 1;
         return b.professional.rating - a.professional.rating;
       });
-  }, [professionals, messages, bookings]);
+  }, [professionals, messages, bookings, selectedProId]);
 
   // Filter conversations
   const filteredConversations = useMemo(() => {
@@ -340,9 +350,29 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
     });
   }, [conversations, filterTab, searchQuery]);
 
+  const activePro = useMemo(() => {
+    if (!selectedProId) return null;
+    return professionals.find(p => p.id === selectedProId) || null;
+  }, [professionals, selectedProId]);
+
   const activeConversation = useMemo(() => {
-    return conversations.find(c => c.proId === selectedProId) || null;
-  }, [conversations, selectedProId]);
+    if (!selectedProId) return null;
+    const found = conversations.find(c => c.proId === selectedProId);
+    if (found) return found;
+    if (activePro) {
+      const relatedBooking = bookings
+        .filter(b => b.professionalId === activePro.id)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+      return {
+        proId: activePro.id,
+        professional: activePro,
+        lastMessage: null,
+        unreadCount: 0,
+        relatedBooking
+      } as ConversationItem;
+    }
+    return null;
+  }, [conversations, selectedProId, activePro, bookings]);
 
   const activeMessages = useMemo(() => {
     if (!selectedProId) return [];

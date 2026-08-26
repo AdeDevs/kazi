@@ -42,35 +42,59 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/70 backdrop-blur-xs">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-3xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 dark:border-slate-800 relative flex flex-col">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/70 backdrop-blur-xs"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white dark:bg-slate-900 rounded-2xl max-w-3xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 dark:border-slate-800 relative flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
         
         {/* Cover / Header section */}
-        <div className="relative bg-gradient-to-r from-navy-950 via-navy-900 to-slate-900 text-white p-4 sm:p-5 rounded-t-2xl">
+        <div className="relative bg-gradient-to-r from-navy-950 via-navy-900 to-slate-900 text-white p-4 sm:p-6 rounded-t-2xl">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 sm:top-6 sm:right-6 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer z-10"
+            title="Close Profile"
+            aria-label="Close Profile"
           >
             <X className="w-5 h-5" />
           </button>
 
-          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 mt-4 sm:mt-0">
-            <div className="relative flex-shrink-0">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 mt-2 sm:mt-0">
+            <div className="relative shrink-0">
               <img
                 src={professional.avatar}
                 alt={professional.name}
                 className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-4 border-white/20 dark:border-slate-800/80 shadow-xl"
               />
               {professional.isAvailableNow && (
-                <span className="absolute -bottom-1 -right-1 px-2.5 py-0.5 bg-emerald-500 text-white text-[10px] font-bold rounded-full border-2 border-white dark:border-slate-900 shadow">
-                  Available Now
-                </span>
+                <>
+                  {/* Mobile Pulse Dot */}
+                  <span className="sm:hidden absolute -bottom-1 -right-1 flex h-4 w-4">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-500 border-2 border-white dark:border-slate-900"></span>
+                  </span>
+                  {/* Desktop Full Badge */}
+                  <span className="hidden sm:inline-flex absolute -bottom-1 -right-1 px-2.5 py-0.5 bg-emerald-500 text-white text-[10px] font-bold rounded-full border-2 border-white dark:border-slate-900 shadow">
+                    Available Now
+                  </span>
+                </>
               )}
             </div>
 
             <div className="text-center sm:text-left flex-1 min-w-0">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:flex-wrap justify-center sm:justify-start gap-2 mb-2">
-                <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white truncate">{professional.name}</h2>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:flex-wrap justify-center sm:justify-start gap-2 mb-1.5">
+                <div className="flex items-center justify-center sm:justify-start gap-2">
+                  <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white truncate">{professional.name}</h2>
+                  {professional.isAvailableNow && (
+                    <span className="sm:hidden relative flex h-2.5 w-2.5 shrink-0" title="Available Now">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                    </span>
+                  )}
+                </div>
                 {professional.verified && (
                   <span className="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 rounded-full bg-navy-800/80 text-navy-200 text-[10px] sm:text-xs font-semibold border border-navy-700 self-center">
                     <ShieldCheck className="w-3.5 h-3.5 text-navy-300" /> Verified Pro
@@ -80,14 +104,14 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
               <p className="text-navy-300 font-medium text-xs sm:text-sm mb-3 line-clamp-2">{professional.tagline}</p>
               
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-2 text-[11px] sm:text-xs text-slate-300">
-                <span className="flex items-center gap-1 bg-white/5 px-2 py-1 rounded-lg">
-                  <MapPin className="w-3.5 h-3.5 text-navy-400 flex-shrink-0" /> <span className="truncate max-w-[150px]">{professional.neighborhood}, {professional.location}</span>
+                <span className="flex items-center gap-1 bg-white/5 px-2.5 py-1 rounded-lg">
+                  <MapPin className="w-3.5 h-3.5 text-navy-400 shrink-0" /> <span className="truncate max-w-[150px]">{professional.neighborhood}, {professional.location}</span>
                 </span>
-                <span className="flex items-center gap-1 bg-white/5 px-2 py-1 rounded-lg">
-                  <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 flex-shrink-0" /> <strong className="text-white">{professional.rating}</strong> ({professional.reviewCount} reviews)
+                <span className="flex items-center gap-1 bg-white/5 px-2.5 py-1 rounded-lg">
+                  <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" /> <strong className="text-white">{professional.rating}</strong> ({professional.reviewCount} reviews)
                 </span>
-                <span className="flex items-center gap-1 bg-white/5 px-2 py-1 rounded-lg">
-                  <Briefcase className="w-3.5 h-3.5 text-navy-400 flex-shrink-0" /> {professional.completedJobs} jobs
+                <span className="flex items-center gap-1 bg-white/5 px-2.5 py-1 rounded-lg">
+                  <Briefcase className="w-3.5 h-3.5 text-navy-400 shrink-0" /> {professional.completedJobs} jobs
                 </span>
               </div>
             </div>
@@ -497,8 +521,14 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
 
         {/* Complaint / Dispute Modal */}
         {showComplaintModal && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in">
-            <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl p-4 sm:p-5 space-y-5 border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+          <div 
+            className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in"
+            onClick={() => setShowComplaintModal(false)}
+          >
+            <div 
+              className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl p-4 sm:p-5 space-y-5 border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
               <button
                 onClick={() => setShowComplaintModal(false)}
                 className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"

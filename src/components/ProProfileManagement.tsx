@@ -3,12 +3,15 @@ import { Professional, ServiceItem, PortfolioItem, ServicePricingType, Category 
 import { Language, t, SUPPORTED_LANGUAGES } from '../translations';
 import { formatCurrency } from '../utils';
 import { CATEGORIES } from '../mockData';
+import { ConfirmationModal } from './ui/ConfirmationModal';
+import { UserAvatar } from './ui/UserAvatar';
 import { 
   User, Briefcase, Star, MapPin, Mail, Phone, Calendar, ShieldCheck, 
   Lock, Bell, CheckCircle2, Settings, Camera, Upload, Edit3, Check, 
   ChevronRight, Sliders, Moon, Sun, Globe, AlertTriangle, Trash2, X, Key, LogOut,
   Plus, Eye, Award, Sparkles, Layers, DollarSign, Clock, Navigation, Shield, Radio,
-  ToggleLeft, ToggleRight, CheckSquare, RefreshCw, Image, FileText, Smartphone
+  ToggleLeft, ToggleRight, CheckSquare, RefreshCw, Image, FileText, Smartphone,
+  Snowflake, ShieldAlert
 } from 'lucide-react';
 
 interface ProProfileManagementProps {
@@ -117,9 +120,30 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
   const [hidePhoneUntilBooked, setHidePhoneUntilBooked] = useState(false);
   const [twoFactorAuth, setTwoFactorAuth] = useState(true);
   const [accountDeactivated, setAccountDeactivated] = useState(false);
+  const [isFrozen, setIsFrozen] = useState(false);
+  const [showFreezeModal, setShowFreezeModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // Availability
   const [isAvailable, setIsAvailable] = useState(activeProfessional.isAvailableNow);
+
+  // Sync state when activeProfessional prop changes
+  React.useEffect(() => {
+    setName(activeProfessional.name);
+    setTitle(activeProfessional.tagline || `${activeProfessional.category} Specialist`);
+    setTagline(activeProfessional.tagline);
+    setBio(activeProfessional.bio);
+    setPhone(activeProfessional.phone);
+    setEmail(activeProfessional.email);
+    setCategory(activeProfessional.category);
+    setPrimaryLocation(
+      activeProfessional.neighborhood ? `${activeProfessional.neighborhood}, ${activeProfessional.location}` : activeProfessional.location
+    );
+    if (activeProfessional.skills) setSkills(activeProfessional.skills);
+    if (activeProfessional.services) setServices(activeProfessional.services);
+    if (activeProfessional.portfolio) setPortfolio(activeProfessional.portfolio);
+    setIsAvailable(activeProfessional.isAvailableNow);
+  }, [activeProfessional]);
 
   // Modals & UI States
   const [showEditInfoModal, setShowEditInfoModal] = useState(false);
@@ -149,11 +173,6 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
   const [certIssuer, setCertIssuer] = useState('');
   const [certYear, setCertYear] = useState('2023');
 
-  // Other Modals
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [showLanguageModal, setShowLanguageModal] = useState(false);
-  const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Form notifications
   const [saveToast, setSaveToast] = useState<string | null>(null);
@@ -400,7 +419,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
   };
 
   return (
-    <div className="w-full max-w-none space-y-8 pb-16 animate-in fade-in">
+    <div className="w-full max-w-none space-y-6 animate-in fade-in">
       {/* Toast Notification */}
       {saveToast && (
         <div className="fixed top-5 right-5 z-50 px-4 py-3 rounded-2xl bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 font-bold text-xs shadow-2xl flex items-center gap-2 border border-slate-700 animate-in slide-in-from-top-2">
@@ -432,45 +451,6 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
             Customize how customers see your services, pricing, portfolio, and credentials across KaziHub.
           </p>
         </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={() => setShowPublicProfileModal(true)}
-            className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-200 font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center gap-2"
-          >
-            <Eye className="w-4 h-4 text-navy-800 dark:text-navy-400" />
-            <span>View Public Profile</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowEditInfoModal(true)}
-            className="px-4 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-black text-xs shadow-md transition-all cursor-pointer flex items-center gap-2"
-          >
-            <Edit3 className="w-4 h-4" />
-            <span>Edit Profile</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Desktop Quick Actions Bar */}
-      <div className="hidden md:flex items-center justify-end gap-2.5">
-        <button
-          type="button"
-          onClick={() => setShowPublicProfileModal(true)}
-          className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-200 font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center gap-2"
-        >
-          <Eye className="w-4 h-4 text-navy-800 dark:text-navy-400" />
-          <span>View Public Profile</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowEditInfoModal(true)}
-          className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-black text-xs shadow-md transition-all cursor-pointer flex items-center gap-2"
-        >
-          <Edit3 className="w-4 h-4" />
-          <span>Edit Profile</span>
-        </button>
       </div>
 
       {/* 1. PROFILE HEADER CARD */}
@@ -480,10 +460,13 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
           <div className="flex flex-col sm:flex-row items-center text-center sm:text-left gap-5">
             {/* Avatar with Upload */}
             <div className="relative group shrink-0">
-              <img
+              <UserAvatar
                 src={activeProfessional.avatar}
-                alt={activeProfessional.name}
-                className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover ring-4 ring-navy-800/10 dark:ring-slate-700 shadow-md"
+                name={activeProfessional.name}
+                sizeClassName="w-24 h-24 sm:w-28 sm:h-28"
+                textClassName="text-3xl font-black"
+                roundedClassName="rounded-2xl"
+                verified={activeProfessional.verified}
               />
               <button
                 type="button"
@@ -535,42 +518,16 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
             </div>
           </div>
 
-          {/* Right: Availability Toggle & Quick Status */}
-          <div className="w-full md:w-auto bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 space-y-3 shrink-0">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <span className={`w-3 h-3 rounded-full ${isAvailable ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></span>
-                <span className="text-xs font-extrabold text-slate-900 dark:text-slate-100">
-                  {isAvailable ? 'Available Now' : 'Offline Mode'}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={handleToggleAvailability}
-                className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  isAvailable
-                    ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300 hover:bg-rose-500/20'
-                    : 'bg-emerald-500 text-white hover:bg-emerald-600'
-                }`}
-              >
-                {isAvailable ? (
-                  <>
-                    <ToggleRight className="w-4 h-4" />
-                    <span>Go Offline</span>
-                  </>
-                ) : (
-                  <>
-                    <ToggleLeft className="w-4 h-4" />
-                    <span>Go Online</span>
-                  </>
-                )}
-              </button>
-            </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              {isAvailable
-                ? 'Your profile is highlighted in customer nearby searches for immediate emergency & scheduled bookings.'
-                : 'Turn online to receive live customer booking notifications and quotes.'}
-            </p>
+          {/* Right: Quick Actions */}
+          <div className="w-full md:w-auto flex flex-col justify-center shrink-0 h-full mt-2 md:mt-0">
+            <button
+              type="button"
+              onClick={() => setShowEditInfoModal(true)}
+              className="w-full md:w-auto px-6 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-black text-sm shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+            >
+              <Edit3 className="w-4 h-4" />
+              <span>Edit Profile</span>
+            </button>
           </div>
         </div>
 
@@ -1078,176 +1035,85 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
             </div>
           )}
         </div>
-      </div>
 
-      {/* 8. PROFILE SETTINGS */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl p-3.5 sm:p-4 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
-        <div className="flex items-center gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
-          <div className="w-10 h-10 rounded-2xl bg-slate-800/10 text-slate-800 dark:text-slate-200 flex items-center justify-center shrink-0">
-            <Settings className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="font-black text-lg text-slate-900 dark:text-slate-100">Profile & Notification Settings</h2>
-            <p className="text-xs text-slate-500">Notifications, security preferences, language, and display mode</p>
-          </div>
-        </div>
-
-        <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
-          {/* Notifications */}
-          <div className="py-3.5 flex items-center justify-between">
-            <div>
-              <p className="font-bold text-slate-900 dark:text-slate-100">Push Notifications</p>
-              <p className="text-[11px] text-slate-500">Alerts for new customer booking requests and instant chat messages</p>
+        {/* Account Actions Section */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+          <div className="flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+            <div className="w-8 h-8 rounded-xl bg-navy-800/10 text-navy-800 dark:text-navy-400 flex items-center justify-center">
+              <ShieldAlert className="w-4 h-4" />
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={pushNotifications}
-                onChange={(e) => setPushNotifications(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-navy-800"></div>
-            </label>
+            <div>
+              <h3 className="font-extrabold text-sm text-slate-900 dark:text-slate-100">Account Actions</h3>
+              <p className="text-[11px] text-slate-400">Manage account status, freeze visibility, or request permanent deletion.</p>
+            </div>
           </div>
 
-          <div className="py-3.5 flex items-center justify-between">
-            <div>
-              <p className="font-bold text-slate-900 dark:text-slate-100">Email Alerts</p>
-              <p className="text-[11px] text-slate-500">Weekly earnings summaries and escrow payout notifications</p>
+          <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+            {/* Freeze / Unfreeze Account */}
+            <div className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <p className="font-bold text-slate-900 dark:text-slate-100">
+                    {isFrozen ? 'Account is Currently Frozen' : 'Freeze Artisan Account'}
+                  </p>
+                  {isFrozen && (
+                    <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold">
+                      Frozen
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-500 max-w-lg leading-relaxed">
+                  {isFrozen
+                    ? 'Your profile is temporarily paused and hidden from search results. Reactivate anytime to resume taking jobs.'
+                    : 'Temporarily pause taking jobs and hide your profile from search without losing your reviews, portfolio, or credentials.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowFreezeModal(true)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                  isFrozen
+                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
+                    : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 border border-amber-500/30'
+                }`}
+              >
+                <Snowflake className="w-3.5 h-3.5" />
+                <span>{isFrozen ? 'Unfreeze Account' : 'Freeze Account'}</span>
+              </button>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={emailAlerts}
-                onChange={(e) => setEmailAlerts(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-navy-800"></div>
-            </label>
-          </div>
 
-          {/* Privacy */}
-          <div className="py-3.5 flex items-center justify-between">
-            <div>
-              <p className="font-bold text-slate-900 dark:text-slate-100">Profile Visibility</p>
-              <p className="text-[11px] text-slate-500">Control who can discover your professional listing</p>
+            {/* Delete Account */}
+            <div className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="space-y-0.5">
+                <p className="font-bold text-rose-600 dark:text-rose-400">Delete Account Permanently</p>
+                <p className="text-[11px] text-slate-500 max-w-lg leading-relaxed">
+                  Permanently delete your artisan profile, all service listings, reviews, and completed job history. This action cannot be reversed.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(true)}
+                className="px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 font-bold text-xs border border-rose-200 dark:border-rose-900/50 transition-colors cursor-pointer shrink-0 flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete Account</span>
+              </button>
             </div>
-            <select
-              value={profileVisibility}
-              onChange={(e) => setProfileVisibility(e.target.value as any)}
-              className="px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200"
-            >
-              <option value="public">Public to All Customers</option>
-              <option value="verified_only">Verified Customers Only</option>
-            </select>
-          </div>
-
-          {/* Security & Password */}
-          <div className="py-3.5 flex items-center justify-between">
-            <div>
-              <p className="font-bold text-slate-900 dark:text-slate-100">Account Password</p>
-              <p className="text-[11px] text-slate-500">Update login password and security key</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowPasswordModal(true)}
-              className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-navy-800 dark:text-navy-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-            >
-              Change Password
-            </button>
-          </div>
-
-          {/* Language Selector */}
-          <div className="py-3.5 flex items-center justify-between">
-            <div>
-              <p className="font-bold text-slate-900 dark:text-slate-100">{t('pref.language', activeLang)}</p>
-              <p className="text-[11px] text-slate-500 font-semibold text-navy-800 dark:text-navy-400">{activeLang}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowLanguageModal(true)}
-              className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer flex items-center gap-1.5"
-            >
-              <Globe className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400" />
-              <span>Change Language</span>
-            </button>
-          </div>
-
-          {/* Appearance Toggle */}
-          <div className="py-3.5 flex items-center justify-between">
-            <div>
-              <p className="font-bold text-slate-900 dark:text-slate-100">Appearance Theme</p>
-              <p className="text-[11px] text-slate-500">Currently: <strong className="text-slate-700 dark:text-slate-300">{darkMode ? 'Dark Mode' : 'Light Mode'}</strong></p>
-            </div>
-            <button
-              type="button"
-              onClick={onToggleDarkMode}
-              className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 transition-colors cursor-pointer flex items-center gap-1.5"
-            >
-              {darkMode ? (
-                <>
-                  <Sun className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Light Mode</span>
-                </>
-              ) : (
-                <>
-                  <Moon className="w-3.5 h-3.5 text-slate-600" />
-                  <span>Dark Mode</span>
-                </>
-              )}
-            </button>
           </div>
         </div>
       </div>
-
-      {/* 9. ACCOUNT ACTIONS */}
-      <div className="bg-rose-500/5 dark:bg-rose-950/20 rounded-2xl p-3.5 sm:p-4 border border-rose-500/20 dark:border-rose-900/40 space-y-4">
-        <div className="flex items-center gap-2 pb-2 border-b border-rose-500/10 dark:border-rose-900/30">
-          <AlertTriangle className="w-5 h-5 text-rose-600 dark:text-rose-400" />
-          <div>
-            <h2 className="font-black text-base text-rose-700 dark:text-rose-300">Account Management & Deactivation</h2>
-            <p className="text-xs text-rose-600/70 dark:text-rose-400/70">Pause or permanently remove your professional account on KaziHub</p>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-          {onLogout && (
-            <button
-              type="button"
-              onClick={onLogout}
-              className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors cursor-pointer flex items-center gap-1.5"
-            >
-              <LogOut className="w-3.5 h-3.5 text-slate-500" />
-              <span>Sign Out</span>
-            </button>
-          )}
-
-          <button
-            type="button"
-            onClick={() => setShowDeactivateConfirm(true)}
-            className="px-4 py-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-300 font-extrabold text-xs border border-amber-500/20 transition-colors cursor-pointer flex items-center gap-1.5"
-          >
-            <ToggleLeft className="w-3.5 h-3.5" />
-            <span>Deactivate Account</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowDeleteConfirm(true)}
-            className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>Delete Account</span>
-          </button>
-        </div>
-      </div>
-
       {/* ================= MODALS ================= */}
 
       {/* EDIT BASIC INFORMATION MODAL */}
       {showEditInfoModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl p-4 sm:p-5 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in"
+          onClick={() => setShowEditInfoModal(false)}
+        >
+          <div 
+            className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl p-4 sm:p-5 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={() => setShowEditInfoModal(false)}
               className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
@@ -1367,8 +1233,14 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
 
       {/* SERVICE MODAL (ADD / EDIT) */}
       {showServiceModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl p-4 sm:p-5 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl relative">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in"
+          onClick={() => setShowServiceModal(false)}
+        >
+          <div 
+            className="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl p-4 sm:p-5 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl relative"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={() => setShowServiceModal(false)}
               className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
@@ -1471,8 +1343,14 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
 
       {/* PORTFOLIO MODAL (ADD / EDIT) */}
       {showPortfolioModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl p-4 sm:p-5 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in"
+          onClick={() => setShowPortfolioModal(false)}
+        >
+          <div 
+            className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl p-4 sm:p-5 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={() => setShowPortfolioModal(false)}
               className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
@@ -1557,8 +1435,14 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
 
       {/* ADD CERTIFICATION MODAL */}
       {showCertModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl p-4 sm:p-5 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl relative">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in"
+          onClick={() => setShowCertModal(false)}
+        >
+          <div 
+            className="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl p-4 sm:p-5 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl relative"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={() => setShowCertModal(false)}
               className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
@@ -1630,8 +1514,14 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
 
       {/* PUBLIC PROFILE PREVIEW MODAL */}
       {showPublicProfileModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-2xl p-4 sm:p-5 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in"
+          onClick={() => setShowPublicProfileModal(false)}
+        >
+          <div 
+            className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-2xl p-4 sm:p-5 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={() => setShowPublicProfileModal(false)}
               className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer z-10"
@@ -1703,217 +1593,53 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
         </div>
       )}
 
-      {/* LANGUAGE SELECTOR MODAL */}
-      {showLanguageModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-2xl p-4 sm:p-5 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl relative">
-            <button
-              onClick={() => setShowLanguageModal(false)}
-              className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
+      {/* FREEZE ACCOUNT CONFIRMATION MODAL (Slide up on mobile) */}
+      <ConfirmationModal
+        isOpen={showFreezeModal}
+        onClose={() => setShowFreezeModal(false)}
+        onConfirm={() => {
+          setIsFrozen(!isFrozen);
+          setShowFreezeModal(false);
+          triggerToast(isFrozen ? 'Account unfreezed & active!' : 'Account frozen successfully.');
+        }}
+        title={isFrozen ? 'Reactivate & Unfreeze Account' : 'Freeze Artisan Account'}
+        description={isFrozen
+          ? 'Reactivating your account will make your profile visible again in search and allow clients to send you new booking requests.'
+          : 'Freezing your account will pause all incoming booking requests and temporarily hide your profile from search without losing your reviews, portfolio, or credentials.'}
+        confirmText={isFrozen ? 'Yes, Unfreeze Account' : 'Yes, Freeze Account'}
+        cancelText="Cancel"
+        type="freeze"
+        details={[
+          'Your profile will not appear in customer searches when frozen',
+          'Pending or ongoing accepted jobs remain accessible',
+          'You can unfreeze anytime with zero loss of data'
+        ]}
+      />
 
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-navy-800/10 text-navy-800 dark:text-navy-400 flex items-center justify-center shrink-0">
-                <Globe className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-black text-slate-900 dark:text-slate-100">{t('modal.select_language', activeLang)}</h3>
-                <p className="text-xs text-slate-500">{t('modal.choose_language', activeLang)}</p>
-              </div>
-            </div>
+      {/* DELETE ACCOUNT CONFIRMATION MODAL (Slide up on mobile) */}
+      <ConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={() => {
+          setShowDeleteModal(false);
+          if (onDeleteAccount) {
+            onDeleteAccount();
+          } else if (onLogout) {
+            onLogout();
+          }
+        }}
+        title="Delete Artisan Account"
+        description={`This is a permanent action. All your listings, verified badges, rating history (${activeProfessional.rating}★), and portfolio uploads will be permanently wiped from the KaziHub registry.`}
+        confirmText="Yes, Permanently Delete"
+        cancelText="Cancel, Keep Account"
+        type="danger"
+        details={[
+          'Permanent deletion of all profile credentials and certifications',
+          'Wiping of reviews and client history from KaziHub database',
+          'Consider freezing your account instead if you need a temporary pause'
+        ]}
+      />
 
-            <div className="space-y-2 pt-1">
-              {SUPPORTED_LANGUAGES.map((lang) => (
-                <button
-                  key={lang}
-                  type="button"
-                  onClick={() => {
-                    if (onLanguageChange) onLanguageChange(lang);
-                    setShowLanguageModal(false);
-                  }}
-                  className={`w-full p-3 rounded-xl text-left text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
-                    activeLang === lang
-                      ? 'bg-navy-800 text-white shadow-xs'
-                      : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  <span>{lang}</span>
-                  {activeLang === lang && <Check className="w-4 h-4 text-white" />}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* CHANGE PASSWORD MODAL */}
-      {showPasswordModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl p-4 sm:p-5 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl relative">
-            <button
-              onClick={() => setShowPasswordModal(false)}
-              className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-navy-800/10 text-navy-800 dark:text-navy-400 flex items-center justify-center shrink-0">
-                <Key className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-lg font-black text-slate-900 dark:text-slate-100">Change Password</h3>
-                <p className="text-xs text-slate-500">Ensure your artisan account uses a strong password.</p>
-              </div>
-            </div>
-
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                triggerToast('Password updated successfully!');
-                setShowPasswordModal(false);
-              }}
-              className="space-y-3.5"
-            >
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Current Password</label>
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">New Password</label>
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100"
-                  required
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setShowPasswordModal(false)}
-                  className="px-4 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-navy-800 text-white font-extrabold text-xs shadow-xs cursor-pointer"
-                >
-                  Update Password
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* DEACTIVATE ACCOUNT CONFIRM MODAL */}
-      {showDeactivateConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl p-4 sm:p-5 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl relative">
-            <button
-              onClick={() => setShowDeactivateConfirm(false)}
-              className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                <ToggleLeft className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-lg font-black text-slate-900 dark:text-slate-100">Deactivate Professional Account</h3>
-                <p className="text-xs text-slate-500">Temporarily pause customer booking requests.</p>
-              </div>
-            </div>
-
-            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-              Deactivating your account will temporarily remove your profile from customer search results and pause incoming quotes. You can reactivate anytime by logging back in.
-            </p>
-
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowDeactivateConfirm(false)}
-                className="px-4 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-              >
-                Keep Active
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsAvailable(false);
-                  if (onUpdateProfile) onUpdateProfile({ isAvailableNow: false });
-                  setShowDeactivateConfirm(false);
-                  triggerToast('Profile deactivated. You can re-enable availability anytime.');
-                }}
-                className="px-5 py-2.5 rounded-xl bg-amber-600 text-white font-extrabold text-xs shadow-xs cursor-pointer"
-              >
-                Confirm Deactivate
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* DELETE ACCOUNT CONFIRM MODAL */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl p-4 sm:p-5 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl relative">
-            <button
-              onClick={() => setShowDeleteConfirm(false)}
-              className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
-                <Trash2 className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-lg font-black text-rose-700 dark:text-rose-400">Permanently Delete Account</h3>
-                <p className="text-xs text-slate-500">This action cannot be undone.</p>
-              </div>
-            </div>
-
-            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-              Deleting your KaziHub Artisan Account will permanently erase your job history, customer reviews, ratings, and active quote records.
-            </p>
-
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowDeleteConfirm(false)}
-                className="px-4 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowDeleteConfirm(false);
-                  if (onDeleteAccount) onDeleteAccount();
-                }}
-                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs shadow-xs cursor-pointer"
-              >
-                Permanently Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

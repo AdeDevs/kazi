@@ -3,7 +3,9 @@ import { Professional, Category, Booking, ChatMessage } from '../types';
 import { CATEGORIES, CATEGORY_SERVICES_CATALOG } from '../mockData';
 import { CustomDropdown } from './CustomDropdown';
 import { CustomerMessages } from './CustomerMessages';
+import { ConfirmationModal } from './ui/ConfirmationModal';
 import { formatCurrency, formatServicePrice } from '../utils';
+import { useAuth } from '../context/AuthContext';
 import { 
   Search, MapPin, Star, ShieldCheck, Sparkles, Filter, CheckCircle2, 
   Calendar, MessageSquare, Clock, ArrowRight, User, Bookmark, Bell, 
@@ -35,6 +37,8 @@ interface CustomerDashboardProps {
   customerNotifications?: any[];
   onUpdateCustomerNotifications?: (notifs: any[]) => void;
   initialMessageProId?: string;
+  darkMode?: boolean;
+  onToggleDarkMode?: () => void;
 }
 
 export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
@@ -59,8 +63,12 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   onDeactivateAccount,
   customerNotifications,
   onUpdateCustomerNotifications,
-  initialMessageProId
+  initialMessageProId,
+  darkMode,
+  onToggleDarkMode
 }) => {
+  const { user } = useAuth();
+  const clientGreetingName = user?.first_name || (user?.email ? user.email.split('@')[0] : 'Client');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedNeighborhood, setSelectedNeighborhood] = useState<string>('All');
   const [defaultNeighborhood, setDefaultNeighborhood] = useState<string>('Bodija, Ibadan');
@@ -1770,205 +1778,6 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
     );
   }
 
-  if (activeTab === 'settings') {
-    const settingsSearchTrimmed = settingsSearchTerm.trim().toLowerCase();
-
-    const showSecurity = !settingsSearchTrimmed || 'security privacy two-factor authentication 2fa otp push notifications'.includes(settingsSearchTrimmed);
-    const showPassword = !settingsSearchTrimmed || 'change password update security credentials'.includes(settingsSearchTrimmed);
-    const showServiceArea = !settingsSearchTrimmed || 'service area default neighborhood location city state bodija ibadan'.includes(settingsSearchTrimmed);
-    const showAccountActions = !settingsSearchTrimmed || 'account actions logout log out deactivate account delete remove'.includes(settingsSearchTrimmed);
-
-    const noResults = !showSecurity && !showPassword && !showServiceArea && !showAccountActions;
-
-    return (
-      <div className="w-full max-w-none space-y-6 animate-in fade-in duration-300">
-        <div className="md:hidden">
-          <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100">Account Settings</h1>
-          <p className="text-xs text-slate-500">Manage your security preferences, notifications, password, and account actions.</p>
-        </div>
-
-        {/* Unified Search Banner */}
-        <div className="p-2.5 sm:p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-3">
-          <div className="flex flex-col sm:flex-row gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                value={settingsSearchTerm}
-                onChange={(e) => setSettingsSearchTerm(e.target.value)}
-                placeholder="Search settings (password, security, notifications, neighborhood, logout)..."
-                className="w-full pl-10 pr-9 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-orange-500/50 focus:border-brand-orange-500"
-              />
-              {settingsSearchTerm && (
-                <button
-                  onClick={() => setSettingsSearchTerm('')}
-                  className="absolute right-3 top-3 p-0.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
-                  title="Clear Search"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-
-            {settingsSearchTerm && (
-              <button
-                onClick={() => setSettingsSearchTerm('')}
-                className="px-4 py-2.5 rounded-xl text-xs font-bold bg-navy-800 hover:bg-navy-900 text-white shadow-xs transition-colors cursor-pointer shrink-0 text-center"
-              >
-                Reset
-              </button>
-            )}
-          </div>
-        </div>
-
-        {noResults ? (
-          <div className="p-12 text-center rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
-            <Settings className="w-10 h-10 text-slate-400 mx-auto" />
-            <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">No settings found</h3>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto">
-              No preferences match "{settingsSearchTerm}". Try searching for "password", "security", or "neighborhood".
-            </p>
-          </div>
-        ) : (
-          <div className="p-4 sm:p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-6 shadow-xs">
-            {showSecurity && (
-              <div className="space-y-4">
-                <h3 className="font-bold text-sm uppercase tracking-wider text-slate-400">Security & Privacy</h3>
-                <div className="flex items-center justify-between py-3 border-b border-slate-100 dark:border-slate-800">
-                  <div>
-                    <p className="text-xs font-bold text-slate-900 dark:text-slate-100">Two-Factor Authentication (2FA)</p>
-                    <p className="text-[11px] text-slate-500">Require OTP verification upon signing in</p>
-                  </div>
-                  <input type="checkbox" defaultChecked className="w-4 h-4 accent-brand-orange-500 cursor-pointer focus:ring-2 focus:ring-brand-orange-500/50" />
-                </div>
-                <div className="flex items-center justify-between py-3">
-                  <div>
-                    <p className="text-xs font-bold text-slate-900 dark:text-slate-100">Push Notifications for Bookings</p>
-                    <p className="text-[11px] text-slate-500">Receive instant updates when pros accept your requests</p>
-                  </div>
-                  <input type="checkbox" defaultChecked className="w-4 h-4 accent-brand-orange-500 cursor-pointer focus:ring-2 focus:ring-brand-orange-500/50" />
-                </div>
-              </div>
-            )}
-
-            {/* Change Password Section */}
-            {showPassword && (
-              <form onSubmit={handlePasswordChange} className={`${showSecurity ? 'pt-6 border-t border-slate-200 dark:border-slate-800' : ''} space-y-4`}>
-                <h3 className="font-bold text-sm uppercase tracking-wider text-slate-400">Change Password</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Current Password</label>
-                    <input
-                      type="password"
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-orange-500/50 focus:border-brand-orange-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">New Password</label>
-                    <input
-                      type="password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-orange-500/50 focus:border-brand-orange-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Confirm New Password</label>
-                    <input
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-orange-500/50 focus:border-brand-orange-500"
-                    />
-                  </div>
-                </div>
-                <div className="flex justify-end">
-                  <button
-                    type="submit"
-                    className="px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-extrabold text-xs shadow-xs cursor-pointer transition-colors"
-                  >
-                    Update Password
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {showServiceArea && (
-              <div className={`${(showSecurity || showPassword) ? 'pt-6 border-t border-slate-200 dark:border-slate-800' : ''} space-y-4`}>
-                <h3 className="font-bold text-sm uppercase tracking-wider text-slate-400">Service Area Default</h3>
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Default Neighborhood</label>
-                  <CustomDropdown
-                    value={defaultNeighborhood}
-                    onChange={(val) => setDefaultNeighborhood(val)}
-                    options={[
-                      { value: 'Bodija, Ibadan', label: 'Bodija, Ibadan' },
-                      { value: 'Ring Road, Ibadan', label: 'Ring Road, Ibadan' },
-                      { value: 'Dugbe, Ibadan', label: 'Dugbe, Ibadan' },
-                      { value: 'UI / Agbowo, Ibadan', label: 'UI / Agbowo, Ibadan' },
-                      { value: 'Oluyole Estate, Ibadan', label: 'Oluyole Estate, Ibadan' },
-                      { value: 'Challenge, Ibadan', label: 'Challenge, Ibadan' },
-                      { value: 'Akobo, Ibadan', label: 'Akobo, Ibadan' },
-                      { value: 'Iyaganku GRA, Ibadan', label: 'Iyaganku GRA, Ibadan' },
-                      { value: 'Ogbomoso, Oyo State', label: 'Ogbomoso, Oyo State' },
-                      { value: 'Oyo Town, Oyo State', label: 'Oyo Town, Oyo State' }
-                    ]}
-                    className="w-full"
-                    buttonClassName="py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Account Management Actions */}
-            {showAccountActions && (
-              <div className={`${(showSecurity || showPassword || showServiceArea) ? 'pt-6 border-t border-slate-200 dark:border-slate-800' : ''} space-y-4`}>
-                <h3 className="font-bold text-sm uppercase tracking-wider text-rose-500">Account Actions</h3>
-                <div className="flex flex-wrap items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (onLogout) onLogout();
-                    }}
-                    className="px-5 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs cursor-pointer transition-all"
-                  >
-                    Log Out
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (window.confirm('Are you sure you want to deactivate your account? You can reactivate anytime by logging back in.')) {
-                        if (onDeactivateAccount) onDeactivateAccount();
-                      }
-                    }}
-                    className="px-5 py-3 rounded-xl bg-brand-orange-500/10 hover:bg-brand-orange-500/20 text-brand-orange-600 dark:text-brand-orange-400 font-bold text-xs cursor-pointer transition-all border border-brand-orange-500/20"
-                  >
-                    Deactivate Account
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (window.confirm('Are you sure you want to permanently delete your KaziHub account? All bookings and history will be removed.')) {
-                        if (onDeleteAccount) onDeleteAccount();
-                      }
-                    }}
-                    className="px-5 py-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-400 font-bold text-xs cursor-pointer transition-all border border-rose-500/20"
-                  >
-                    Delete Account
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  }
 
   // ==========================================
   // HOME / CENTER FEED (Default View)
@@ -1985,7 +1794,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
               if (hour < 12) return 'Good morning';
               if (hour < 17) return 'Good afternoon';
               return 'Good evening';
-            })()}, Nneka
+            })()}, {clientGreetingName}
           </h1>
         </div>
 
@@ -2568,67 +2377,29 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
         </div>
       )}
 
-      {/* Cancellation Confirmation Modal */}
-      {cancelModalBooking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl p-4 sm:p-5 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl relative">
-            <button
-              onClick={() => setCancelModalBooking(null)}
-              className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0">
-                <XCircle className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-lg font-black text-slate-900 dark:text-slate-100">
-                  Cancel {cancelModalBooking.servicePricingType === 'quote_required' || cancelModalBooking.status === 'awaiting_quote' ? 'Quote Request' : 'Booking'}?
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Artisan: <strong className="text-slate-800 dark:text-slate-200">{cancelModalBooking.professionalName}</strong>
-                </p>
-              </div>
-            </div>
-
-            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-300 space-y-1">
-              <div><strong>Service:</strong> {cancelModalBooking.selectedService || cancelModalBooking.category}</div>
-              <div><strong>Scheduled Date:</strong> {cancelModalBooking.date} ({cancelModalBooking.timeSlot})</div>
-            </div>
-
-            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-              Are you sure you want to cancel this {cancelModalBooking.servicePricingType === 'quote_required' || cancelModalBooking.status === 'awaiting_quote' ? 'quote request' : 'booking request'}? Please confirm yes or no.
-            </p>
-
-            <div className="flex items-center gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setCancelModalBooking(null)}
-                className="flex-1 py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors"
-              >
-                No, Keep Booking
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (cancelModalBooking) {
-                    onCancelBooking(cancelModalBooking.id);
-                    setRateToast(`Request with ${cancelModalBooking.professionalName} was cancelled.`);
-                    setTimeout(() => setRateToast(null), 4000);
-                  }
-                  setCancelModalBooking(null);
-                }}
-                className="flex-1 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs shadow-xs cursor-pointer transition-colors flex items-center justify-center gap-1.5"
-              >
-                <XCircle className="w-4 h-4" />
-                <span>Yes, Cancel</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Cancellation Confirmation Modal (Bottom Slide-Up on Mobile) */}
+      <ConfirmationModal
+        isOpen={Boolean(cancelModalBooking)}
+        onClose={() => setCancelModalBooking(null)}
+        onConfirm={() => {
+          if (cancelModalBooking) {
+            onCancelBooking(cancelModalBooking.id);
+            setRateToast(`Request with ${cancelModalBooking.professionalName} was cancelled.`);
+            setTimeout(() => setRateToast(null), 4000);
+          }
+          setCancelModalBooking(null);
+        }}
+        title={`Cancel ${cancelModalBooking?.servicePricingType === 'quote_required' || cancelModalBooking?.status === 'awaiting_quote' ? 'Quote Request' : 'Booking'}?`}
+        description={`Are you sure you want to cancel this booking with ${cancelModalBooking?.professionalName || 'the artisan'}?`}
+        confirmText="Yes, Cancel Booking"
+        cancelText="No, Keep Booking"
+        type="danger"
+        details={cancelModalBooking ? [
+          `Service: ${cancelModalBooking.selectedService || cancelModalBooking.category}`,
+          `Scheduled: ${cancelModalBooking.date} (${cancelModalBooking.timeSlot})`,
+          'Zero cancellation penalty applied'
+        ] : []}
+      />
 
       {/* AI Fault Diagnostic Assistant Modal */}
       {isAIDiagnosisOpen && (
