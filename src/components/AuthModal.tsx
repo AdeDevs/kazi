@@ -477,23 +477,7 @@ export const AuthModal: React.FC = () => {
                     onClick={() => openTermsWithTab('terms')}
                     className="text-brand-orange-600 dark:text-brand-orange-400 hover:underline font-semibold cursor-pointer"
                   >
-                    Terms
-                  </button>
-                  ,{' '}
-                  <button
-                    type="button"
-                    onClick={() => openTermsWithTab('escrow')}
-                    className="text-brand-orange-600 dark:text-brand-orange-400 hover:underline font-semibold cursor-pointer"
-                  >
-                    Escrow Rules
-                  </button>
-                  , and{' '}
-                  <button
-                    type="button"
-                    onClick={() => openTermsWithTab('privacy')}
-                    className="text-brand-orange-600 dark:text-brand-orange-400 hover:underline font-semibold cursor-pointer"
-                  >
-                    Privacy Policy
+                    Terms of Service
                   </button>
                   .
                 </p>
@@ -847,22 +831,6 @@ export const AuthModal: React.FC = () => {
                       className="text-brand-orange-600 dark:text-brand-orange-400 hover:underline font-semibold cursor-pointer"
                     >
                       Terms of Service
-                    </button>
-                    ,{' '}
-                    <button
-                      type="button"
-                      onClick={() => openTermsWithTab('escrow')}
-                      className="text-brand-orange-600 dark:text-brand-orange-400 hover:underline font-semibold cursor-pointer"
-                    >
-                      Escrow Rules
-                    </button>
-                    , and{' '}
-                    <button
-                      type="button"
-                      onClick={() => openTermsWithTab('privacy')}
-                      className="text-brand-orange-600 dark:text-brand-orange-400 hover:underline font-semibold cursor-pointer"
-                    >
-                      Privacy Policy
                     </button>
                     .
                   </label>

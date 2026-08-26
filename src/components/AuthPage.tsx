@@ -326,8 +326,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({
       {/* Main Split Poster Layout: Edge to Edge, Left Side strictly non-scrolling 100vh fit with space-between, Right Side scrollable only if needed */}
       <main className="flex-1 flex flex-col lg:flex-row w-full overflow-hidden">
         
-        {/* Left Side Poster Column (Strictly non-scrolling, fits inside available height with space-between distribution) */}
-        <section className="lg:w-5/12 xl:w-1/2 bg-navy-950 text-white px-8 py-8 sm:px-12 sm:py-10 lg:px-14 lg:py-10 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-navy-900 relative overflow-hidden shrink-0">
+        {/* Left Side Poster Column (Hidden on mobile/tablet, shown on desktop) */}
+        <section className="hidden lg:flex lg:flex-col lg:w-5/12 xl:w-1/2 bg-navy-950 text-white px-8 py-8 sm:px-12 sm:py-10 lg:px-14 lg:py-10 justify-between border-b lg:border-b-0 lg:border-r border-navy-900 relative overflow-hidden shrink-0">
           {/* Subtle background ambient gradients */}
           <div className="absolute top-0 right-0 w-80 h-80 bg-brand-orange-500/10 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 w-80 h-80 bg-navy-800/30 rounded-full blur-3xl pointer-events-none" />
@@ -535,22 +535,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                       className="text-brand-orange-600 dark:text-brand-orange-400 hover:underline font-semibold cursor-pointer"
                     >
                       Terms of Service
-                    </button>
-                    ,{' '}
-                    <button
-                      type="button"
-                      onClick={() => openTermsWithTab('escrow')}
-                      className="text-brand-orange-600 dark:text-brand-orange-400 hover:underline font-semibold cursor-pointer"
-                    >
-                      Escrow Settlement Rules
-                    </button>
-                    , and{' '}
-                    <button
-                      type="button"
-                      onClick={() => openTermsWithTab('privacy')}
-                      className="text-brand-orange-600 dark:text-brand-orange-400 hover:underline font-semibold cursor-pointer"
-                    >
-                      Privacy Policy
                     </button>
                     .
                   </p>
@@ -883,22 +867,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                       >
                         Terms of Service
                       </button>
-                      ,{' '}
-                      <button
-                        type="button"
-                        onClick={() => openTermsWithTab('escrow')}
-                        className="text-brand-orange-600 dark:text-brand-orange-400 hover:underline font-semibold cursor-pointer"
-                      >
-                        Escrow Settlement Rules
-                      </button>
-                      , and{' '}
-                      <button
-                        type="button"
-                        onClick={() => openTermsWithTab('privacy')}
-                        className="text-brand-orange-600 dark:text-brand-orange-400 hover:underline font-semibold cursor-pointer"
-                      >
-                        Privacy Policy
-                      </button>
                       .
                     </label>
                   </div>
@@ -1185,26 +1153,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({
         <div className="flex items-center gap-3 sm:gap-4 text-[11px]">
           <button
             type="button"
-            onClick={() => openTermsWithTab('escrow')}
-            className="hover:text-brand-orange-600 dark:hover:text-brand-orange-400 transition-colors cursor-pointer"
-          >
-            Escrow Protection
-          </button>
-          <span>•</span>
-          <button
-            type="button"
             onClick={() => openTermsWithTab('terms')}
-            className="hover:text-brand-orange-600 dark:hover:text-brand-orange-400 transition-colors cursor-pointer"
-          >
-            Verified Artisans
-          </button>
-          <span>•</span>
-          <button
-            type="button"
-            onClick={() => openTermsWithTab('privacy')}
             className="hover:text-brand-orange-600 dark:hover:text-brand-orange-400 transition-colors font-medium cursor-pointer"
           >
-            Terms & Privacy
+            Terms of Service
           </button>
         </div>
       </footer>
