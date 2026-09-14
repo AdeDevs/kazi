@@ -44,6 +44,18 @@ export interface UserUpdate {
 export interface LoginCredentials {
   username: string;
   password: string;
+  totp_code?: string;
+}
+
+export interface TokenPair {
+  access_token: string;
+  refresh_token: string;
+  token_type?: string;
+}
+
+export interface TwoFactorSetupResponse {
+  secret: string;
+  otpauth_url: string;
 }
 
 export interface VerifyEmailSchema {
