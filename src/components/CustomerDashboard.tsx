@@ -4,7 +4,7 @@ import { CATEGORIES, CATEGORY_SERVICES_CATALOG } from '../mockData';
 import { CustomDropdown } from './CustomDropdown';
 import { CustomerMessages } from './CustomerMessages';
 import { ConfirmationModal } from './ui/ConfirmationModal';
-import { formatCurrency, formatServicePrice } from '../utils';
+import { formatCurrency, formatServicePrice, isBookingArchived } from '../utils';
 import { useAuth } from '../context/AuthContext';
 import { 
   Search, MapPin, Star, ShieldCheck, Sparkles, Filter, CheckCircle2, 
@@ -142,7 +142,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   const [submittedTicket, setSubmittedTicket] = useState<{ ticketId: string; bookingId: string; professionalName: string } | null>(null);
 
   const getCancelEligibility = (b: Booking): { eligible: boolean; reason?: string } => {
-    if (b.status === 'cancelled' || b.status === 'completed') {
+    if (b.status === 'cancelled' || b.status === 'paid_out') {
       return { eligible: false, reason: 'Booking has already ended.' };
     }
     return { eligible: true };
@@ -726,26 +726,26 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   }
 
   if (activeTab === 'bookings') {
-    const activeCount = bookings.filter(b => b.status === 'pending' || b.status === 'awaiting_quote' || b.status === 'accepted' || b.status === 'in-progress').length;
-    const awaitingCompletionCount = bookings.filter(b => b.status === 'completion-submitted').length;
-    const completedCount = bookings.filter(b => b.status === 'completed').length;
-    const issueReportedCount = bookings.filter(b => b.status === 'issue-reported').length;
-    const closedCount = bookings.filter(b => b.status === 'closed' || b.status === 'cancelled').length;
+    const activeCount = bookings.filter(b => b.status === 'pending' || b.status === 'quote_requested' || b.status === 'accepted' || b.status === 'in_progress').length;
+    const awaitingCompletionCount = bookings.filter(b => b.status === 'completed_by_artisan').length;
+    const completedCount = bookings.filter(b => b.status === 'paid_out').length;
+    const issueReportedCount = bookings.filter(b => b.status === 'disputed').length;
+    const closedCount = bookings.filter(b => isBookingArchived(b)).length;
 
     const bookingsSearchTrimmed = bookingsSearchTerm.trim().toLowerCase();
 
     const filteredBookingsList = bookings.filter(b => {
       // Filter by status tab
       if (bookingFilter === 'active') {
-        if (!(b.status === 'pending' || b.status === 'awaiting_quote' || b.status === 'accepted' || b.status === 'in-progress')) return false;
+        if (!(b.status === 'pending' || b.status === 'quote_requested' || b.status === 'accepted' || b.status === 'in_progress')) return false;
       } else if (bookingFilter === 'awaiting_completion') {
-        if (b.status !== 'completion-submitted') return false;
+        if (b.status !== 'completed_by_artisan') return false;
       } else if (bookingFilter === 'completed') {
-        if (b.status !== 'completed') return false;
+        if (b.status !== 'paid_out') return false;
       } else if (bookingFilter === 'issue_reported') {
-        if (b.status !== 'issue-reported') return false;
+        if (b.status !== 'disputed') return false;
       } else if (bookingFilter === 'closed') {
-        if (!(b.status === 'closed' || b.status === 'cancelled')) return false;
+        if (!isBookingArchived(b)) return false;
       }
 
       // Filter by category
@@ -755,13 +755,13 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
 
       // Search matching across artisan name, service name, category, issue description, booking ID
       if (bookingsSearchTrimmed) {
-        const matchesSearch = 
+        const matchesSearch =
           b.professionalName.toLowerCase().includes(bookingsSearchTrimmed) ||
-          b.serviceName.toLowerCase().includes(bookingsSearchTrimmed) ||
+          (b.title || '').toLowerCase().includes(bookingsSearchTrimmed) ||
           b.category.toLowerCase().includes(bookingsSearchTrimmed) ||
-          b.issueDescription.toLowerCase().includes(bookingsSearchTrimmed) ||
+          b.description.toLowerCase().includes(bookingsSearchTrimmed) ||
           b.id.toLowerCase().includes(bookingsSearchTrimmed) ||
-          (b.neighborhood && b.neighborhood.toLowerCase().includes(bookingsSearchTrimmed));
+          (b.address && b.address.toLowerCase().includes(bookingsSearchTrimmed));
         if (!matchesSearch) return false;
       }
 
@@ -958,13 +958,13 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
         ) : (
           <div className="space-y-4">
             {filteredBookingsList.map(b => {
-              const pro = professionals.find(p => p.id === b.professionalId);
-              const isCompleted = b.status === 'completed';
-              const isClosed = b.status === 'closed';
-              const isAwaitingCompletion = b.status === 'completion-submitted';
-              const isIssueReported = b.status === 'issue-reported';
+              const pro = professionals.find(p => p.id === b.artisan_id);
+              const isCompleted = b.status === 'paid_out';
+              const isClosed = isBookingArchived(b);
+              const isAwaitingCompletion = b.status === 'completed_by_artisan';
+              const isIssueReported = b.status === 'disputed';
               const isCancelled = b.status === 'cancelled';
-              const isQuoteRequest = b.status === 'awaiting_quote' || (b.servicePricingType === 'quote_required' && b.status !== 'completed' && b.status !== 'closed' && !isCancelled);
+              const isQuoteRequest = b.status === 'quote_requested' || (b.servicePricingType === 'quote_required' && !isClosed && !isCancelled);
               const { eligible, reason } = getCancelEligibility(b);
 
               // Status configuration for single, clean status pill
@@ -1009,7 +1009,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     icon: <XCircle className="w-3.5 h-3.5 text-rose-400" />
                   };
                 }
-                if (b.status === 'in-progress') {
+                if (b.status === 'in_progress') {
                   return {
                     label: 'Work In Progress',
                     className: 'bg-navy-50 dark:bg-navy-950/60 text-navy-800 dark:text-navy-300 border-navy-200/80 dark:border-navy-800',
@@ -1068,7 +1068,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                           {pro?.is_verified && <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />}
                         </h3>
                         <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate mt-0.5">
-                          {b.selectedService || b.category}
+                          {b.title || b.category}
                         </p>
                       </div>
                     </div>
@@ -1076,10 +1076,10 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     {/* Right Side: Price / Escrow Amount & Status Badge */}
                     <div className="flex flex-col items-end justify-start gap-1.5 shrink-0 ml-auto text-right">
                       {/* Price / Escrow Info */}
-                      {!isQuoteRequest && b.totalPrice && b.totalPrice > 0 ? (
+                      {!isQuoteRequest && b.amount && b.amount > 0 ? (
                         <div className="text-right flex flex-col items-end">
                           <div className="text-base font-black text-slate-900 dark:text-slate-100">
-                            {formatCurrency(b.totalPrice)}
+                            {formatCurrency(b.amount)}
                           </div>
                           <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase tracking-wide mt-0.5">
                             <ShieldCheck className="w-3 h-3 text-emerald-500" />
@@ -1089,7 +1089,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                       ) : null}
 
                       {/* Unified Status Pill */}
-                      <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold flex items-center gap-1.5 border shadow-2xs ${statusConfig.className} ${(!b.totalPrice || isQuoteRequest) ? 'mt-0.5' : ''}`}>
+                      <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold flex items-center gap-1.5 border shadow-2xs ${statusConfig.className} ${(!b.amount || isQuoteRequest) ? 'mt-0.5' : ''}`}>
                         {statusConfig.dotColor && <span className={`w-1.5 h-1.5 rounded-full ${statusConfig.dotColor}`} />}
                         <span>{statusConfig.label}</span>
                       </span>
@@ -1100,7 +1100,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-800/80 text-xs">
                     <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 min-w-0">
                       <Calendar className="w-3.5 h-3.5 text-brand-orange-500 shrink-0" />
-                      <span className="font-bold text-slate-900 dark:text-slate-100">{b.date}</span>
+                      <span className="font-bold text-slate-900 dark:text-slate-100">{b.scheduled_date}</span>
                       <span className="text-slate-300 dark:text-slate-600">•</span>
                       <span className="text-slate-600 dark:text-slate-400 font-medium">{b.timeSlot}</span>
                     </div>
@@ -1118,7 +1118,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                       <span className="font-bold text-slate-900 dark:text-slate-100">
                         {isQuoteRequest ? 'Job Scope Request:' : 'Job Description:'}
                       </span>{' '}
-                      <span className="text-slate-600 dark:text-slate-300">{b.issueDescription}</span>
+                      <span className="text-slate-600 dark:text-slate-300">{b.description}</span>
                     </div>
 
                     {((b.problemImages && b.problemImages.length > 0) || b.problemImageUrl) && (
@@ -1184,7 +1184,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                   {isCompleted && (() => {
                     const completedAtDate = b.completedAt
                       ? new Date(b.completedAt)
-                      : (b.completionDetails?.submittedAt ? new Date(b.completionDetails.submittedAt) : new Date(b.createdAt));
+                      : (b.completionDetails?.submittedAt ? new Date(b.completionDetails.submittedAt) : new Date(b.created_at));
                     const deadlineDate = new Date(completedAtDate.getTime() + 4 * 24 * 60 * 60 * 1000);
                     const msRemaining = Math.max(0, deadlineDate.getTime() - new Date().getTime());
                     const totalHours = Math.floor(msRemaining / (1000 * 60 * 60));
@@ -1231,14 +1231,14 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                   )}
 
                   {/* Policy Footer - For active bookings / quote requests */}
-                  {(b.status === 'pending' || b.status === 'awaiting_quote' || b.status === 'accepted' || b.status === 'in-progress') && (
+                  {(b.status === 'pending' || b.status === 'quote_requested' || b.status === 'accepted' || b.status === 'in_progress') && (
                     <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800/60 text-xs text-slate-500 dark:text-slate-400">
                       <Info className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400 shrink-0" />
                       <p className="text-[11px] truncate">
                         {isQuoteRequest ? (
                           'Artisan is assessing job scope. Message them directly to discuss requirements.'
                         ) : (
-                          <>Free cancellation up to 45 mins prior to scheduled time. {!eligible && b.status !== 'cancelled' && <span className="text-rose-600 font-bold ml-1">({reason})</span>}</>
+                          <>Free cancellation up to 45 mins prior to scheduled time. {!eligible && <span className="text-rose-600 font-bold ml-1">({reason})</span>}</>
                         )}
                       </p>
                     </div>
@@ -1261,7 +1261,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     {/* Right: Contextual Primary & High-Priority Actions */}
                     <div className="flex flex-wrap items-center gap-2 shrink-0 justify-end">
                       {/* Active / Pending / Quote Request: Cancel Option */}
-                      {(b.status === 'pending' || b.status === 'awaiting_quote' || b.status === 'accepted' || b.status === 'in-progress') && (
+                      {(b.status === 'pending' || b.status === 'quote_requested' || b.status === 'accepted' || b.status === 'in_progress') && (
                         <button
                           type="button"
                           onClick={(e) => {
@@ -1294,7 +1294,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                             type="button"
                             onClick={() => {
                               if (onUpdateBookingStatus) {
-                                onUpdateBookingStatus(b.id, 'completed', { completedAt: new Date().toISOString() });
+                                onUpdateBookingStatus(b.id, 'paid_out', { completedAt: new Date().toISOString() });
                               }
                             }}
                             className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer transition-all"
@@ -1324,7 +1324,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                           <button
                             type="button"
                             onClick={() => {
-                              const targetPro = pro || professionals.find(p => p.id === b.professionalId || p.category === b.category) || professionals[0];
+                              const targetPro = pro || professionals.find(p => p.id === b.artisan_id || p.category === b.category) || professionals[0];
                               if (targetPro) {
                                 onOpenBooking(targetPro);
                               } else {
@@ -1335,7 +1335,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                           >
                             <RotateCcw className="w-3.5 h-3.5 text-white" />
                             <span>Rehire Artisan</span>
-                            {(pro?.is_available_now || (professionals.find(p => p.id === b.professionalId)?.is_available_now)) && (
+                            {(pro?.is_available_now || (professionals.find(p => p.id === b.artisan_id)?.is_available_now)) && (
                               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-0.5" title="Available Now" aria-label="Available Now" />
                             )}
                           </button>
@@ -2059,7 +2059,9 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                             {pro.name}
                           </h3>
                           {pro.is_verified && (
-                            <ShieldCheck className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400 shrink-0" title="Verified Professional" />
+                            <span title="Verified Professional">
+                              <ShieldCheck className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400 shrink-0" />
+                            </span>
                           )}
                         </div>
                         <div className="flex items-center gap-1.5 mt-0.5 text-xs text-slate-500 dark:text-slate-400">
@@ -2268,7 +2270,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 text-xs text-slate-700 dark:text-slate-300">
                   <div>
                     <span className="text-[10px] uppercase font-bold text-slate-400 block">Service / Job</span>
-                    <strong className="text-slate-900 dark:text-white text-sm">{complaintModalBooking.selectedService || complaintModalBooking.category}</strong>
+                    <strong className="text-slate-900 dark:text-white text-sm">{complaintModalBooking.title || complaintModalBooking.category}</strong>
                   </div>
                   <div>
                     <span className="text-[10px] uppercase font-bold text-slate-400 block">Professional</span>
@@ -2317,7 +2319,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                       const evidencePhotos = [complaintPhoto1, complaintPhoto2].filter(Boolean);
                       if (complaintModalBooking) {
                         if (onUpdateBookingStatus) {
-                          onUpdateBookingStatus(complaintModalBooking.id, 'issue-reported', {
+                          onUpdateBookingStatus(complaintModalBooking.id, 'disputed', {
                             issueDetails: {
                               description: `[${complaintReason}] ${complaintDetails}`,
                               evidencePhotos,
@@ -2391,14 +2393,14 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
           }
           setCancelModalBooking(null);
         }}
-        title={`Cancel ${cancelModalBooking?.servicePricingType === 'quote_required' || cancelModalBooking?.status === 'awaiting_quote' ? 'Quote Request' : 'Booking'}?`}
+        title={`Cancel ${cancelModalBooking?.servicePricingType === 'quote_required' || cancelModalBooking?.status === 'quote_requested' ? 'Quote Request' : 'Booking'}?`}
         description={`Are you sure you want to cancel this booking with ${cancelModalBooking?.professionalName || 'the artisan'}?`}
         confirmText="Yes, Cancel Booking"
         cancelText="No, Keep Booking"
         type="danger"
         details={cancelModalBooking ? [
-          `Service: ${cancelModalBooking.selectedService || cancelModalBooking.category}`,
-          `Scheduled: ${cancelModalBooking.date} (${cancelModalBooking.timeSlot})`,
+          `Service: ${cancelModalBooking.title || cancelModalBooking.category}`,
+          `Scheduled: ${cancelModalBooking.scheduled_date} (${cancelModalBooking.timeSlot})`,
           'Zero cancellation penalty applied'
         ] : []}
       />

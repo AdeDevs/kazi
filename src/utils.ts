@@ -1,4 +1,19 @@
-import { ServicePricingType } from './types';
+import { Booking, ServicePricingType } from './types';
+
+const ARCHIVE_AFTER_MS = 4 * 24 * 60 * 60 * 1000; // 4 days
+
+/**
+ * A 'paid_out' or 'cancelled' booking is archived (what the UI used to call the 'closed'
+ * status) once it's old enough -- there's no such state on the backend, so this is computed
+ * client-side from `completedAt`/`created_at` rather than stored on the booking itself.
+ */
+export function isBookingArchived(booking: Booking): boolean {
+  if (booking.status === 'cancelled') return true;
+  if (booking.status !== 'paid_out') return false;
+  const referenceTime = booking.completedAt || booking.created_at;
+  if (!referenceTime) return false;
+  return Date.now() - new Date(referenceTime).getTime() >= ARCHIVE_AFTER_MS;
+}
 
 /**
  * Formats a numeric price into Naira currency format using the en-NG locale.

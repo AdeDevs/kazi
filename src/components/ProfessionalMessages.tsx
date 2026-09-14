@@ -85,8 +85,8 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
       
       // Find related booking (most recent one for this customer)
       const relatedBooking = bookings
-        .filter(b => b.customerId === customerId)
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+        .filter(b => b.client_id === customerId)
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
 
       conversationsMap.set(customerId, {
         customerId,
@@ -105,7 +105,7 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
 
   const filteredConversations = conversations.filter(c => 
     c.customerName.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    (c.relatedBooking?.selectedService || c.relatedBooking?.category || '').toLowerCase().includes(searchQuery.toLowerCase())
+    (c.relatedBooking?.title || c.relatedBooking?.category || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const activeConversation = conversations.find(c => c.customerId === selectedCustomerId);
@@ -386,7 +386,7 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
                       
                       {conv.relatedBooking && (
                         <div className="text-[10px] font-semibold text-navy-600 dark:text-navy-400 mb-0.5 truncate">
-                          Job: {conv.relatedBooking.selectedService || conv.relatedBooking.category}
+                          Job: {conv.relatedBooking.title || conv.relatedBooking.category}
                         </div>
                       )}
 
@@ -436,7 +436,7 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
                   </h3>
                   {activeConversation.relatedBooking && (
                     <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate">
-                      Job Context: {activeConversation.relatedBooking.selectedService || activeConversation.relatedBooking.category}
+                      Job Context: {activeConversation.relatedBooking.title || activeConversation.relatedBooking.category}
                     </p>
                   )}
                 </div>

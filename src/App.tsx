@@ -342,25 +342,25 @@ export default function App() {
     localStorage.setItem('kazihub_language', currentLanguage);
   }, [currentLanguage]);
 
-  // Automatic Availability Management: When logged in as professional, set isAvailableNow = true. When leaving/unloading/visibility hidden/logout/switch role, set isAvailableNow = false.
+  // Automatic Availability Management: When logged in as professional, set is_available_now = true. When leaving/unloading/visibility hidden/logout/switch role, set is_available_now = false.
   useEffect(() => {
     if (currentRole === 'professional') {
-      setProfessionals(prev => prev.map(p => p.id === activeProId ? { ...p, isAvailableNow: true } : p));
+      setProfessionals(prev => prev.map(p => p.id === activeProId ? { ...p, is_available_now: true } : p));
     }
   }, [currentRole, activeProId]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
-        setProfessionals(prev => prev.map(p => p.id === activeProId ? { ...p, isAvailableNow: false } : p));
+        setProfessionals(prev => prev.map(p => p.id === activeProId ? { ...p, is_available_now: false } : p));
       } else if (document.visibilityState === 'visible' && currentRole === 'professional') {
-        setProfessionals(prev => prev.map(p => p.id === activeProId ? { ...p, isAvailableNow: true } : p));
+        setProfessionals(prev => prev.map(p => p.id === activeProId ? { ...p, is_available_now: true } : p));
       }
     };
 
     const handleBeforeUnload = () => {
       const proList = JSON.parse(localStorage.getItem('kazihub_ng_professionals_v10') || '[]');
-      const updated = proList.map((p: any) => p.id === activeProId ? { ...p, isAvailableNow: false } : p);
+      const updated = proList.map((p: any) => p.id === activeProId ? { ...p, is_available_now: false } : p);
       localStorage.setItem('kazihub_ng_professionals_v10', JSON.stringify(updated));
     };
 
@@ -370,54 +370,44 @@ export default function App() {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      setProfessionals(prev => prev.map(p => p.id === activeProId ? { ...p, isAvailableNow: false } : p));
+      setProfessionals(prev => prev.map(p => p.id === activeProId ? { ...p, is_available_now: false } : p));
     };
   }, [activeProId, currentRole]);
 
   const handleLogout = () => {
-    setProfessionals(prev => prev.map(p => p.id === activeProId ? { ...p, isAvailableNow: false } : p));
+    setProfessionals(prev => prev.map(p => p.id === activeProId ? { ...p, is_available_now: false } : p));
     setActiveTab('explore');
   };
 
   const handleDeleteAccount = () => {
-    setProfessionals(prev => prev.map(p => p.id === activeProId ? { ...p, isAvailableNow: false } : p));
+    setProfessionals(prev => prev.map(p => p.id === activeProId ? { ...p, is_available_now: false } : p));
     setCurrentRole('customer');
     setActiveTab('explore');
   };
 
   const handleDeactivateAccount = () => {
-    setProfessionals(prev => prev.map(p => p.id === activeProId ? { ...p, isAvailableNow: false } : p));
+    setProfessionals(prev => prev.map(p => p.id === activeProId ? { ...p, is_available_now: false } : p));
     setActiveTab('explore');
   };
 
-  // 4-day window 1 (completion-submitted -> completed) & 4-day window 2 (completed -> closed) checks
+  // Auto-completion window: completed_by_artisan -> paid_out after 4 days with no customer response
+  // (mirrors the backend's auto_completion_deadline). Archiving old paid_out/cancelled bookings out of
+  // the default view is a separate, purely client-side concern -- see isBookingArchived in utils.ts.
   useEffect(() => {
     const checkAutoCompletions = () => {
       const now = new Date().getTime();
       const FOUR_DAYS_MS = 4 * 24 * 60 * 60 * 1000;
       let updated = false;
       const newBookings = bookings.map(b => {
-        // Window 1: completion-submitted -> completed after 4 days
-        if (b.status === 'completion-submitted' && b.completionDetails?.submittedAt) {
+        if (b.status === 'completed_by_artisan' && b.completionDetails?.submittedAt) {
           const submittedTime = new Date(b.completionDetails.submittedAt).getTime();
           if (now - submittedTime >= FOUR_DAYS_MS) {
             updated = true;
             return {
               ...b,
-              status: 'completed' as const,
+              status: 'paid_out' as const,
               completedAt: b.completedAt || new Date().toISOString()
             };
-          }
-        }
-
-        // Window 2: completed -> closed after 4 days from completion
-        if (b.status === 'completed') {
-          const completedTime = b.completedAt
-            ? new Date(b.completedAt).getTime()
-            : (b.completionDetails?.submittedAt ? new Date(b.completionDetails.submittedAt).getTime() : new Date(b.createdAt).getTime());
-          if (now - completedTime >= FOUR_DAYS_MS) {
-            updated = true;
-            return { ...b, status: 'closed' as const };
           }
         }
 
@@ -457,22 +447,22 @@ export default function App() {
   // Handlers
   const handleSwitchRole = (newRole: Role) => {
     if (currentRole === 'professional') {
-      setProfessionals(prev => prev.map(p => p.id === activeProId ? { ...p, isAvailableNow: false } : p));
+      setProfessionals(prev => prev.map(p => p.id === activeProId ? { ...p, is_available_now: false } : p));
     }
     setCurrentRole(newRole);
     localStorage.setItem('kazihub_role', newRole);
     if (newRole === 'professional') {
-      setProfessionals(prev => prev.map(p => p.id === activeProId ? { ...p, isAvailableNow: true } : p));
+      setProfessionals(prev => prev.map(p => p.id === activeProId ? { ...p, is_available_now: true } : p));
     }
   };
 
-  const handleCreateBooking = (bookingData: Omit<Booking, 'id' | 'createdAt' | 'status'>) => {
+  const handleCreateBooking = (bookingData: Omit<Booking, 'id' | 'created_at' | 'status'>) => {
     const isQuoteRequired = bookingData.servicePricingType === 'quote_required';
     const newBooking: Booking = {
       ...bookingData,
       id: isQuoteRequired ? `req-${Date.now()}` : `b-${Date.now()}`,
-      status: isQuoteRequired ? 'awaiting_quote' : 'pending',
-      createdAt: new Date().toISOString()
+      status: isQuoteRequired ? 'quote_requested' : 'pending',
+      created_at: new Date().toISOString()
     };
     setBookings([newBooking, ...bookings]);
 
@@ -483,10 +473,10 @@ export default function App() {
       senderId: 'c1',
       senderName: bookingData.customerName,
       senderRole: 'customer',
-      recipientId: bookingData.professionalId,
+      recipientId: bookingData.artisan_id,
       message: isQuoteRequired
-        ? `Hello! I have submitted a service quote request for "${bookingData.selectedService || bookingData.category}" (Preferred date: ${bookingData.date}, ${bookingData.timeSlot}). Scope: ${bookingData.issueDescription}. Please review and send a custom quote.`
-        : `Hello! I have booked your service (${bookingData.selectedService || bookingData.category}) for ${bookingData.date} (${bookingData.timeSlot}). Issue: ${bookingData.issueDescription}`,
+        ? `Hello! I have submitted a service quote request for "${bookingData.title || bookingData.category}" (Preferred date: ${bookingData.scheduled_date}, ${bookingData.timeSlot}). Scope: ${bookingData.description}. Please review and send a custom quote.`
+        : `Hello! I have booked your service (${bookingData.title || bookingData.category}) for ${bookingData.scheduled_date} (${bookingData.timeSlot}). Issue: ${bookingData.description}`,
       timestamp: new Date().toISOString()
     };
     setMessages(prev => [...prev, initialMsg]);
@@ -497,8 +487,8 @@ export default function App() {
       type: 'new_job',
       title: isQuoteRequired ? 'New Service Quote Request' : 'New Job Booking Request',
       description: isQuoteRequired
-        ? `${bookingData.customerName} submitted a quote request for "${bookingData.selectedService || bookingData.category}".`
-        : `${bookingData.customerName} requested a ${bookingData.selectedService || bookingData.category} for ${bookingData.date} at ${bookingData.timeSlot}.`,
+        ? `${bookingData.customerName} submitted a quote request for "${bookingData.title || bookingData.category}".`
+        : `${bookingData.customerName} requested a ${bookingData.title || bookingData.category} for ${bookingData.scheduled_date} at ${bookingData.timeSlot}.`,
       timestamp: new Date().toISOString(),
       isRead: false,
       relatedId: newBooking.id
@@ -559,7 +549,7 @@ export default function App() {
     setBookings(prev => prev.map(b => {
       if (b.id === bookingId) {
         const updateObj: Partial<Booking> = { status, ...(extra || {}) };
-        if (status === 'completed' && !b.completedAt && !updateObj.completedAt) {
+        if (status === 'paid_out' && !b.completedAt && !updateObj.completedAt) {
           updateObj.completedAt = new Date().toISOString();
         }
         return { ...b, ...updateObj };
@@ -727,7 +717,7 @@ export default function App() {
       activeTab={activeTab}
       onTabChange={handleTabChange}
       professionals={professionals}
-      bookings={bookings.filter(b => currentRole === 'customer' ? b.customerId === 'c1' : b.professionalId === activeProfessional.id)}
+      bookings={bookings.filter(b => currentRole === 'customer' ? b.client_id === 'c1' : b.artisan_id === activeProfessional.id)}
       activeProfessional={activeProfessional}
       customerAvatar={customerAvatar}
       onLogout={handleLogout}
@@ -737,7 +727,7 @@ export default function App() {
         <ProfileView
           currentRole={currentRole}
           activeProfessional={activeProfessional}
-          bookings={bookings.filter(b => currentRole === 'customer' ? b.customerId === 'c1' : b.professionalId === activeProfessional.id)}
+          bookings={bookings.filter(b => currentRole === 'customer' ? b.client_id === 'c1' : b.artisan_id === activeProfessional.id)}
           customerAvatar={customerAvatar}
           onUpdateCustomerAvatar={setCustomerAvatar}
           onUpdateProfile={handleUpdateProfile}
@@ -756,7 +746,7 @@ export default function App() {
         <SettingsView
           currentRole={currentRole}
           activeProfessional={activeProfessional}
-          bookings={bookings.filter(b => currentRole === 'customer' ? b.customerId === 'c1' : b.professionalId === activeProfessional.id)}
+          bookings={bookings.filter(b => currentRole === 'customer' ? b.client_id === 'c1' : b.artisan_id === activeProfessional.id)}
           customerAvatar={customerAvatar}
           onUpdateCustomerAvatar={setCustomerAvatar}
           onUpdateProfile={handleUpdateProfile}
@@ -774,7 +764,7 @@ export default function App() {
       ) : currentRole === 'customer' ? (
         <CustomerDashboard
           professionals={professionals}
-          bookings={bookings.filter(b => b.customerId === 'c1')}
+          bookings={bookings.filter(b => b.client_id === 'c1')}
           messages={messages}
           onSendMessage={handleCustomerSendMessage}
           onMarkAsRead={handleCustomerMarkAsRead}
@@ -821,7 +811,7 @@ export default function App() {
       ) : (
         <ProfessionalDashboard
           professional={activeProfessional}
-          bookings={bookings.filter(b => b.professionalId === activeProfessional.id)}
+          bookings={bookings.filter(b => b.artisan_id === activeProfessional.id)}
           onUpdateBookingStatus={handleUpdateBookingStatus}
           onAddPortfolioItem={handleAddPortfolioItem}
           onUpdateProfile={handleUpdateProfile}

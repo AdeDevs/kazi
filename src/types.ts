@@ -81,28 +81,72 @@ export interface Professional {
   verificationStatus?: 'verified' | 'pending' | 'unverified';
 }
 
+// Matches the backend's BookingType enum exactly.
+export type BookingType = 'fixed_service' | 'custom_quote' | 'gig_purchase';
+
+// Matches the backend's BookingStatus enum exactly. Note there is no 'closed' value here:
+// the backend has no such state -- what the UI previously called "closed" was really just
+// an old 'paid_out' booking old enough to archive from the default view, computed client-side
+// (see isBookingArchived in utils.ts) rather than a status the server would ever return.
+export type BookingStatus =
+  | 'quote_requested'
+  | 'quote_sent'
+  | 'pending'
+  | 'accepted'
+  | 'escrow_funded'
+  | 'in_progress'
+  | 'completed_by_artisan'
+  | 'paid_out'
+  | 'cancelled'
+  | 'disputed';
+
+// Matches the backend's EscrowStatus enum exactly.
+export type EscrowStatus = 'unfunded' | 'held_in_escrow' | 'released_to_artisan' | 'refunded_to_client' | 'partially_refunded';
+
+export interface BookingStatusHistoryEntry {
+  from_status?: string | null;
+  to_status: string;
+  changed_by?: string | null;
+  reason?: string | null;
+  created_at: string;
+}
+
 export interface Booking {
   id: string;
-  customerId: string;
-  customerName: string;
-  customerPhone: string;
-  professionalId: string;
-  professionalName: string;
-  category: Category;
-  selectedService?: string;
-  servicePricingType?: ServicePricingType;
-  issueDescription: string;
-  problemImageUrl?: string;
-  problemImages?: string[];
-  date: string;
-  timeSlot: string;
+  client_id: string;
+  customerName: string; // frontend-only convenience: the backend booking response only returns client_id, not a denormalized name
+  customerPhone: string; // frontend-only convenience, no backend equivalent
+  artisan_id: string;
+  professionalName: string; // frontend-only convenience: the backend booking response only returns artisan_id, not a denormalized name
+  category: Category; // frontend-only convenience, no backend equivalent
+  booking_type?: BookingType;
+  gig_id?: string | null;
+  title?: string; // was selectedService
+  servicePricingType?: ServicePricingType; // frontend-only, no backend equivalent
+  description: string; // was issueDescription
+  problemImageUrl?: string; // frontend-only, no backend equivalent yet
+  problemImages?: string[]; // frontend-only, no backend equivalent yet
+  attachments?: string[]; // backend field: evidence photo URLs actually sent with the booking request
+  scheduled_date?: string; // was `date`
+  timeSlot: string; // frontend-only, no backend equivalent (backend only models a single scheduled_date)
   address: string;
-  landmark?: string;
-  landmarkImages?: string[];
-  coordinates?: { lat: number; lng: number; addressName?: string };
-  status: 'pending' | 'awaiting_quote' | 'accepted' | 'in-progress' | 'completion-submitted' | 'completed' | 'issue-reported' | 'cancelled' | 'closed';
-  totalPrice?: number;
-  completedAt?: string;
+  landmark_hint?: string; // was `landmark`
+  landmarkImages?: string[]; // frontend-only, no backend equivalent
+  coordinates?: { lat: number; lng: number; addressName?: string }; // frontend-only, no backend equivalent
+  status: BookingStatus;
+  escrow_status?: EscrowStatus;
+  amount?: number; // was totalPrice
+  quote_breakdown?: string | null;
+  payment_reference?: string | null;
+  reference_code?: string | null;
+  escrow_amount?: number;
+  platform_fee?: number;
+  gateway_fee?: number;
+  artisan_earnings?: number;
+  platform_commission_rate?: number;
+  completedAt?: string; // frontend-only convenience timestamp
+  completion_description?: string;
+  completion_photos?: string[];
   completionDetails?: {
     description: string;
     photos: string[];
@@ -114,7 +158,10 @@ export interface Booking {
     evidencePhotos: string[];
     reportedAt: string;
   };
-  createdAt: string;
+  auto_completion_deadline?: string;
+  lock_version?: number;
+  timeline?: BookingStatusHistoryEntry[];
+  created_at: string; // was createdAt
 }
 
 export interface ChatMessage {

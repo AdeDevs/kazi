@@ -12,7 +12,7 @@ interface BookingModalProps {
   professional: Professional | null;
   isOpen: boolean;
   onClose: () => void;
-  onSubmitBooking: (bookingData: Omit<Booking, 'id' | 'createdAt' | 'status'>) => void;
+  onSubmitBooking: (bookingData: Omit<Booking, 'id' | 'created_at' | 'status'>) => void;
   onOpenChatWithPro?: (pro: Professional) => void;
   preselectedService?: string;
 }
@@ -211,25 +211,25 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     const refPrefix = svcPricingType === 'quote_required' ? 'REQ' : 'KAZI';
     const refId = `${refPrefix}-${Math.floor(100000 + Math.random() * 900000)}`;
 
-    const bookingPayload: Omit<Booking, 'id' | 'createdAt' | 'status'> = {
-      customerId: 'c1',
+    const bookingPayload: Omit<Booking, 'id' | 'created_at' | 'status'> = {
+      client_id: 'c1',
       customerName,
       customerPhone,
-      professionalId: professional.id,
+      artisan_id: professional.id,
       professionalName: professional.name,
       category: professional.category,
-      selectedService: selectedServiceItem?.name || 'General Technical Work',
+      title: selectedServiceItem?.name || 'General Technical Work',
       servicePricingType: svcPricingType,
-      issueDescription,
+      description: issueDescription,
       problemImages,
       problemImageUrl: problemImages[0] || undefined,
-      date,
+      scheduled_date: date,
       timeSlot,
       address,
-      landmark,
+      landmark_hint: landmark,
       landmarkImages,
       coordinates: gpsCoords || undefined,
-      totalPrice: calculatedPrice
+      amount: calculatedPrice
     };
 
     onSubmitBooking(bookingPayload);
@@ -238,8 +238,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     setConfirmedBooking({
       ...bookingPayload,
       id: refId,
-      status: svcPricingType === 'quote_required' ? 'awaiting_quote' : 'pending',
-      createdAt: new Date().toISOString()
+      status: svcPricingType === 'quote_required' ? 'quote_requested' : 'pending',
+      created_at: new Date().toISOString()
     });
     setBookingRefId(refId);
     setStep('confirmed');
@@ -908,7 +908,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 <div>
                   <span className="text-slate-400 font-bold block mb-1">Service & Trade</span>
                   <p className="font-extrabold text-slate-900 dark:text-slate-100 text-sm">
-                    {confirmedBooking?.selectedService || selectedServiceItem?.name || 'General Service'}
+                    {confirmedBooking?.title || selectedServiceItem?.name || 'General Service'}
                   </p>
                   <p className="text-navy-800 dark:text-navy-400 font-semibold">{professional.category}</p>
                 </div>
@@ -986,7 +986,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                     </span>
                   ) : (
                     <span className="text-lg font-black text-navy-800 dark:text-navy-400">
-                      ₦{confirmedBooking?.totalPrice?.toLocaleString() || '0'}
+                      ₦{confirmedBooking?.amount?.toLocaleString() || '0'}
                     </span>
                   )}
                 </div>

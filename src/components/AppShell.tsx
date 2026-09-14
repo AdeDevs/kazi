@@ -64,7 +64,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   }, [activeTab]);
 
   const pendingCount = bookings.filter(b => b.status === 'pending').length;
-  const activeCount = bookings.filter(b => b.status === 'accepted' || b.status === 'in-progress').length;
+  const activeCount = bookings.filter(b => b.status === 'accepted' || b.status === 'in_progress').length;
 
   const displayName = user 
     ? `${user.first_name} ${user.last_name}`.trim() || user.email.split('@')[0]

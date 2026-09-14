@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Professional, Booking, ChatMessage, Category } from '../types';
-import { formatCurrency } from '../utils';
+import { formatCurrency, isBookingArchived } from '../utils';
 import { 
   Search, SendHorizontal, Image as ImageIcon, ArrowLeft, 
   CheckCheck, Check, Clock, User, MessageSquare,
@@ -305,8 +305,8 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
         const unreadCount = proMsgs.filter(m => m.senderId === pro.id && m.recipientId === 'c1' && m.status !== 'read').length;
 
         const relatedBooking = bookings
-          .filter(b => b.professionalId === pro.id)
-          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+          .filter(b => b.artisan_id === pro.id)
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
 
         return {
           proId: pro.id,
@@ -334,7 +334,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
     const q = searchQuery.trim().toLowerCase();
     return conversations.filter(conv => {
       if (filterTab === 'unread' && conv.unreadCount === 0) return false;
-      if (filterTab === 'active_jobs' && (!conv.relatedBooking || ['completed', 'cancelled', 'closed'].includes(conv.relatedBooking.status))) {
+      if (filterTab === 'active_jobs' && (!conv.relatedBooking || isBookingArchived(conv.relatedBooking))) {
         return false;
       }
 
@@ -343,7 +343,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
         const matchesCategory = conv.professional.category.toLowerCase().includes(q);
         const matchesNeighborhood = conv.professional.neighborhood.toLowerCase().includes(q);
         const matchesMsg = conv.lastMessage?.message.toLowerCase().includes(q);
-        const matchesBooking = (conv.relatedBooking?.selectedService || '').toLowerCase().includes(q);
+        const matchesBooking = (conv.relatedBooking?.title || '').toLowerCase().includes(q);
         return matchesName || matchesCategory || matchesNeighborhood || matchesMsg || matchesBooking;
       }
       return true;
@@ -361,8 +361,8 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
     if (found) return found;
     if (activePro) {
       const relatedBooking = bookings
-        .filter(b => b.professionalId === activePro.id)
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+        .filter(b => b.artisan_id === activePro.id)
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
       return {
         proId: activePro.id,
         professional: activePro,
@@ -575,13 +575,13 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
                   ACTIVE JOB
                 </span>
                 <span className="font-bold text-navy-900 dark:text-navy-100 truncate">
-                  {activeConversation.relatedBooking.selectedService || activeConversation.relatedBooking.category}
+                  {activeConversation.relatedBooking.title || activeConversation.relatedBooking.category}
                 </span>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                {activeConversation.relatedBooking.totalPrice && (
+                {activeConversation.relatedBooking.amount && (
                   <span className="font-black text-brand-orange-600 dark:text-brand-orange-400">
-                    {formatCurrency(activeConversation.relatedBooking.totalPrice)}
+                    {formatCurrency(activeConversation.relatedBooking.amount)}
                   </span>
                 )}
                 <span 
@@ -1068,7 +1068,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
                         <>
                           <span>•</span>
                           <span className="text-navy-700 dark:text-navy-300 font-bold truncate">
-                            Job: {conv.relatedBooking.selectedService || conv.relatedBooking.category}
+                            Job: {conv.relatedBooking.title || conv.relatedBooking.category}
                           </span>
                         </>
                       )}

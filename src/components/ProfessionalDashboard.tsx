@@ -15,7 +15,7 @@ import {
 interface ProfessionalDashboardProps {
   professional: Professional;
   bookings: Booking[];
-  onUpdateBookingStatus: (bookingId: string, status: Booking['status']) => void;
+  onUpdateBookingStatus: (bookingId: string, status: Booking['status'], extra?: Partial<Booking>) => void;
   onAddPortfolioItem: (item: Omit<PortfolioItem, 'id'>) => void;
   onUpdateProfile: (updated: Partial<Professional>) => void;
   activeTab?: string;
@@ -89,7 +89,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
 
   // Auto-completion helper (4 days = 345600000 ms)
   const isJobAutoCompleted = (job: Booking): boolean => {
-    if (job.status === 'completion-submitted' && job.completionDetails?.submittedAt) {
+    if (job.status === 'completed_by_artisan' && job.completionDetails?.submittedAt) {
       const submittedTime = new Date(job.completionDetails.submittedAt).getTime();
       const fourDaysMs = 4 * 24 * 60 * 60 * 1000;
       return (Date.now() - submittedTime) >= fourDaysMs;
@@ -152,26 +152,25 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
     onUpdateBookingStatus(jobId, status, extra);
   };
 
-  const myBookings = localBookings.filter(b => b.professionalId === professional.id);
-  const pendingRequests = myBookings.filter(b => b.status === 'pending' || b.status === 'awaiting_quote');
+  const myBookings = localBookings.filter(b => b.artisan_id === professional.id);
+  const pendingRequests = myBookings.filter(b => b.status === 'pending' || b.status === 'quote_requested');
 
   const activeJobs = myBookings.filter(b => 
     b.status === 'accepted' || 
-    b.status === 'in-progress' || 
-    (b.status === 'completion-submitted' && !isJobAutoCompleted(b)) || 
-    b.status === 'issue-reported'
+    b.status === 'in_progress' || 
+    (b.status === 'completed_by_artisan' && !isJobAutoCompleted(b)) || 
+    b.status === 'disputed'
   );
 
-  const completedJobs = myBookings.filter(b => 
-    b.status === 'completed' || 
-    b.status === 'closed' || 
+  const completedJobs = myBookings.filter(b =>
+    b.status === 'paid_out' ||
     isJobAutoCompleted(b)
   );
 
   const filteredActiveJobs = activeJobs.filter(b => {
-    if (activeJobFilter === 'in_progress') return b.status === 'accepted' || b.status === 'in-progress';
-    if (activeJobFilter === 'completion_submitted') return b.status === 'completion-submitted' && !isJobAutoCompleted(b);
-    if (activeJobFilter === 'issue_reported') return b.status === 'issue-reported';
+    if (activeJobFilter === 'in_progress') return b.status === 'accepted' || b.status === 'in_progress';
+    if (activeJobFilter === 'completion_submitted') return b.status === 'completed_by_artisan' && !isJobAutoCompleted(b);
+    if (activeJobFilter === 'issue_reported') return b.status === 'disputed';
     return true;
   });
 
@@ -353,7 +352,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
             ) : (
               <div className="space-y-4">
                 {pendingRequests.map((job) => {
-                  const isQuote = job.status === 'awaiting_quote' || job.servicePricingType === 'quote_required';
+                  const isQuote = job.status === 'quote_requested' || job.servicePricingType === 'quote_required';
                   return (
                   <div key={job.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3.5 sm:p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="space-y-2">
@@ -369,14 +368,14 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                       </div>
 
                       <h4 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                        {job.selectedService || job.category}
+                        {job.title || job.category}
                       </h4>
                       <p className="text-xs text-slate-600 dark:text-slate-300 font-medium">
-                        "{job.issueDescription}"
+                        "{job.description}"
                       </p>
 
                       <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 dark:text-slate-400 pt-1">
-                        <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400" /> {job.date} ({job.timeSlot})</span>
+                        <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400" /> {job.scheduled_date} ({job.timeSlot})</span>
                         <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-slate-400" /> {job.address}</span>
                       </div>
                     </div>
@@ -385,7 +384,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                       <div className="text-right sm:mr-4 hidden sm:block">
                         <p className="text-xs text-slate-400">{isQuote ? 'Quote Status' : 'Est. Payout'}</p>
                         <p className="text-base font-black text-slate-900 dark:text-white">
-                          {isQuote ? (job.totalPrice && job.totalPrice > 0 ? formatCurrency(job.totalPrice) : 'Quote Required') : formatCurrency(job.totalPrice || 0)}
+                          {isQuote ? (job.amount && job.amount > 0 ? formatCurrency(job.amount) : 'Quote Required') : formatCurrency(job.amount || 0)}
                         </p>
                       </div>
 
@@ -448,10 +447,10 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
               >
                 <span>In Progress</span>
                 <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200">
-                  {activeJobs.filter(j => j.status === 'accepted' || j.status === 'in-progress').length}
+                  {activeJobs.filter(j => j.status === 'accepted' || j.status === 'in_progress').length}
                 </span>
               </button>
-              {activeJobs.filter(j => j.status === 'completion-submitted' && !isJobAutoCompleted(j)).length > 0 && (
+              {activeJobs.filter(j => j.status === 'completed_by_artisan' && !isJobAutoCompleted(j)).length > 0 && (
                 <button
                   onClick={() => setActiveJobFilter('completion_submitted')}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
@@ -463,11 +462,11 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                   <Clock className="w-3 h-3 text-emerald-500" />
                   <span>Completion Submitted</span>
                   <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-extrabold">
-                    {activeJobs.filter(j => j.status === 'completion-submitted' && !isJobAutoCompleted(j)).length}
+                    {activeJobs.filter(j => j.status === 'completed_by_artisan' && !isJobAutoCompleted(j)).length}
                   </span>
                 </button>
               )}
-              {activeJobs.filter(j => j.status === 'issue-reported').length > 0 && (
+              {activeJobs.filter(j => j.status === 'disputed').length > 0 && (
                 <button
                   onClick={() => setActiveJobFilter('issue_reported')}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
@@ -479,7 +478,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                   <AlertCircle className="w-3 h-3 text-rose-500" />
                   <span>Issue Reported</span>
                   <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-extrabold">
-                    {activeJobs.filter(j => j.status === 'issue-reported').length}
+                    {activeJobs.filter(j => j.status === 'disputed').length}
                   </span>
                 </button>
               )}
@@ -495,8 +494,8 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
               <div className="space-y-4">
                 {filteredActiveJobs.map((job) => {
                   const timeRem = getTimeRemainingForCustomerResponse(job.completionDetails?.submittedAt);
-                  const isSubmitted = job.status === 'completion-submitted' && !isJobAutoCompleted(job);
-                  const isIssue = job.status === 'issue-reported';
+                  const isSubmitted = job.status === 'completed_by_artisan' && !isJobAutoCompleted(job);
+                  const isIssue = job.status === 'disputed';
 
                   return (
                     <div key={job.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3.5 sm:p-4 shadow-xs space-y-3">
@@ -526,17 +525,17 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                           </div>
 
                           <h4 className="text-base font-bold text-slate-900 dark:text-slate-100 pt-1">
-                            {job.selectedService || job.category}
+                            {job.title || job.category}
                           </h4>
                           <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                            "{job.issueDescription}"
+                            "{job.description}"
                           </p>
                         </div>
 
                         <div className="text-left md:text-right shrink-0">
                           <p className="text-xs text-slate-400">Total Payout</p>
                           <p className="text-lg font-black text-slate-900 dark:text-white">
-                            {formatCurrency(job.totalPrice || 0)}
+                            {formatCurrency(job.amount || 0)}
                           </p>
                         </div>
                       </div>
@@ -617,7 +616,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                       {/* Footer Metadata & Action Buttons */}
                       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
                         <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
-                          <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400" /> {job.date} ({job.timeSlot})</span>
+                          <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400" /> {job.scheduled_date} ({job.timeSlot})</span>
                           <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-slate-400" /> {job.address}</span>
                         </div>
 
@@ -633,7 +632,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                           <button
                             onClick={() => {
                               if (onTabChange) {
-                                onTabChange('messages', job.customerId);
+                                onTabChange('messages', job.client_id);
                               }
                             }}
                             className={`px-4 py-2 text-xs font-bold rounded-xl transition-colors cursor-pointer flex-1 sm:flex-none flex items-center justify-center gap-1.5 ${
@@ -648,14 +647,14 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
 
                           {job.status === 'accepted' && (
                             <button
-                              onClick={() => handleOptimisticUpdateStatus(job.id, 'in-progress')}
+                              onClick={() => handleOptimisticUpdateStatus(job.id, 'in_progress')}
                               className="px-4 py-2 bg-navy-800 hover:bg-navy-900 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex-1 sm:flex-none shadow-xs"
                             >
                               Start Job
                             </button>
                           )}
 
-                          {job.status === 'in-progress' && (
+                          {job.status === 'in_progress' && (
                             <button
                               onClick={() => {
                                 setCompletingJob(job);
@@ -708,13 +707,13 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                           </div>
 
                           <h4 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                            {job.selectedService || job.category}
+                            {job.title || job.category}
                           </h4>
                         </div>
 
                         <div className="text-left md:text-right shrink-0">
                           <p className="text-xs text-slate-400">Paid Payout</p>
-                          <p className="text-lg font-black text-emerald-600 dark:text-emerald-400">{formatCurrency(job.totalPrice || 0)}</p>
+                          <p className="text-lg font-black text-emerald-600 dark:text-emerald-400">{formatCurrency(job.amount || 0)}</p>
                         </div>
                       </div>
 
@@ -725,7 +724,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                           <span>
                             {autoCompleted
                               ? 'Job Auto-Completed (4-Day Window Concluded)'
-                              : job.status === 'completed'
+                              : job.status === 'paid_out'
                               ? 'Job Confirmed & Escrow Released'
                               : 'Job Finalized & Closed'}
                           </span>
@@ -733,7 +732,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                         <p className="text-emerald-800 dark:text-emerald-300 font-medium">
                           {autoCompleted
                             ? 'The customer did not report an issue within the 4-day response window. The job automatically transitioned to Completed.'
-                            : job.status === 'completed'
+                            : job.status === 'paid_out'
                             ? 'The customer confirmed work completion and escrow payout was released.'
                             : 'This job has been finalized.'}
                         </p>
@@ -746,7 +745,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
 
                       <div className="flex items-center justify-between pt-1">
                         <span className="flex items-center gap-1 text-xs text-slate-500">
-                          <Calendar className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400" /> Scheduled/Completed Date: {job.date}
+                          <Calendar className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400" /> Scheduled/Completed Date: {job.scheduled_date}
                         </span>
 
                         <button
@@ -785,7 +784,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
               <div className="space-y-1">
                 <span className="text-xs font-bold text-navy-800 dark:text-navy-400 uppercase tracking-wider">Job Details & Status</span>
                 <h3 className="text-xl font-black text-slate-900 dark:text-white">
-                  {selectedBookingForDetails.selectedService || selectedBookingForDetails.category}
+                  {selectedBookingForDetails.title || selectedBookingForDetails.category}
                 </h3>
                 <p className="text-xs text-slate-500">Booking ID: {selectedBookingForDetails.id}</p>
               </div>
@@ -801,7 +800,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                 </div>
                 <div className="flex justify-between">
                   <span className="font-semibold text-slate-500">Scheduled Date:</span>
-                  <span className="font-bold text-slate-900 dark:text-white">{selectedBookingForDetails.date} ({selectedBookingForDetails.timeSlot})</span>
+                  <span className="font-bold text-slate-900 dark:text-white">{selectedBookingForDetails.scheduled_date} ({selectedBookingForDetails.timeSlot})</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="font-semibold text-slate-500">Location / Address:</span>
@@ -810,16 +809,16 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                 <div className="flex justify-between items-center pt-2 border-t border-slate-200 dark:border-slate-700">
                   <span className="font-semibold text-slate-500">Job Status:</span>
                   <span className="font-extrabold uppercase px-2.5 py-1 rounded-full text-xs bg-navy-800 text-white">
-                    {selectedBookingForDetails.status === 'completion-submitted'
+                    {selectedBookingForDetails.status === 'completed_by_artisan'
                       ? 'Completion Submitted'
-                      : selectedBookingForDetails.status === 'issue-reported'
+                      : selectedBookingForDetails.status === 'disputed'
                       ? 'Issue Reported'
                       : selectedBookingForDetails.status}
                   </span>
                 </div>
                 <div className="flex justify-between pt-2 border-t border-slate-200 dark:border-slate-700">
                   <span className="font-bold text-slate-800 dark:text-slate-200">Total Payout:</span>
-                  <span className="font-black text-base text-slate-900 dark:text-white">{formatCurrency(selectedBookingForDetails.totalPrice || 0)}</span>
+                  <span className="font-black text-base text-slate-900 dark:text-white">{formatCurrency(selectedBookingForDetails.amount || 0)}</span>
                 </div>
               </div>
 
@@ -847,7 +846,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
               <div className="space-y-1.5">
                 <span className="text-xs font-semibold text-slate-500">Initial Issue Description</span>
                 <p className="text-xs sm:text-sm bg-white dark:bg-slate-950 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300">
-                  {selectedBookingForDetails.issueDescription}
+                  {selectedBookingForDetails.description}
                 </p>
               </div>
 
@@ -888,7 +887,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                   Submit Work Completion Proof
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Provide a description and mandatory proof photo(s) for "{completingJob.selectedService || completingJob.category}" with {completingJob.customerName}.
+                  Provide a description and mandatory proof photo(s) for "{completingJob.title || completingJob.category}" with {completingJob.customerName}.
                 </p>
               </div>
 
@@ -909,7 +908,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                   // Update job status to completion-submitted
                   const updated: Booking = {
                     ...completingJob,
-                    status: 'completion-submitted',
+                    status: 'completed_by_artisan',
                     completionDetails: {
                       description: completionDesc,
                       photos,
@@ -918,7 +917,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                     }
                   };
 
-                  handleOptimisticUpdateStatus(updated.id, 'completion-submitted', {
+                  handleOptimisticUpdateStatus(updated.id, 'completed_by_artisan', {
                     completionDetails: updated.completionDetails
                   });
                   setCompletingJob(null);
@@ -1215,7 +1214,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                     <div className="flex items-center gap-2">
                       <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase ${
                         job.status === 'accepted' ? 'bg-emerald-500/10 text-emerald-600' :
-                        job.status === 'in-progress' ? 'bg-navy-800/10 text-navy-800 dark:text-navy-400' :
+                        job.status === 'in_progress' ? 'bg-navy-800/10 text-navy-800 dark:text-navy-400' :
                         job.status === 'pending' ? 'bg-brand-orange-500/10 text-brand-orange-600 border border-brand-orange-500/20 dark:text-brand-orange-400 dark:border-brand-orange-500/30' :
                         'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
                       }`}>
@@ -1224,10 +1223,10 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                       <span className="text-xs text-slate-400 font-semibold truncate">Customer: {job.customerName} ({job.customerPhone})</span>
                     </div>
 
-                    <h4 className="text-base font-bold text-slate-900 dark:text-slate-100">Issue: {job.issueDescription}</h4>
+                    <h4 className="text-base font-bold text-slate-900 dark:text-slate-100">Issue: {job.description}</h4>
 
                     <div className="flex flex-wrap items-center gap-4 text-xs text-slate-600 dark:text-slate-400">
-                      <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400" /> {job.date} ({job.timeSlot})</span>
+                      <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400" /> {job.scheduled_date} ({job.timeSlot})</span>
                       <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-slate-400" /> {job.address}</span>
                     </div>
                   </div>
@@ -1235,17 +1234,17 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                   <div className="flex flex-col sm:flex-row items-center gap-2">
                     <div className="text-right sm:mr-4 hidden sm:block">
                       <p className="text-xs text-slate-400">Est. Payout</p>
-                      <p className="text-base font-bold text-slate-900 dark:text-slate-100">{formatCurrency(job.totalPrice || 0)}</p>
+                      <p className="text-base font-bold text-slate-900 dark:text-slate-100">{formatCurrency(job.amount || 0)}</p>
                     </div>
 
                     {job.status === 'pending' || job.status === 'accepted' ? (
                       <button
-                        onClick={() => handleOptimisticUpdateStatus(job.id, 'in-progress')}
+                        onClick={() => handleOptimisticUpdateStatus(job.id, 'in_progress')}
                         className="px-4 py-2 bg-navy-800 hover:bg-navy-900 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer w-full sm:w-auto shadow-xs"
                       >
                         Start Job
                       </button>
-                    ) : job.status === 'in-progress' ? (
+                    ) : job.status === 'in_progress' ? (
                       <button
                         onClick={() => {
                           setCompletingJob(job);
