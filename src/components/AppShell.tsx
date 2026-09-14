@@ -171,7 +171,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                     title={item.label}
                     aria-label={item.label}
                   >
-                    <div className="w-11 h-11 flex items-center justify-center shrink-0 absolute left-0 top-0">
+                    <div className="w-11 h-11 flex items-center justify-center shrink-0 absolute top-0 left-0 md:left-1/2 md:-translate-x-1/2 md:group-hover:left-0 md:group-hover:translate-x-0 transition-[left,transform] duration-300 ease-in-out">
                       <Icon className="w-5 h-5 shrink-0" strokeWidth={1.5} />
                     </div>
                     <span className={`pl-12 whitespace-nowrap overflow-hidden text-left flex-1 transition-opacity duration-200 ${
@@ -202,7 +202,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                   title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
                   aria-label="Toggle Dark Mode"
                 >
-                  <div className="w-11 h-11 flex items-center justify-center shrink-0 absolute left-0 top-0">
+                  <div className="w-11 h-11 flex items-center justify-center shrink-0 absolute top-0 left-0 md:left-1/2 md:-translate-x-1/2 md:group-hover:left-0 md:group-hover:translate-x-0 transition-[left,transform] duration-300 ease-in-out">
                     {darkMode ? <Sun className="w-5 h-5 text-amber-500" strokeWidth={1.5} /> : <Moon className="w-5 h-5 text-zinc-500" strokeWidth={1.5} />}
                   </div>
                   <span className={`pl-12 whitespace-nowrap overflow-hidden text-left flex-1 transition-opacity duration-200 ${
@@ -222,7 +222,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                   title="Sign Out"
                   aria-label="Sign Out"
                 >
-                  <div className="w-11 h-11 flex items-center justify-center shrink-0 absolute left-0 top-0">
+                  <div className="w-11 h-11 flex items-center justify-center shrink-0 absolute top-0 left-0 md:left-1/2 md:-translate-x-1/2 md:group-hover:left-0 md:group-hover:translate-x-0 transition-[left,transform] duration-300 ease-in-out">
                     <LogOut className="w-5 h-5" strokeWidth={1.5} />
                   </div>
                   <span className={`pl-12 whitespace-nowrap overflow-hidden text-left flex-1 transition-opacity duration-200 ${
@@ -251,7 +251,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                   title="View Profile"
                   aria-label="View Profile"
                 >
-                  <div className="w-11 h-11 flex items-center justify-center shrink-0 absolute left-0 top-0">
+                  <div className="w-11 h-11 flex items-center justify-center shrink-0 absolute top-0 left-0 md:left-1/2 md:-translate-x-1/2 md:group-hover:left-0 md:group-hover:translate-x-0 transition-[left,transform] duration-300 ease-in-out">
                     <UserAvatar
                       src={currentRole === 'customer' ? customerAvatar : activeProfessional.profile_picture}
                       name={displayName}
@@ -284,7 +284,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                   onClick={() => openAuthModal('login')}
                   className="w-full relative flex items-center h-11 rounded-xl bg-navy-900 hover:bg-navy-800 text-white font-bold text-xs transition-colors cursor-pointer justify-center shadow-xs"
                 >
-                  <div className="w-11 h-11 flex items-center justify-center shrink-0 absolute left-0 top-0">
+                  <div className="w-11 h-11 flex items-center justify-center shrink-0 absolute top-0 left-0 md:left-1/2 md:-translate-x-1/2 md:group-hover:left-0 md:group-hover:translate-x-0 transition-[left,transform] duration-300 ease-in-out">
                     <LogIn className="w-4 h-4" />
                   </div>
                   <span className={`pl-10 whitespace-nowrap overflow-hidden text-left transition-opacity duration-200 ${
