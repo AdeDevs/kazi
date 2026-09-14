@@ -1,0 +1,421 @@
+import React, { useState, useEffect } from 'react';
+import { Role, Professional, Booking, Category } from '../types';
+import { Language, t } from '../translations';
+import { 
+  Wrench, Home, Calendar, MessageSquare,
+  Moon, Sun, Bell, Settings, Briefcase, LogOut, User,
+  Menu, Search, X, LogIn, ShieldCheck, CheckCircle2, Layers
+} from 'lucide-react';
+import { ConfirmationModal } from './ui/ConfirmationModal';
+import { UserAvatar } from './ui/UserAvatar';
+import { useAuth } from '../context/AuthContext';
+import { AuthModal } from './AuthModal';
+
+interface AppShellProps {
+  currentRole: Role;
+  onSwitchRole: (role: Role) => void;
+  onOpenAuthPage?: (view?: 'signin' | 'signup') => void;
+  unreadCount: number;
+  notificationsUnreadCount?: number;
+  onOpenChats: () => void;
+  darkMode: boolean;
+  onToggleDarkMode: () => void;
+  selectedCategoryFilter: Category | 'All';
+  onSelectCategoryFilter: (cat: Category | 'All') => void;
+  activeTab: string;
+  onTabChange: (tab: string) => void;
+  professionals: Professional[];
+  bookings: Booking[];
+  activeProfessional: Professional;
+  customerAvatar: string;
+  onLogout?: () => void;
+  currentLanguage?: Language;
+  children: React.ReactNode;
+}
+
+export const AppShell: React.FC<AppShellProps> = ({
+  currentRole,
+  onSwitchRole,
+  onOpenAuthPage,
+  unreadCount,
+  notificationsUnreadCount = 0,
+  onOpenChats,
+  darkMode,
+  onToggleDarkMode,
+  selectedCategoryFilter,
+  onSelectCategoryFilter,
+  activeTab,
+  onTabChange,
+  professionals,
+  bookings,
+  activeProfessional,
+  customerAvatar,
+  onLogout,
+  currentLanguage = 'English (Nigeria)' as Language,
+  children
+}) => {
+  const { user, isAuthenticated, openAuthModal, logout: authLogout, loginAsDemo } = useAuth();
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  // Scroll to top whenever activeTab changes so new views don't inherit previous page scroll position
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
+  }, [activeTab]);
+
+  const pendingCount = bookings.filter(b => b.status === 'pending').length;
+  const activeCount = bookings.filter(b => b.status === 'accepted' || b.status === 'in-progress').length;
+
+  const displayName = user 
+    ? `${user.first_name} ${user.last_name}`.trim() || user.email.split('@')[0]
+    : (currentRole === 'customer' ? 'Guest Client' : 'Guest Artisan');
+
+  const displayLocation = user?.state ? `${user.state}, Nigeria` : (currentRole === 'customer' ? 'Oyo, Nigeria' : activeProfessional.location);
+
+  const handleLogoutAction = () => {
+    authLogout();
+    if (onLogout) onLogout();
+  };
+
+  const navItems = [
+    { id: 'explore', label: t('nav.home', currentLanguage), icon: Home },
+    ...(currentRole === 'professional' ? [
+      { id: 'jobs', label: t('nav.jobs', currentLanguage), icon: Briefcase, badge: pendingCount > 0 ? pendingCount : undefined },
+      { id: 'gigs', label: 'My Gigs', icon: Layers }
+    ] : []),
+    ...(currentRole === 'customer' ? [{ id: 'bookings', label: t('nav.bookings', currentLanguage), icon: Calendar }] : []),
+    { id: 'messages', label: t('nav.messages', currentLanguage), icon: MessageSquare, badge: unreadCount > 0 ? unreadCount : undefined },
+    { id: 'notifications', label: t('nav.notifications', currentLanguage), icon: Bell, badge: notificationsUnreadCount > 0 ? notificationsUnreadCount : undefined },
+    { id: 'settings', label: 'Account Settings', icon: Settings },
+  ];
+
+  return (
+    <div className={`min-h-screen ${darkMode ? 'bg-zinc-950 text-zinc-100 dark' : 'bg-zinc-50 text-zinc-900'} antialiased`}>
+      
+      {/* Shell Layout Wrapper */}
+      <div className="w-full flex min-h-screen relative">
+        
+        {/* ================= OVERLAY FOR MOBILE SIDEBAR ================= */}
+        {isMobileSidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-navy-950/60 backdrop-blur-xs z-40 md:hidden transition-opacity duration-300 animate-in fade-in"
+            onClick={() => setIsMobileSidebarOpen(false)}
+          />
+        )}
+
+        {/* ================= LEFT SIDEBAR ================= */}
+        <aside
+          className={`flex flex-col border-r border-zinc-200 dark:border-zinc-800 fixed inset-y-0 left-0 md:sticky top-0 h-[100dvh] max-h-[100dvh] md:h-screen overflow-hidden shrink-0 z-50 md:z-30 bg-white dark:bg-zinc-950 group w-72 max-w-[85vw] md:w-[68px] md:hover:w-64 transition-transform md:transition-[width] duration-300 ease-in-out ${
+            isMobileSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'
+          }`}
+        >
+          
+          {/* Brand Logo & Mobile Close Button */}
+          <div className="h-[65px] md:h-[73px] w-full shrink-0 flex items-center justify-between px-3.5 border-b border-zinc-200/80 dark:border-zinc-800/80 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => {
+                onTabChange('explore');
+                if (window.innerWidth < 768) {
+                  setIsMobileSidebarOpen(false);
+                }
+              }}
+              className="flex items-center cursor-pointer"
+              title="KaziHub Home"
+              aria-label="KaziHub Home"
+            >
+              <div className="w-10 h-10 rounded-xl bg-navy-900 text-white border border-navy-900 shrink-0 flex items-center justify-center shadow-xs">
+                <Wrench className="w-5 h-5" strokeWidth={1.5} />
+              </div>
+              <div className={`pl-2.5 whitespace-nowrap overflow-hidden transition-opacity duration-200 ${
+                isMobileSidebarOpen ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
+              }`}>
+                <span className="text-[17px] font-bold tracking-tight text-navy-900 dark:text-zinc-100">
+                  Kazi<span className="text-brand-orange-700">Hub</span>
+                </span>
+              </div>
+            </button>
+
+            {/* Mobile Close Button */}
+            <button
+              type="button"
+              onClick={() => setIsMobileSidebarOpen(false)}
+              className="md:hidden p-2 rounded-xl text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+              title="Close Menu"
+              aria-label="Close Menu"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar flex flex-col justify-between p-3.5 pb-4 md:pb-3.5">
+            {/* Navigation Links */}
+            <nav className="space-y-1">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      onTabChange(item.id);
+                      if (window.innerWidth < 768) {
+                        setIsMobileSidebarOpen(false);
+                      }
+                    }}
+                    className={`w-full relative flex items-center h-11 rounded-xl font-medium text-sm transition-all cursor-pointer group/link ${
+                      isActive
+                        ? 'bg-navy-900 text-white font-semibold shadow-xs'
+                        : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900/90 hover:text-navy-900 dark:hover:text-zinc-100'
+                    }`}
+                    title={item.label}
+                    aria-label={item.label}
+                  >
+                    <div className="w-11 h-11 flex items-center justify-center shrink-0 absolute left-0 top-0">
+                      <Icon className="w-5 h-5 shrink-0" strokeWidth={1.5} />
+                    </div>
+                    <span className={`pl-12 whitespace-nowrap overflow-hidden text-left flex-1 transition-opacity duration-200 ${
+                      isMobileSidebarOpen ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
+                    }`}>
+                      {item.label}
+                    </span>
+                    {item.badge !== undefined && (
+                      <span className={`absolute right-3 top-1/2 -translate-y-1/2 min-w-4.5 h-4.5 px-1 rounded-full text-[10px] font-bold flex items-center justify-center text-center shrink-0 transition-opacity duration-200 leading-none ${
+                        isMobileSidebarOpen ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
+                      } bg-brand-orange-700 text-white shadow-xs`}>
+                        <span className="flex items-center justify-center text-center">{item.badge}</span>
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Bottom Controls & Profile */}
+            <div className="pt-3 mt-auto border-t border-zinc-200 dark:border-zinc-800 space-y-1.5 shrink-0 overflow-hidden pb-4 md:pb-0">
+              <div className="md:hidden space-y-1.5">
+                {/* Theme Toggle Button */}
+                <button
+                  type="button"
+                  onClick={onToggleDarkMode}
+                  className="w-full relative flex items-center h-11 rounded-xl font-medium text-sm transition-colors cursor-pointer text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900 hover:text-navy-900 dark:hover:text-navy-100"
+                  title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                  aria-label="Toggle Dark Mode"
+                >
+                  <div className="w-11 h-11 flex items-center justify-center shrink-0 absolute left-0 top-0">
+                    {darkMode ? <Sun className="w-5 h-5 text-amber-500" strokeWidth={1.5} /> : <Moon className="w-5 h-5 text-zinc-500" strokeWidth={1.5} />}
+                  </div>
+                  <span className={`pl-12 whitespace-nowrap overflow-hidden text-left flex-1 transition-opacity duration-200 ${
+                    isMobileSidebarOpen ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
+                  }`}>
+                    {darkMode ? 'Light Theme' : 'Dark Theme'}
+                  </span>
+                </button>
+              </div>
+  
+              {/* Logout Button with slide up Confirmation Modal */}
+              {onLogout && (
+                <button
+                  type="button"
+                  onClick={() => setShowLogoutConfirm(true)}
+                  className="w-full relative flex items-center h-11 rounded-xl font-medium text-sm transition-colors cursor-pointer text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                  title="Sign Out"
+                  aria-label="Sign Out"
+                >
+                  <div className="w-11 h-11 flex items-center justify-center shrink-0 absolute left-0 top-0">
+                    <LogOut className="w-5 h-5" strokeWidth={1.5} />
+                  </div>
+                  <span className={`pl-12 whitespace-nowrap overflow-hidden text-left flex-1 transition-opacity duration-200 ${
+                    isMobileSidebarOpen ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
+                  }`}>
+                    Sign Out
+                  </span>
+                </button>
+              )}
+
+              {/* User Profile Info Navigator Button */}
+              {user ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onTabChange('profile');
+                    if (window.innerWidth < 768) {
+                      setIsMobileSidebarOpen(false);
+                    }
+                  }}
+                  className={`w-full relative flex items-center h-11 rounded-xl transition-all cursor-pointer select-none group/profile ${
+                    activeTab === 'profile'
+                      ? 'bg-navy-900 text-white font-semibold shadow-xs'
+                      : 'bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700'
+                  }`}
+                  title="View Profile"
+                  aria-label="View Profile"
+                >
+                  <div className="w-11 h-11 flex items-center justify-center shrink-0 absolute left-0 top-0">
+                    <UserAvatar
+                      src={currentRole === 'customer' ? customerAvatar : activeProfessional.avatar}
+                      name={displayName}
+                      sizeClassName="w-7 h-7 sm:w-8 sm:h-8"
+                      textClassName="text-[11px] font-black"
+                      roundedClassName="rounded-lg"
+                      verified={Boolean(user?.is_email_verified)}
+                    />
+                  </div>
+                  <div className={`pl-12 pr-2 whitespace-nowrap overflow-hidden text-left transition-opacity duration-200 ${
+                    isMobileSidebarOpen ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
+                  }`}>
+                    <div className="flex items-center gap-1">
+                      <h4 className={`font-bold text-xs truncate ${
+                        activeTab === 'profile' ? 'text-white' : 'text-navy-900 dark:text-zinc-100'
+                      }`}>
+                        {displayName}
+                      </h4>
+                    </div>
+                    <p className={`text-[10px] truncate ${
+                      activeTab === 'profile' ? 'text-zinc-300' : 'text-zinc-500 dark:text-zinc-400'
+                    }`}>
+                      {user.role === 'artisan' ? `Artisan • ${user.state || 'Oyo'}` : `Client • ${user.state || 'Oyo'}`}
+                    </p>
+                  </div>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => openAuthModal('login')}
+                  className="w-full relative flex items-center h-11 rounded-xl bg-navy-900 hover:bg-navy-800 text-white font-bold text-xs transition-colors cursor-pointer justify-center shadow-xs"
+                >
+                  <div className="w-11 h-11 flex items-center justify-center shrink-0 absolute left-0 top-0">
+                    <LogIn className="w-4 h-4" />
+                  </div>
+                  <span className={`pl-10 whitespace-nowrap overflow-hidden text-left transition-opacity duration-200 ${
+                    isMobileSidebarOpen ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
+                  }`}>
+                    Sign In / Register
+                  </span>
+                </button>
+              )}
+            </div>
+          </div>
+        </aside>
+
+        {/* ================= SCROLLABLE CENTER MAIN FEED ================= */}
+        <main className="flex-1 min-w-0 min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col">
+          
+          {/* Unified Glassmorphic Top Header */}
+          <header className="h-[65px] md:h-[73px] shrink-0 sticky top-0 z-30 bg-white/70 dark:bg-zinc-950/70 backdrop-blur-md border-b border-zinc-200/80 dark:border-zinc-800/80 px-3.5 sm:px-4 flex items-center justify-between">
+            {/* Mobile View: Hamburger + Logo */}
+            <div className="flex md:hidden items-center gap-2.5">
+              <button 
+                onClick={() => setIsMobileSidebarOpen(true)}
+                className="p-2 -ml-1 text-zinc-900 dark:text-white cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-colors active:scale-95"
+                title="Open Navigation"
+                aria-label="Open Navigation"
+              >
+                <Menu className="w-5 h-5" strokeWidth={1.5} />
+              </button>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-[17px] text-navy-900 dark:text-zinc-100">Kazi<span className="text-brand-orange-700">Hub</span></span>
+              </div>
+            </div>
+
+            {/* Desktop View: Dynamic Title & Contextual Badges */}
+            <div className="hidden md:flex items-center gap-3 shrink-0">
+              <h2 className="text-[19px] sm:text-xl font-bold tracking-tight text-navy-900 dark:text-zinc-100 capitalize">
+                {activeTab === 'explore' ? t('nav.home', currentLanguage) : 
+                 activeTab === 'bookings' ? (currentRole === 'customer' ? 'My Bookings & Jobs' : 'Service Jobs') :
+                 activeTab === 'jobs' ? 'Service Jobs' :
+                 activeTab === 'messages' ? 'Messages & Inquiries' :
+                 activeTab === 'notifications' ? 'Notifications & Alerts' :
+                 activeTab === 'settings' ? 'Account Settings' :
+                 activeTab === 'saved' ? 'Saved Professionals' :
+                 activeTab === 'profile' ? 'Profile & Preferences' : activeTab}
+              </h2>
+
+              {/* Header Status Badges for Active Tab */}
+              {activeTab === 'messages' && unreadCount > 0 && (
+                <span className="px-2.5 py-0.5 rounded-full bg-brand-orange-700 text-white text-xs font-bold shadow-xs">
+                  {unreadCount} new
+                </span>
+              )}
+              {activeTab === 'notifications' && (notificationsUnreadCount || 0) > 0 && (
+                <span className="px-2.5 py-0.5 rounded-full bg-brand-orange-700 text-white text-xs font-bold shadow-xs">
+                  {notificationsUnreadCount} unread
+                </span>
+              )}
+              {activeTab === 'bookings' && (
+                <span className="px-2.5 py-0.5 rounded-full bg-navy-800/10 text-navy-800 dark:bg-navy-900/40 dark:text-navy-300 text-xs font-bold border border-navy-800/20">
+                  {bookings.length} {bookings.length === 1 ? 'Job' : 'Jobs'}
+                </span>
+              )}
+              {activeTab === 'jobs' && (
+                <span className="px-2.5 py-0.5 rounded-full bg-navy-800/10 text-navy-800 dark:bg-navy-900/40 dark:text-navy-300 text-xs font-bold border border-navy-800/20">
+                  {bookings.length} {bookings.length === 1 ? 'Job' : 'Jobs'}
+                </span>
+              )}
+            </div>
+
+            {/* Desktop View: Top Actions (Theme Toggle & Notifications) */}
+            <div className="flex items-center gap-2 shrink-0 ml-auto">
+              {!user && (
+                <button
+                  type="button"
+                  onClick={() => onOpenAuthPage ? onOpenAuthPage('signin') : openAuthModal('login')}
+                  className="px-3.5 py-1.5 rounded-xl bg-navy-900 hover:bg-navy-800 text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>Sign In</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={onToggleDarkMode}
+                className="p-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                title="Toggle Theme"
+                aria-label="Toggle Dark Mode"
+              >
+                {darkMode ? <Sun className="w-4 h-4 text-amber-500" strokeWidth={1.5} /> : <Moon className="w-4 h-4 text-zinc-500" strokeWidth={1.5} />}
+              </button>
+              
+              <button
+                type="button"
+                className="relative p-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                title="Notifications"
+                aria-label="Notifications"
+                onClick={() => onTabChange('notifications')}
+              >
+                <Bell className="w-4 h-4" strokeWidth={1.5} />
+                {(notificationsUnreadCount || 0) > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-brand-orange-700 text-white font-bold text-[9px] flex items-center justify-center text-center leading-none shadow-xs">
+                    <span className="flex items-center justify-center text-center">{notificationsUnreadCount}</span>
+                  </span>
+                )}
+              </button>
+            </div>
+          </header>
+
+          {/* Main Feed Content Area */}
+          <div className="p-3.5 sm:p-4 pb-4 w-full max-w-none flex-1">
+            {children}
+          </div>
+        </main>
+      </div>
+
+      {/* Universal Slide-Up Log Out Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={handleLogoutAction}
+        title="Sign Out of KaziHub"
+        description="Are you sure you want to sign out of your account on this device?"
+        confirmText="Yes, Sign Out"
+        cancelText="Stay Signed In"
+        type="logout"
+      />
+
+      {/* Global Auth Modal */}
+      <AuthModal />
+    </div>
+  );
+};
+
