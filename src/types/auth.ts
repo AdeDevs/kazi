@@ -6,12 +6,16 @@ export interface AuthUser {
   last_name: string;
   email: string;
   phone_number: string;
-  nin?: string | null;
+  nin_masked?: string | null;
   state: string;
   role: UserRole;
+  roles: string[];
+  is_admin: boolean;
   is_active: boolean;
   is_email_verified: boolean;
   profile_picture?: string | null;
+  theme: string;
+  preferred_language: string;
   created_at: string;
 }
 
@@ -33,6 +37,8 @@ export interface UserUpdate {
   state?: string | null;
   nin?: string | null;
   profile_picture?: string | null;
+  theme?: string | null;
+  preferred_language?: string | null;
 }
 
 export interface LoginCredentials {

@@ -65,11 +65,15 @@ export const DEMO_CUSTOMER_USER: AuthUser = {
   last_name: 'Okonkwo',
   email: 'nneka.okonkwo@kazihub.ng',
   phone_number: '+234 803 123 4567',
-  nin: '78291048291',
+  nin_masked: '*******8291',
   state: 'Oyo',
   role: 'client',
+  roles: ['client'],
+  is_admin: false,
   is_active: true,
   is_email_verified: true,
+  theme: 'system',
+  preferred_language: 'en',
   created_at: '2024-03-15T10:00:00Z',
 };
 
@@ -79,11 +83,15 @@ export const DEMO_ARTISAN_USER: AuthUser = {
   last_name: 'Adebayo',
   email: 'babatunde.adebayo@kazihub.ng',
   phone_number: '+234 802 345 6789',
-  nin: '91827364510',
+  nin_masked: '*******4510',
   state: 'Lagos',
   role: 'artisan',
+  roles: ['artisan'],
+  is_admin: false,
   is_active: true,
   is_email_verified: true,
+  theme: 'system',
+  preferred_language: 'en',
   created_at: '2024-01-10T08:30:00Z',
 };
 

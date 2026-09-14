@@ -39,6 +39,11 @@ function generateOtp(): string {
   return String(Math.floor(10000 + Math.random() * 90000));
 }
 
+function maskNin(nin: string | null | undefined): string | null {
+  if (!nin) return null;
+  return nin.length > 4 ? '*'.repeat(nin.length - 4) + nin.slice(-4) : nin;
+}
+
 function stripPassword(user: StoredUser): AuthUser {
   const { password, ...publicUser } = user;
   return publicUser;
@@ -90,12 +95,16 @@ export function completeRegistration(email: string, otp: string): AuthUser {
     last_name: payload.last_name,
     email: payload.email,
     phone_number: payload.phone_number,
-    nin: payload.nin || '',
+    nin_masked: maskNin(payload.nin),
     state: payload.state,
     role: payload.role,
+    roles: [payload.role],
+    is_admin: false,
     is_active: true,
     is_email_verified: true,
     profile_picture: null,
+    theme: 'system',
+    preferred_language: 'en',
     created_at: new Date().toISOString(),
     password: payload.password,
   };
