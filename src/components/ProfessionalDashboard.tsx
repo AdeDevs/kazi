@@ -74,10 +74,10 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
 
   // Profile edit state
   const [bio, setBio] = useState(professional.bio);
-  const [hourlyRate, setHourlyRate] = useState(professional.hourlyRate);
+  const [hourlyRate, setHourlyRate] = useState(professional.hourly_rate);
   const [tagline, setTagline] = useState(professional.tagline);
   const [availabilityState, setAvailabilityState] = useState<'Available' | 'Busy' | 'Offline'>(
-    professional.isAvailableNow ? 'Available' : 'Offline'
+    professional.is_available_now ? 'Available' : 'Offline'
   );
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
 
@@ -185,9 +185,9 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
     onAddPortfolioItem({
       title: newTitle,
       category: newCategory,
-      imageUrl: newImageUrl,
+      image_url: newImageUrl,
       description: newDesc,
-      dateCompleted: new Date().toISOString().split('T')[0]
+      date_completed: new Date().toISOString().split('T')[0]
     });
 
     setNewTitle('');
@@ -198,16 +198,16 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
 
   // Synchronize availability with professional prop
   useEffect(() => {
-    setAvailabilityState(professional.isAvailableNow ? 'Available' : 'Offline');
-  }, [professional.isAvailableNow]);
+    setAvailabilityState(professional.is_available_now ? 'Available' : 'Offline');
+  }, [professional.is_available_now]);
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
     onUpdateProfile({
       bio,
-      hourlyRate: Number(hourlyRate),
+      hourly_rate: Number(hourlyRate),
       tagline,
-      isAvailableNow: availabilityState === 'Available'
+      is_available_now: availabilityState === 'Available'
     });
     alert('Profile updated successfully!');
   };
@@ -1016,7 +1016,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
               {getGreeting()}, {firstName}.
             </h1>
-            {professional.verified && <ShieldCheck className="w-5 h-5 text-emerald-500 fill-emerald-500/10" />}
+            {professional.is_verified && <ShieldCheck className="w-5 h-5 text-emerald-500 fill-emerald-500/10" />}
           </div>
           <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400">
             {getFormattedDate()}
@@ -1139,8 +1139,8 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
               </div>
               <div className="space-y-1">
                 <div className="flex items-baseline gap-2">
-                  <p className="text-2xl font-black text-slate-900 dark:text-white">{professional.rating.toFixed(1)}</p>
-                  <span className="text-xs text-slate-400 font-semibold">({professional.reviewCount} reviews)</span>
+                  <p className="text-2xl font-black text-slate-900 dark:text-white">{professional.rating_average.toFixed(1)}</p>
+                  <span className="text-xs text-slate-400 font-semibold">({professional.review_count} reviews)</span>
                 </div>
               </div>
             </div>
@@ -1339,11 +1339,11 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {professional.portfolio.map((item) => (
               <div key={item.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
-                <img src={item.imageUrl} alt={item.title} className="w-full h-48 object-cover" />
+                <img src={item.image_url} alt={item.title} className="w-full h-48 object-cover" />
                 <div className="p-4">
                   <h4 className="font-bold text-slate-900 dark:text-slate-100 text-sm mb-1">{item.title}</h4>
                   <p className="text-xs text-slate-600 dark:text-slate-400 mb-2">{item.description}</p>
-                  <span className="text-[10px] text-slate-400">Completed on {item.dateCompleted}</span>
+                  <span className="text-[10px] text-slate-400">Completed on {item.date_completed}</span>
                 </div>
               </div>
             ))}

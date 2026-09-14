@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Star, ShieldCheck, MapPin, Briefcase, Award, Phone, Mail, CheckCircle2, MessageSquare, Calendar, AlertCircle, ShieldAlert, Check, Tag } from 'lucide-react';
-import { Professional, ServiceItem } from '../types';
+import { Professional, ServiceItem, ServicePricingType } from '../types';
 
 
 interface ProfessionalProfileModalProps {
@@ -65,11 +65,11 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 mt-2 sm:mt-0">
             <div className="relative shrink-0">
               <img
-                src={professional.avatar}
+                src={professional.profile_picture}
                 alt={professional.name}
                 className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-4 border-white/20 dark:border-slate-800/80 shadow-xl"
               />
-              {professional.isAvailableNow && (
+              {professional.is_available_now && (
                 <>
                   {/* Mobile Pulse Dot */}
                   <span className="sm:hidden absolute -bottom-1 -right-1 flex h-4 w-4">
@@ -88,14 +88,14 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
               <div className="flex flex-col sm:flex-row sm:items-center sm:flex-wrap justify-center sm:justify-start gap-2 mb-1.5">
                 <div className="flex items-center justify-center sm:justify-start gap-2">
                   <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white truncate">{professional.name}</h2>
-                  {professional.isAvailableNow && (
+                  {professional.is_available_now && (
                     <span className="sm:hidden relative flex h-2.5 w-2.5 shrink-0" title="Available Now">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                     </span>
                   )}
                 </div>
-                {professional.verified && (
+                {professional.is_verified && (
                   <span className="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 rounded-full bg-navy-800/80 text-navy-200 text-[10px] sm:text-xs font-semibold border border-navy-700 self-center">
                     <ShieldCheck className="w-3.5 h-3.5 text-navy-300" /> Verified Pro
                   </span>
@@ -105,13 +105,13 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
               
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-2 text-[11px] sm:text-xs text-slate-300">
                 <span className="flex items-center gap-1 bg-white/5 px-2.5 py-1 rounded-lg">
-                  <MapPin className="w-3.5 h-3.5 text-navy-400 shrink-0" /> <span className="truncate max-w-[150px]">{professional.neighborhood}, {professional.location}</span>
+                  <MapPin className="w-3.5 h-3.5 text-navy-400 shrink-0" /> <span className="truncate max-w-[150px]">{professional.neighborhood}, {professional.state}</span>
                 </span>
                 <span className="flex items-center gap-1 bg-white/5 px-2.5 py-1 rounded-lg">
-                  <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" /> <strong className="text-white">{professional.rating}</strong> ({professional.reviewCount} reviews)
+                  <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" /> <strong className="text-white">{professional.rating_average}</strong> ({professional.review_count} reviews)
                 </span>
                 <span className="flex items-center gap-1 bg-white/5 px-2.5 py-1 rounded-lg">
-                  <Briefcase className="w-3.5 h-3.5 text-navy-400 shrink-0" /> {professional.completedJobs} jobs
+                  <Briefcase className="w-3.5 h-3.5 text-navy-400 shrink-0" /> {professional.completed_jobs_count} jobs
                 </span>
               </div>
             </div>
@@ -164,7 +164,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
               <div className="grid grid-cols-3 gap-3 sm:gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
                 <div className="bg-slate-50 dark:bg-slate-800/40 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200/60 dark:border-slate-800">
                   <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium">Experience</p>
-                  <p className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 mt-0.5">{professional.experienceYears} Years</p>
+                  <p className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 mt-0.5">{professional.years_of_experience} Years</p>
                 </div>
                 <div className="bg-slate-50 dark:bg-slate-800/40 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200/60 dark:border-slate-800 min-w-0">
                   <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium">Category</p>
@@ -215,7 +215,8 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                         name: `${professional.category} Standard Service`,
                         category: professional.category,
                         description: professional.tagline || professional.bio,
-                        durationEstimate: '1-2 hrs'
+                        pricing_type: 'starting' as ServicePricingType,
+                        duration_estimate: '1-2 hrs'
                       }]
                   ).map((svc: ServiceItem) => (
                     <div
@@ -236,9 +237,9 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                         <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                           {svc.description}
                         </p>
-                        {svc.durationEstimate && (
+                        {svc.duration_estimate && (
                           <span className="text-[10px] text-slate-400 block">
-                            Est. duration: {svc.durationEstimate}
+                            Est. duration: {svc.duration_estimate}
                           </span>
                         )}
                       </div>
@@ -275,13 +276,13 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {professional.portfolio.map((item) => (
                       <div key={item.id} className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden bg-white dark:bg-slate-900 shadow-xs hover:shadow-md transition-shadow flex flex-col">
-                        <img src={item.imageUrl} alt={item.title} className="w-full aspect-video sm:h-36 object-cover" />
+                        <img src={item.image_url} alt={item.title} className="w-full aspect-video sm:h-36 object-cover" />
                         <div className="p-3.5 flex-1 flex flex-col justify-between">
                           <div>
                             <h5 className="font-bold text-slate-900 dark:text-slate-100 text-xs sm:text-sm mb-1">{item.title}</h5>
                             <p className="text-xs text-slate-600 dark:text-slate-400 mb-2 leading-relaxed line-clamp-2">{item.description}</p>
                           </div>
-                          <p className="text-[10px] text-slate-400 dark:text-slate-500 pt-2 border-t border-slate-100 dark:border-slate-800/40">Completed: {item.dateCompleted}</p>
+                          <p className="text-[10px] text-slate-400 dark:text-slate-500 pt-2 border-t border-slate-100 dark:border-slate-800/40">Completed: {item.date_completed}</p>
                         </div>
                       </div>
                     ))}
@@ -298,13 +299,13 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
               ) : (
                 professional.portfolio.map((item) => (
                   <div key={item.id} className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden bg-white dark:bg-slate-900 shadow-xs hover:shadow-md transition-shadow flex flex-col">
-                    <img src={item.imageUrl} alt={item.title} className="w-full aspect-video sm:h-40 object-cover" />
+                    <img src={item.image_url} alt={item.title} className="w-full aspect-video sm:h-40 object-cover" />
                     <div className="p-4 flex-1 flex flex-col justify-between">
                       <div>
                         <h5 className="font-bold text-slate-900 dark:text-slate-100 text-sm mb-1">{item.title}</h5>
                         <p className="text-xs text-slate-600 dark:text-slate-400 mb-3 leading-relaxed">{item.description}</p>
                       </div>
-                      <p className="text-[10px] text-slate-400 dark:text-slate-500 pt-2 border-t border-slate-100 dark:border-slate-800/40">Completed on {item.dateCompleted}</p>
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 pt-2 border-t border-slate-100 dark:border-slate-800/40">Completed on {item.date_completed}</p>
                     </div>
                   </div>
                 ))
@@ -326,7 +327,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                   <h4 className="font-extrabold text-xs text-slate-900 dark:text-slate-100 uppercase tracking-wider">
                     Client Reviews ({professional.reviews.length})
                   </h4>
-                  <p className="text-[11px] text-slate-500 mt-0.5">Average rating: ★ {professional.rating.toFixed(1)} / 5.0</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">Average rating_average: ★ {professional.rating_average.toFixed(1)} / 5.0</p>
                 </div>
                 {!showWriteReview && (
                   <button
@@ -489,7 +490,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                 </span>
               </div>
             </div>
-            {professional.isAvailableNow && (
+            {professional.is_available_now && (
               <span className="sm:hidden px-2 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold rounded-md border border-emerald-500/20">
                 Online
               </span>

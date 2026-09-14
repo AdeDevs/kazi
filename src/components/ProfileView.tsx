@@ -110,7 +110,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         if (currentRole === 'customer') {
           onUpdateCustomerAvatar(resultUrl);
         } else if (onUpdateProfile) {
-          onUpdateProfile({ avatar: resultUrl });
+          onUpdateProfile({ profile_picture: resultUrl });
         }
       }
     };
@@ -124,7 +124,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         if (currentRole === 'customer') {
           onUpdateCustomerAvatar(updated.profile_picture);
         } else if (onUpdateProfile) {
-          onUpdateProfile({ avatar: updated.profile_picture });
+          onUpdateProfile({ profile_picture: updated.profile_picture });
         }
       }
       triggerToast('Profile photo uploaded and saved successfully!');

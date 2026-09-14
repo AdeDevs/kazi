@@ -211,12 +211,11 @@ export default function App() {
         id: user.id || rawPro.id,
         name: `${user.first_name} ${user.last_name}`.trim() || rawPro.name,
         email: user.email || rawPro.email,
-        phone: user.phone_number || rawPro.phone,
-        location: user.state ? `${user.state}, Nigeria` : rawPro.location,
-        nin: user.nin || rawPro.nin,
-        verified: localStorage.getItem(`kazihub_kyc_completed_${user.id}`) === 'true',
+        phone_number: user.phone_number || rawPro.phone_number,
+        state: user.state ? `${user.state}, Nigeria` : rawPro.state,
+        is_verified: localStorage.getItem(`kazihub_kyc_completed_${user.id}`) === 'true',
         verificationStatus: localStorage.getItem(`kazihub_kyc_completed_${user.id}`) === 'true' ? 'verified' : 'unverified',
-        avatar: userCustomAvatar,
+        profile_picture: userCustomAvatar,
       };
     }
     return rawPro;
@@ -613,9 +612,9 @@ export default function App() {
   };
 
   const handleUpdateProfile = (updated: Partial<Professional>) => {
-    if (updated.avatar && user?.id) {
-      localStorage.setItem(`kazihub_avatar_${user.id}`, updated.avatar);
-      setCustomerAvatar(updated.avatar);
+    if (updated.profile_picture && user?.id) {
+      localStorage.setItem(`kazihub_avatar_${user.id}`, updated.profile_picture);
+      setCustomerAvatar(updated.profile_picture);
     }
     setProfessionals(prev => prev.map(p => {
       if (p.id === activeProfessional.id) {

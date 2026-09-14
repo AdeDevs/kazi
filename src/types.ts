@@ -7,9 +7,9 @@ export interface ServiceItem {
   name: string;
   category: Category;
   description: string;
-  pricingType: ServicePricingType;
+  pricing_type: ServicePricingType;
   price?: number; // Exact amount for 'fixed', starting base amount for 'starting'
-  durationEstimate?: string; // e.g. "1-2 hrs", "2-4 hrs", "Custom"
+  duration_estimate?: string; // e.g. "1-2 hrs", "2-4 hrs", "Custom"
   popular?: boolean;
 }
 
@@ -45,31 +45,31 @@ export interface PortfolioItem {
   id: string;
   title: string;
   category: Category;
-  imageUrl: string;
+  image_url: string;
   description: string;
-  dateCompleted: string;
+  date_completed: string;
 }
 
 export interface Professional {
   id: string;
   name: string;
-  avatar: string;
+  profile_picture: string;
   category: Category;
   tagline: string;
   bio: string;
-  location: string;
+  state: string;
   neighborhood: string;
-  hourlyRate: number;
-  pricingType?: ServicePricingType; // default pricing model for this pro's primary offerings
-  basePrice?: number; // Starting or fixed base price if applicable
+  hourly_rate: number;
+  pricing_type?: ServicePricingType; // default pricing model for this pro's primary offerings
+  base_price?: number; // Starting or fixed base price if applicable
   services?: ServiceItem[];
-  rating: number;
-  reviewCount: number;
-  completedJobs: number;
-  experienceYears: number;
-  isAvailableNow: boolean;
-  verified: boolean;
-  phone: string;
+  rating_average: number;
+  review_count: number;
+  completed_jobs_count: number;
+  years_of_experience: number;
+  is_available_now: boolean;
+  is_verified: boolean;
+  phone_number: string;
   email: string;
   portfolio: PortfolioItem[];
   reviews: Review[];

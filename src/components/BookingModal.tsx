@@ -48,9 +48,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           name: `${professional.category} Standard Service`,
           category: professional.category,
           description: professional.tagline || professional.bio,
-          pricingType: professional.pricingType || 'starting',
-          price: professional.basePrice || professional.hourlyRate,
-          durationEstimate: '1-2 hrs'
+          pricing_type: professional.pricing_type || 'starting',
+          price: professional.base_price || professional.hourly_rate,
+          duration_estimate: '1-2 hrs'
         }]
       : [];
 
@@ -83,9 +83,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             name: `${professional.category} Standard Service`,
             category: professional.category,
             description: professional.tagline || professional.bio,
-            pricingType: professional.pricingType || 'starting',
-            price: professional.basePrice || professional.hourlyRate,
-            durationEstimate: '1-2 hrs'
+            pricing_type: professional.pricing_type || 'starting',
+            price: professional.base_price || professional.hourly_rate,
+            duration_estimate: '1-2 hrs'
           }];
 
       if (preselectedService) {
@@ -109,7 +109,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   if (!isOpen || !professional) return null;
 
-  const currentPricingType: ServicePricingType = selectedServiceItem?.pricingType || professional.pricingType || 'starting';
+  const currentPricingType: ServicePricingType = selectedServiceItem?.pricing_type || professional.pricing_type || 'starting';
   const isQuoteService = currentPricingType === 'quote_required';
 
   // Image Upload Handlers
@@ -200,8 +200,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   // Final submission of the request or booking
   const handleFinalSubmit = () => {
-    const svcPricingType: ServicePricingType = selectedServiceItem?.pricingType || professional.pricingType || 'starting';
-    const svcBasePrice = selectedServiceItem?.price ?? professional.basePrice ?? (professional.hourlyRate * 2);
+    const svcPricingType: ServicePricingType = selectedServiceItem?.pricing_type || professional.pricing_type || 'starting';
+    const svcBasePrice = selectedServiceItem?.price ?? professional.base_price ?? (professional.hourly_rate * 2);
     const calculatedPrice = svcPricingType === 'fixed' 
       ? svcBasePrice 
       : svcPricingType === 'quote_required' 
@@ -271,8 +271,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         <div className="sticky top-0 z-20 flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md">
           <div className="flex items-center gap-2.5 sm:gap-3">
             <div className="relative shrink-0">
-              <img src={professional.avatar} alt={professional.name} className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl object-cover shadow-xs border border-navy-800/30" />
-              {professional.verified && (
+              <img src={professional.profile_picture} alt={professional.name} className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl object-cover shadow-xs border border-navy-800/30" />
+              {professional.is_verified && (
                 <ShieldCheck className="absolute -bottom-1 -right-1 w-3.5 h-3.5 sm:w-4 sm:h-4 text-navy-800 dark:text-navy-400 bg-white dark:bg-slate-900 rounded-full" />
               )}
             </div>
@@ -280,7 +280,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                 <h3 className="font-extrabold text-slate-900 dark:text-slate-100 text-sm sm:text-base">{professional.name}</h3>
                 <span className="px-2 py-0.5 rounded-full bg-navy-800/10 text-navy-800 dark:text-navy-400 font-bold text-[10px] border border-navy-800/20">
-                  ★ {professional.rating} ({professional.reviewCount})
+                  ★ {professional.rating_average} ({professional.review_count})
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
@@ -348,7 +348,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {servicesList.map((svc, idx) => {
                   const isSelected = selectedServiceItem?.id === svc.id || selectedServiceItem?.name === svc.name;
-                  const priceInfo = formatServicePrice(svc.pricingType, svc.price);
+                  const priceInfo = formatServicePrice(svc.pricing_type, svc.price);
 
                   return (
                     <button
@@ -628,8 +628,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
             {/* Pricing Summary Callout */}
             {(() => {
-              const svcPrice = selectedServiceItem?.price ?? professional.basePrice ?? (professional.hourlyRate * 2);
-              const priceInfo = formatServicePrice(currentPricingType, svcPrice, professional.hourlyRate);
+              const svcPrice = selectedServiceItem?.price ?? professional.base_price ?? (professional.hourly_rate * 2);
+              const priceInfo = formatServicePrice(currentPricingType, svcPrice, professional.hourly_rate);
 
               return (
                 <div className="p-4 rounded-2xl bg-navy-800/10 border border-navy-800/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -744,10 +744,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 <div>
                   <span className="text-slate-400 font-bold block mb-1">Assigned Professional</span>
                   <div className="flex items-center gap-2">
-                    <img src={professional.avatar} alt={professional.name} className="w-8 h-8 rounded-xl object-cover" />
+                    <img src={professional.profile_picture} alt={professional.name} className="w-8 h-8 rounded-xl object-cover" />
                     <div>
                       <p className="font-bold text-slate-900 dark:text-slate-100">{professional.name}</p>
-                      <p className="text-[11px] text-slate-500">{professional.phone}</p>
+                      <p className="text-[11px] text-slate-500">{professional.phone_number}</p>
                     </div>
                   </div>
                 </div>
@@ -823,7 +823,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                     </span>
                   ) : (
                     <span className="text-base font-black text-slate-900 dark:text-white">
-                      ₦{(selectedServiceItem?.price || professional.basePrice || (professional.hourlyRate * 2)).toLocaleString()}
+                      ₦{(selectedServiceItem?.price || professional.base_price || (professional.hourly_rate * 2)).toLocaleString()}
                     </span>
                   )}
                 </div>
@@ -916,10 +916,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 <div>
                   <span className="text-slate-400 font-bold block mb-1">Assigned Artisan</span>
                   <div className="flex items-center gap-2">
-                    <img src={professional.avatar} alt={professional.name} className="w-8 h-8 rounded-xl object-cover" />
+                    <img src={professional.profile_picture} alt={professional.name} className="w-8 h-8 rounded-xl object-cover" />
                     <div>
                       <p className="font-bold text-slate-900 dark:text-slate-100">{professional.name}</p>
-                      <p className="text-[11px] text-slate-500">{professional.phone}</p>
+                      <p className="text-[11px] text-slate-500">{professional.phone_number}</p>
                     </div>
                   </div>
                 </div>

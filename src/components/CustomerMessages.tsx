@@ -325,7 +325,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
         if (timeA !== timeB) return timeB - timeA;
         if (a.relatedBooking && !b.relatedBooking) return -1;
         if (!a.relatedBooking && b.relatedBooking) return 1;
-        return b.professional.rating - a.professional.rating;
+        return b.professional.rating_average - a.professional.rating_average;
       });
   }, [professionals, messages, bookings, selectedProId]);
 
@@ -516,11 +516,11 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
             >
               <div className="relative shrink-0">
                 <img
-                  src={activeConversation.professional.avatar}
+                  src={activeConversation.professional.profile_picture}
                   alt={activeConversation.professional.name}
                   className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl object-cover border border-slate-200/80 dark:border-slate-700/80 group-hover:ring-2 group-hover:ring-brand-orange-500/60 transition-all"
                 />
-                {activeConversation.professional.isAvailableNow && (
+                {activeConversation.professional.is_available_now && (
                   <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full" title="Online" />
                 )}
               </div>
@@ -530,7 +530,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
                   <h2 className="font-black text-sm sm:text-base text-slate-900 dark:text-slate-100 truncate group-hover:text-brand-orange-600 dark:group-hover:text-brand-orange-400 transition-colors">
                     {activeConversation.professional.name}
                   </h2>
-                  {activeConversation.professional.verified && (
+                  {activeConversation.professional.is_verified && (
                     <span 
                       className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-[10px] font-bold text-emerald-700 dark:text-emerald-400 shrink-0"
                       title="Verified Artisan"
@@ -547,7 +547,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
                   <span>•</span>
                   <span className="flex items-center gap-0.5 text-amber-600 dark:text-amber-400 font-bold shrink-0">
                     <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-                    {activeConversation.professional.rating}
+                    {activeConversation.professional.rating_average}
                   </span>
                 </div>
               </div>
@@ -1032,11 +1032,11 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
                 <div className="flex items-start gap-3.5 min-w-0 flex-1">
                   <div className="relative shrink-0 mt-0.5">
                     <img
-                      src={conv.professional.avatar}
+                      src={conv.professional.profile_picture}
                       alt={conv.professional.name}
                       className="w-12 h-12 sm:w-13 sm:h-13 rounded-xl object-cover border border-slate-200/80 dark:border-slate-700/80 shadow-2xs"
                     />
-                    {conv.professional.isAvailableNow && (
+                    {conv.professional.is_available_now && (
                       <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full" title="Online" />
                     )}
                   </div>
@@ -1047,7 +1047,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
                         <h3 className={`text-sm sm:text-base truncate ${hasUnread ? 'font-black text-slate-950 dark:text-white' : 'font-bold text-slate-800 dark:text-slate-200'}`}>
                           {conv.professional.name}
                         </h3>
-                        {conv.professional.verified && (
+                        {conv.professional.is_verified && (
                           <ShieldCheck className="w-4 h-4 text-navy-800 dark:text-navy-400 fill-navy-800/10 shrink-0" />
                         )}
                       </div>

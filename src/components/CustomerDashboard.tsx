@@ -186,10 +186,10 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
 
   const filteredProfessionals = professionals.filter((pro) => {
     const matchesCategory = selectedCategoryFilter === 'All' || pro.category === selectedCategoryFilter;
-    const matchesNeighborhood = selectedNeighborhood === 'All' || pro.neighborhood === selectedNeighborhood || pro.location === selectedNeighborhood;
-    const matchesRating = pro.rating >= searchMinRating;
-    const matchesExperience = pro.experienceYears >= searchMinExperience;
-    const matchesAvailability = !searchAvailabilityOnly || pro.isAvailableNow;
+    const matchesNeighborhood = selectedNeighborhood === 'All' || pro.neighborhood === selectedNeighborhood || pro.state === selectedNeighborhood;
+    const matchesRating = pro.rating_average >= searchMinRating;
+    const matchesExperience = pro.years_of_experience >= searchMinExperience;
+    const matchesAvailability = !searchAvailabilityOnly || pro.is_available_now;
 
     const categoryCatalog = CATEGORY_SERVICES_CATALOG[pro.category] || [];
     const matchesCatalogServices = searchTrimmed ? categoryCatalog.some(srv =>
@@ -296,7 +296,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   const getCategoryMatchingCount = (cat: Category) => {
     return professionals.filter(pro => {
       if (pro.category !== cat) return false;
-      const matchesNeighborhood = selectedNeighborhood === 'All' || pro.neighborhood === selectedNeighborhood || pro.location === selectedNeighborhood;
+      const matchesNeighborhood = selectedNeighborhood === 'All' || pro.neighborhood === selectedNeighborhood || pro.state === selectedNeighborhood;
       if (!matchesNeighborhood) return false;
 
       if (!searchTrimmed) return true;
@@ -380,18 +380,18 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
     }
   };
 
-  const topRatedPros = [...filteredProfessionals].sort((a, b) => b.rating - a.rating).slice(0, 4);
-  const emergencyPros = filteredProfessionals.filter(p => p.isAvailableNow).length > 0
-    ? filteredProfessionals.filter(p => p.isAvailableNow).slice(0, 3)
+  const topRatedPros = [...filteredProfessionals].sort((a, b) => b.rating_average - a.rating_average).slice(0, 4);
+  const emergencyPros = filteredProfessionals.filter(p => p.is_available_now).length > 0
+    ? filteredProfessionals.filter(p => p.is_available_now).slice(0, 3)
     : filteredProfessionals.slice(0, 3);
-  const trendingPros = filteredProfessionals.filter(p => p.completedJobs > 100).slice(0, 4);
-  const recommendedPros = filteredProfessionals.filter(p => p.rating >= 4.8).slice(0, 4);
+  const trendingPros = filteredProfessionals.filter(p => p.completed_jobs_count > 100).slice(0, 4);
+  const recommendedPros = filteredProfessionals.filter(p => p.rating_average >= 4.8).slice(0, 4);
   const recentlyViewedPros = professionals.filter(p => recentlyViewedIds.includes(p.id));
   const savedPros = professionals.filter(p => savedProIds.includes(p.id));
 
   const displayedPros = filteredProfessionals.filter(p => {
-    if (proViewFilter === 'available') return p.isAvailableNow;
-    if (proViewFilter === 'topRated') return p.rating >= 4.8;
+    if (proViewFilter === 'available') return p.is_available_now;
+    if (proViewFilter === 'topRated') return p.rating_average >= 4.8;
     return true;
   });
 
@@ -488,7 +488,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                       {filteredProfessionals.slice(0, 3).map(p => (
                         <div key={p.id} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
                           <div className="flex items-center gap-2.5 min-w-0">
-                            <img src={p.avatar} alt={p.name} className="w-8 h-8 rounded-lg object-cover shrink-0" />
+                            <img src={p.profile_picture} alt={p.name} className="w-8 h-8 rounded-lg object-cover shrink-0" />
                             <div className="min-w-0">
                               <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">{p.name}</h4>
                               <p className="text-[10px] text-slate-500 truncate">{p.category} • {p.neighborhood}</p>
@@ -681,8 +681,8 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
                       <div className="relative">
-                        <img src={pro.avatar} alt={pro.name} className="w-14 h-14 rounded-2xl object-cover shadow-xs group-hover:scale-105 transition-transform" />
-                        {pro.verified && <ShieldCheck className="absolute -bottom-1 -right-1 w-4 h-4 text-navy-800 fill-navy-100 dark:text-navy-400" />}
+                        <img src={pro.profile_picture} alt={pro.name} className="w-14 h-14 rounded-2xl object-cover shadow-xs group-hover:scale-105 transition-transform" />
+                        {pro.is_verified && <ShieldCheck className="absolute -bottom-1 -right-1 w-4 h-4 text-navy-800 fill-navy-100 dark:text-navy-400" />}
                       </div>
                       <div>
                         <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 hover:text-navy-800 dark:hover:text-navy-400">{pro.name}</h3>
@@ -698,9 +698,9 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                   <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2">{pro.tagline}</p>
 
                   <div className="flex items-center gap-2 text-[10px]">
-                    <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/60 dark:border-slate-700/60 font-bold">{pro.experienceYears} Yrs Exp</span>
-                    <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/60 dark:border-slate-700/60 font-bold">{pro.completedJobs} Jobs</span>
-                    {pro.isAvailableNow && <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-bold">Available Now</span>}
+                    <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/60 dark:border-slate-700/60 font-bold">{pro.years_of_experience} Yrs Exp</span>
+                    <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/60 dark:border-slate-700/60 font-bold">{pro.completed_jobs_count} Jobs</span>
+                    {pro.is_available_now && <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-bold">Available Now</span>}
                   </div>
                 </div>
 
@@ -708,7 +708,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1">
                       <Star className="w-3.5 h-3.5 fill-amber-500 dark:fill-amber-400 text-amber-500 dark:text-amber-400" />
-                      {pro.rating} <span className="text-slate-500 dark:text-slate-400 font-normal">({pro.reviewCount} reviews)</span>
+                      {pro.rating_average} <span className="text-slate-500 dark:text-slate-400 font-normal">({pro.review_count} reviews)</span>
                     </span>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
@@ -1053,7 +1053,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     <div className="flex items-center gap-3 min-w-0">
                       {pro ? (
                         <img
-                          src={pro.avatar}
+                          src={pro.profile_picture}
                           alt={pro.name}
                           className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl object-cover shrink-0 border border-slate-200 dark:border-slate-700 shadow-xs"
                         />
@@ -1065,7 +1065,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                       <div className="min-w-0">
                         <h3 className="font-extrabold text-base text-slate-900 dark:text-slate-100 flex items-center gap-1.5 truncate">
                           <span className="truncate">{b.professionalName}</span>
-                          {pro?.verified && <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />}
+                          {pro?.is_verified && <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />}
                         </h3>
                         <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate mt-0.5">
                           {b.selectedService || b.category}
@@ -1335,7 +1335,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                           >
                             <RotateCcw className="w-3.5 h-3.5 text-white" />
                             <span>Rehire Artisan</span>
-                            {(pro?.isAvailableNow || (professionals.find(p => p.id === b.professionalId)?.isAvailableNow)) && (
+                            {(pro?.is_available_now || (professionals.find(p => p.id === b.professionalId)?.is_available_now)) && (
                               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-0.5" title="Available Now" aria-label="Available Now" />
                             )}
                           </button>
@@ -1373,7 +1373,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
       if (savedCategoryFilter !== 'All' && pro.category !== savedCategoryFilter) {
         return false;
       }
-      if (savedNeighborhoodFilter !== 'All' && pro.neighborhood !== savedNeighborhoodFilter && pro.location !== savedNeighborhoodFilter) {
+      if (savedNeighborhoodFilter !== 'All' && pro.neighborhood !== savedNeighborhoodFilter && pro.state !== savedNeighborhoodFilter) {
         return false;
       }
       if (savedSearchTrimmed) {
@@ -1520,7 +1520,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
               <div key={pro.id} onClick={() => onSelectProForProfile(pro)} className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-xs cursor-pointer hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md transition-all active:scale-[0.99]">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <img src={pro.avatar} alt={pro.name} className="w-14 h-14 rounded-2xl object-cover" />
+                    <img src={pro.profile_picture} alt={pro.name} className="w-14 h-14 rounded-2xl object-cover" />
                     <div>
                       <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 hover:text-navy-800 dark:hover:text-navy-400">{pro.name}</h3>
                       <p className="text-xs text-navy-800 dark:text-navy-400 font-semibold">{pro.category}</p>
@@ -1535,7 +1535,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
                   <span className="font-bold text-amber-500 flex items-center gap-1">
                     <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-                    {pro.rating} <span className="text-slate-400 font-normal">({pro.reviewCount})</span>
+                    {pro.rating_average} <span className="text-slate-400 font-normal">({pro.review_count})</span>
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -2045,11 +2045,11 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     <div className="flex items-center gap-3">
                       <div className="relative shrink-0">
                         <img
-                          src={pro.avatar}
+                          src={pro.profile_picture}
                           alt={pro.name}
                           className="w-12 h-12 rounded-2xl object-cover border border-slate-200 dark:border-slate-700 shadow-xs group-hover:scale-102 transition-transform"
                         />
-                        {pro.isAvailableNow && (
+                        {pro.is_available_now && (
                           <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900" title="Available for immediate dispatch" aria-label="Available for immediate dispatch" />
                         )}
                       </div>
@@ -2058,7 +2058,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                           <h3 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-slate-100 group-hover:text-navy-800 dark:group-hover:text-navy-400 transition-colors truncate">
                             {pro.name}
                           </h3>
-                          {pro.verified && (
+                          {pro.is_verified && (
                             <ShieldCheck className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400 shrink-0" title="Verified Professional" />
                           )}
                         </div>
@@ -2067,7 +2067,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                             {pro.category}
                           </span>
                           <span>•</span>
-                          <span>{pro.experienceYears} yrs exp</span>
+                          <span>{pro.years_of_experience} yrs exp</span>
                         </div>
                         <p className="text-[11px] text-slate-400 dark:text-slate-500 flex items-center gap-1 mt-0.5 truncate">
                           <MapPin className="w-3 h-3 text-slate-400 shrink-0" /> {pro.neighborhood}
@@ -2093,11 +2093,11 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                   <div className="flex items-center justify-between text-[11px] py-1.5 px-2.5 rounded-xl bg-slate-100/90 dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700/80 transition-colors">
                     <span className="font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1">
                       <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500 dark:fill-amber-400 dark:text-amber-400 stroke-1 shrink-0" />
-                      <span>{pro.rating}</span>
-                      <span className="text-slate-500 dark:text-slate-400 font-normal">({pro.reviewCount})</span>
+                      <span>{pro.rating_average}</span>
+                      <span className="text-slate-500 dark:text-slate-400 font-normal">({pro.review_count})</span>
                     </span>
                     <span className="font-semibold text-slate-800 dark:text-slate-200">
-                      {pro.completedJobs}+ jobs completed
+                      {pro.completed_jobs_count}+ jobs completed
                     </span>
                   </div>
                 </div>
@@ -2107,7 +2107,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                   <div>
                     <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-bold">Starts From</span>
                     <span className="text-xs sm:text-sm font-black text-navy-900 dark:text-white">
-                      ₦{(pro.hourlyRate || 4000).toLocaleString()}
+                      ₦{(pro.hourly_rate || 4000).toLocaleString()}
                     </span>
                   </div>
 
@@ -2571,10 +2571,10 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                       .map(pro => (
                         <div key={pro.id} className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 shadow-xs">
                           <div className="flex items-center gap-2.5 min-w-0">
-                            <img src={pro.avatar} alt={pro.name} className="w-9 h-9 rounded-lg object-cover shrink-0" />
+                            <img src={pro.profile_picture} alt={pro.name} className="w-9 h-9 rounded-lg object-cover shrink-0" />
                             <div className="min-w-0">
                               <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">{pro.name}</h4>
-                              <p className="text-[10px] text-slate-500 truncate">{pro.neighborhood} • ⭐ {pro.rating}</p>
+                              <p className="text-[10px] text-slate-500 truncate">{pro.neighborhood} • ⭐ {pro.rating_average}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-1 shrink-0">

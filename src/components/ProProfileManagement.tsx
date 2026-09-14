@@ -36,11 +36,11 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
   // Basic Pro Info State
   const [name, setName] = useState(activeProfessional.name);
   const [bio, setBio] = useState(activeProfessional.bio);
-  const [phone, setPhone] = useState(activeProfessional.phone);
+  const [phone, setPhone] = useState(activeProfessional.phone_number);
   const [email, setEmail] = useState(activeProfessional.email);
   const [category, setCategory] = useState<Category>(activeProfessional.category);
   const [primaryLocation, setPrimaryLocation] = useState(
-    activeProfessional.neighborhood ? `${activeProfessional.neighborhood}, ${activeProfessional.location}` : activeProfessional.location
+    activeProfessional.neighborhood ? `${activeProfessional.neighborhood}, ${activeProfessional.state}` : activeProfessional.state
   );
 
   // Services State
@@ -51,27 +51,27 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
         name: 'Socket & Switch Replacement',
         category: activeProfessional.category,
         description: 'Single or multi-gang socket/switch rewiring, earthing check, and circuit safety test.',
-        pricingType: 'fixed',
+        pricing_type: 'fixed',
         price: 5000,
-        durationEstimate: '1 hr'
+        duration_estimate: '1 hr'
       },
       {
         id: 'srv-pro-2',
         name: 'Distribution Board (DB Box) Inspection & Overhaul',
         category: activeProfessional.category,
         description: 'Breaker replacement, phase balancing, short circuit tracing, and fuse maintenance.',
-        pricingType: 'fixed',
+        pricing_type: 'fixed',
         price: 15000,
-        durationEstimate: '2-3 hrs'
+        duration_estimate: '2-3 hrs'
       },
       {
         id: 'srv-pro-3',
         name: 'Inverter & Changeover Installation',
         category: activeProfessional.category,
         description: 'Complete battery rack, inverter hookup, and manual/auto changeover switch wiring.',
-        pricingType: 'starting',
+        pricing_type: 'starting',
         price: 25000,
-        durationEstimate: '3-5 hrs'
+        duration_estimate: '3-5 hrs'
       }
     ]
   );
@@ -128,11 +128,11 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
   React.useEffect(() => {
     setName(activeProfessional.name);
     setBio(activeProfessional.bio);
-    setPhone(activeProfessional.phone);
+    setPhone(activeProfessional.phone_number);
     setEmail(activeProfessional.email);
     setCategory(activeProfessional.category);
     setPrimaryLocation(
-      activeProfessional.neighborhood ? `${activeProfessional.neighborhood}, ${activeProfessional.location}` : activeProfessional.location
+      activeProfessional.neighborhood ? `${activeProfessional.neighborhood}, ${activeProfessional.state}` : activeProfessional.state
     );
     if (activeProfessional.services) setServices(activeProfessional.services);
     if (activeProfessional.portfolio) setPortfolio(activeProfessional.portfolio);
@@ -141,7 +141,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
   // Profile Completion Calculation
   const calculateCompletion = () => {
     let score = 0;
-    if (activeProfessional.avatar) score += 30;
+    if (activeProfessional.profile_picture) score += 30;
     if (name && bio && primaryLocation) score += 30;
     if (services.length > 0) score += 20;
     if (portfolio.length > 0) score += 20;
@@ -160,7 +160,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
     const reader = new FileReader();
     reader.onload = (event) => {
       if (event.target?.result && onUpdateProfile) {
-        onUpdateProfile({ avatar: event.target.result as string });
+        onUpdateProfile({ profile_picture: event.target.result as string });
       }
     };
     reader.readAsDataURL(file);
@@ -170,7 +170,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
     try {
       const updatedUser = await uploadProfilePicture(file);
       if (updatedUser.profile_picture && onUpdateProfile) {
-        onUpdateProfile({ avatar: updatedUser.profile_picture });
+        onUpdateProfile({ profile_picture: updatedUser.profile_picture });
       }
       triggerToast('Profile photo updated and saved!');
     } catch (err: any) {
@@ -187,10 +187,10 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
       onUpdateProfile({
         name,
         bio,
-        phone,
+        phone_number: phone,
         email,
         category,
-        location: primaryLocation
+        state: primaryLocation
       });
     }
     setShowEditInfoModal(false);
@@ -211,9 +211,9 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
   const handleOpenEditService = (s: ServiceItem) => {
     setEditingServiceId(s.id);
     setServiceName(s.name);
-    setServicePricingType(s.pricingType);
+    setServicePricingType(s.pricing_type);
     setServicePrice(s.price || 10000);
-    setServiceDuration(s.durationEstimate || '1-2 hrs');
+    setServiceDuration(s.duration_estimate || '1-2 hrs');
     setServiceDesc(s.description);
     setShowServiceModal(true);
   };
@@ -225,9 +225,9 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
       updatedServices = services.map(s => s.id === editingServiceId ? {
         ...s,
         name: serviceName,
-        pricingType: servicePricingType,
+        pricing_type: servicePricingType,
         price: servicePricingType === 'quote_required' ? undefined : servicePrice,
-        durationEstimate: serviceDuration,
+        duration_estimate: serviceDuration,
         description: serviceDesc
       } : s);
     } else {
@@ -236,9 +236,9 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
         name: serviceName,
         category: category,
         description: serviceDesc,
-        pricingType: servicePricingType,
+        pricing_type: servicePricingType,
         price: servicePricingType === 'quote_required' ? undefined : servicePrice,
-        durationEstimate: serviceDuration
+        duration_estimate: serviceDuration
       };
       updatedServices = [newService, ...services];
     }
@@ -272,9 +272,9 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
     setEditingPortfolioId(p.id);
     setPortTitle(p.title);
     setPortCategory(p.category);
-    setPortImage(p.imageUrl);
+    setPortImage(p.image_url);
     setPortDesc(p.description);
-    setPortDate(p.dateCompleted);
+    setPortDate(p.date_completed);
     setShowPortfolioModal(true);
   };
 
@@ -286,18 +286,18 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
         ...p,
         title: portTitle,
         category: portCategory,
-        imageUrl: portImage,
+        image_url: portImage,
         description: portDesc,
-        dateCompleted: portDate
+        date_completed: portDate
       } : p);
     } else {
       const newPort: PortfolioItem = {
         id: `port-${Date.now()}`,
         title: portTitle,
         category: portCategory,
-        imageUrl: portImage || 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800',
+        image_url: portImage || 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800',
         description: portDesc,
-        dateCompleted: portDate
+        date_completed: portDate
       };
       updatedPortfolio = [newPort, ...portfolio];
     }
@@ -320,7 +320,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
     setKycSubmitted(true);
     localStorage.setItem(`kazihub_kyc_completed_${activeProfessional.id}`, 'true');
     if (onUpdateProfile) {
-      onUpdateProfile({ verified: true, verificationStatus: 'verified' });
+      onUpdateProfile({ is_verified: true, verificationStatus: 'verified' });
     }
     triggerToast('Account identity and liveness check verified!');
   };
@@ -354,7 +354,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
             {/* Avatar with Camera Overlay (Centered on mobile) */}
             <div className="relative group shrink-0 mx-auto sm:mx-0">
               <UserAvatar
-                src={activeProfessional.avatar}
+                src={activeProfessional.profile_picture}
                 name={activeProfessional.name}
                 sizeClassName="w-20 h-20 sm:w-20 sm:h-20"
                 textClassName="text-2xl font-black"
@@ -437,11 +437,11 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
               {/* Key Trust Stats */}
               <div className="flex items-center justify-center sm:justify-start gap-2.5 text-xs font-bold pt-0.5 text-slate-600 dark:text-slate-300">
                 <span className="px-2 py-0.5 rounded-md bg-slate-50 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60">
-                  {activeProfessional.completedJobsCount || 34} Jobs Completed
+                  {activeProfessional.completed_jobs_count || 34} Jobs Completed
                 </span>
                 <span className="text-slate-300 dark:text-slate-700">•</span>
                 <span className="text-amber-600 dark:text-amber-400">
-                  ★ {activeProfessional.rating} <span className="text-slate-500 font-medium">({activeProfessional.reviewCount} Reviews)</span>
+                  ★ {activeProfessional.rating_average} <span className="text-slate-500 font-medium">({activeProfessional.review_count} Reviews)</span>
                 </span>
               </div>
             </div>
@@ -549,13 +549,13 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
                 <div className="space-y-1.5">
                   <div className="flex items-start justify-between gap-2">
                     <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider ${
-                      srv.pricingType === 'fixed'
+                      srv.pricing_type === 'fixed'
                         ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20'
-                        : srv.pricingType === 'starting'
+                        : srv.pricing_type === 'starting'
                         ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20'
                         : 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-500/20'
                     }`}>
-                      {srv.pricingType === 'fixed' ? 'Fixed Price' : srv.pricingType === 'starting' ? 'Starting Base' : 'Quote Required'}
+                      {srv.pricing_type === 'fixed' ? 'Fixed Price' : srv.pricing_type === 'starting' ? 'Starting Base' : 'Quote Required'}
                     </span>
 
                     <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
@@ -587,12 +587,12 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
                 <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between text-xs font-bold">
                   <span className="text-slate-400 flex items-center gap-1 text-[11px]">
                     <Clock className="w-3 h-3" />
-                    {srv.durationEstimate || '1 hr'}
+                    {srv.duration_estimate || '1 hr'}
                   </span>
                   <span className="text-slate-900 dark:text-slate-100 font-black text-xs">
-                    {srv.pricingType === 'quote_required'
+                    {srv.pricing_type === 'quote_required'
                       ? 'Custom Quote'
-                      : `${srv.pricingType === 'starting' ? 'From ' : ''}${formatCurrency(srv.price || 0)}`}
+                      : `${srv.pricing_type === 'starting' ? 'From ' : ''}${formatCurrency(srv.price || 0)}`}
                   </span>
                 </div>
               </div>
@@ -646,7 +646,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
               >
                 <div className="relative aspect-video overflow-hidden bg-slate-900">
                   <img
-                    src={item.imageUrl}
+                    src={item.image_url}
                     alt={item.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
@@ -681,7 +681,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 mt-0.5">{item.description}</p>
                   </div>
                   <p className="text-[10px] font-bold text-slate-400 pt-1.5 border-t border-slate-200 dark:border-slate-700/60">
-                    Completed: {item.dateCompleted}
+                    Completed: {item.date_completed}
                   </p>
                 </div>
               </div>

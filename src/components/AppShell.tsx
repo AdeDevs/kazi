@@ -70,7 +70,7 @@ export const AppShell: React.FC<AppShellProps> = ({
     ? `${user.first_name} ${user.last_name}`.trim() || user.email.split('@')[0]
     : (currentRole === 'customer' ? 'Guest Client' : 'Guest Artisan');
 
-  const displayLocation = user?.state ? `${user.state}, Nigeria` : (currentRole === 'customer' ? 'Oyo, Nigeria' : activeProfessional.location);
+  const displayLocation = user?.state ? `${user.state}, Nigeria` : (currentRole === 'customer' ? 'Oyo, Nigeria' : activeProfessional.state);
 
   const handleLogoutAction = () => {
     authLogout();
@@ -253,7 +253,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                 >
                   <div className="w-11 h-11 flex items-center justify-center shrink-0 absolute left-0 top-0">
                     <UserAvatar
-                      src={currentRole === 'customer' ? customerAvatar : activeProfessional.avatar}
+                      src={currentRole === 'customer' ? customerAvatar : activeProfessional.profile_picture}
                       name={displayName}
                       sizeClassName="w-7 h-7 sm:w-8 sm:h-8"
                       textClassName="text-[11px] font-black"
