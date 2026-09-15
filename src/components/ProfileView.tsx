@@ -3,10 +3,11 @@ import { Role, Professional, Booking } from '../types';
 import { Language } from '../translations';
 import {
   User, MapPin, Calendar, CheckCircle2, Camera, Edit3,
-  X, LogOut, Settings as SettingsIcon, ChevronRight
+  X, LogOut, ChevronRight, Bookmark, Star
 } from 'lucide-react';
 import { ConfirmationModal } from './ui/ConfirmationModal';
 import { UserAvatar } from './ui/UserAvatar';
+import { Card, CardHeader } from './ui/Card';
 import { ProProfileManagement } from './ProProfileManagement';
 import { useAuth } from '../context/AuthContext';
 
@@ -14,6 +15,8 @@ interface ProfileViewProps {
   currentRole: Role;
   activeProfessional: Professional;
   bookings: Booking[];
+  professionals: Professional[];
+  savedProIds: string[];
   customerAvatar: string;
   onUpdateCustomerAvatar: (url: string) => void;
   onUpdateProfile?: (updated: Partial<Professional>) => void;
@@ -30,6 +33,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   currentRole,
   activeProfessional,
   bookings,
+  professionals,
+  savedProIds,
   customerAvatar,
   onUpdateCustomerAvatar,
   onUpdateProfile,
@@ -150,9 +155,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   }
 
   const currentAvatar = customerAvatar;
+  const completedBookingsCount = bookings.filter(b => b.status === 'paid_out').length;
+  const activeBookingsCount = bookings.filter(b => ['pending', 'quote_requested', 'accepted', 'in_progress'].includes(b.status)).length;
+  const savedPros = professionals.filter(p => savedProIds.includes(p.id)).slice(0, 3);
 
   return (
-    <div className="w-full max-w-none space-y-6 animate-in fade-in duration-300">
+    <div className="w-full max-w-none space-y-4 animate-in fade-in duration-300">
       <h1 className="sr-only">Profile & Preferences</h1>
 
       {/* Page Header (Mobile Only) */}
@@ -167,7 +175,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       <input type="file" ref={fileInputRef} onChange={handleImageSelect} accept="image/*" className="hidden" />
 
       {/* 1. IDENTITY & PROFILE HEADER CARD */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-xs relative overflow-hidden">
+      <Card className="relative overflow-hidden">
         <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-5">
           <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
             <div className="relative group shrink-0">
@@ -242,19 +250,30 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </button>
           </div>
         </div>
+      </Card>
+
+      {/* 2. QUICK STATS */}
+      <div className="grid grid-cols-3 gap-3">
+        <Card className="text-center">
+          <p className="text-xl font-black text-slate-900 dark:text-slate-100">{completedBookingsCount}</p>
+          <p className="text-[11px] font-semibold text-slate-500">Jobs Completed</p>
+        </Card>
+        <Card className="text-center">
+          <p className="text-xl font-black text-slate-900 dark:text-slate-100">{activeBookingsCount}</p>
+          <p className="text-[11px] font-semibold text-slate-500">Active Bookings</p>
+        </Card>
+        <Card className="text-center">
+          <p className="text-xl font-black text-slate-900 dark:text-slate-100">{savedProIds.length}</p>
+          <p className="text-[11px] font-semibold text-slate-500">Saved Artisans</p>
+        </Card>
       </div>
 
-      {/* 2. PERSONAL INFORMATION */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
-        <div className="flex items-center gap-2 pb-1 border-b border-slate-100 dark:border-slate-800">
-          <div className="w-8 h-8 rounded-xl bg-navy-800/10 text-navy-800 dark:text-navy-400 flex items-center justify-center">
-            <User className="w-4 h-4" />
-          </div>
-          <div>
-            <h3 className="font-extrabold text-sm text-slate-900 dark:text-slate-100">Personal Information</h3>
-            <p className="text-[11px] text-slate-400">Your contact info used for bookings & notifications. Use "Edit Details" above to update.</p>
-          </div>
-        </div>
+      {/* 3. PERSONAL INFORMATION */}
+      <Card className="space-y-4">
+        <CardHeader
+          title="Personal Information"
+          subtitle={'Your contact info used for bookings & notifications. Use "Edit Details" above to update.'}
+        />
 
         <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
           <div className="py-3 flex items-center justify-between">
@@ -274,31 +293,65 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <span className="font-bold text-slate-900 dark:text-slate-100">{customerLocation}</span>
           </div>
         </div>
-      </div>
+      </Card>
 
-      {/* 3. ACCOUNT SETTINGS LINK -- preferences, security, privacy, help & legal all live in the
-          shared Settings page so both customer and artisan accounts get the same controls. */}
-      {onTabChange && (
-        <button
-          type="button"
-          onClick={() => onTabChange('settings')}
-          className="w-full bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between gap-4 cursor-pointer hover:border-slate-300 dark:hover:border-slate-700 transition-colors text-left"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-navy-800/10 text-navy-800 dark:text-navy-400 flex items-center justify-center shrink-0">
-              <SettingsIcon className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="font-extrabold text-sm text-slate-900 dark:text-slate-100">Account Settings</h3>
-              <p className="text-[11px] text-slate-400">Preferences, security, privacy, help & legal.</p>
-            </div>
+      {/* 4. SAVED ARTISANS PREVIEW */}
+      {savedPros.length > 0 && (
+        <Card className="space-y-4">
+          <CardHeader
+            title="Saved Artisans"
+            subtitle="Professionals you've bookmarked for future jobs."
+            action={onTabChange && (
+              <button
+                type="button"
+                onClick={() => onTabChange('explore')}
+                className="text-xs font-bold text-navy-800 dark:text-navy-400 hover:underline cursor-pointer shrink-0"
+              >
+                See All
+              </button>
+            )}
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {savedPros.map((pro) => (
+              <div key={pro.id} className="flex items-center gap-2.5 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
+                <UserAvatar
+                  src={pro.profile_picture}
+                  name={pro.name}
+                  sizeClassName="w-9 h-9"
+                  textClassName="text-xs font-black"
+                  roundedClassName="rounded-lg"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">{pro.name}</p>
+                  <p className="text-[11px] text-slate-500 flex items-center gap-1">
+                    <Star className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />
+                    <span>{pro.rating_average} &middot; {pro.category}</span>
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
-          <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
-        </button>
+        </Card>
       )}
 
-      {/* 4. LOGOUT BUTTON ONLY (With Universal Confirmation Modal) */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* 5. ACCOUNT SETTINGS LINK -- preferences, security, privacy, help & legal all live in the
+          shared Settings page so both customer and artisan accounts get the same controls. */}
+      {onTabChange && (
+        <Card
+          as="button"
+          onClick={() => onTabChange('settings')}
+          className="w-full flex items-center justify-between gap-4 hover:border-slate-300 dark:hover:border-slate-700 transition-colors text-left cursor-pointer"
+        >
+          <div>
+            <h3 className="font-extrabold text-sm text-slate-900 dark:text-slate-100">Account Settings</h3>
+            <p className="text-[11px] text-slate-400">Preferences, security, privacy, help & legal.</p>
+          </div>
+          <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+        </Card>
+      )}
+
+      {/* 6. SIGN OUT (With Universal Confirmation Modal) */}
+      <Card className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h3 className="font-extrabold text-sm text-slate-900 dark:text-slate-100">Sign Out</h3>
           <p className="text-[11px] text-slate-500">Securely sign out of your current session on this device.</p>
@@ -311,7 +364,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           <LogOut className="w-4 h-4" />
           <span>Sign Out of KaziHub</span>
         </button>
-      </div>
+      </Card>
 
       {/* Toast notification */}
       {actionToast && (

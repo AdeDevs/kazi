@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Sliders, Moon, Sun, Globe, CheckCircle2, X } from 'lucide-react';
+import { Moon, Sun, Globe, CheckCircle2, X } from 'lucide-react';
 import { Language, SUPPORTED_LANGUAGES } from '../../translations';
 import { useAuth } from '../../context/AuthContext';
+import { Card, CardHeader } from '../ui/Card';
 
 interface PreferencesSectionProps {
   darkMode?: boolean;
@@ -49,16 +50,11 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
-      <div className="flex items-center gap-2 pb-1 border-b border-slate-100 dark:border-slate-800">
-        <div className="w-8 h-8 rounded-xl bg-navy-800/10 text-navy-800 dark:text-navy-400 flex items-center justify-center">
-          <Sliders className="w-4 h-4" />
-        </div>
-        <div>
-          <h3 className="font-extrabold text-sm text-slate-900 dark:text-slate-100">Preferences</h3>
-          <p className="text-[11px] text-slate-400">Language, display mode, and notification channels.</p>
-        </div>
-      </div>
+    <Card className="space-y-4">
+      <CardHeader
+        title="Preferences"
+        subtitle="Language, display mode, and notification channels."
+      />
 
       <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
         {/* Push Notifications */}
@@ -167,6 +163,6 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({
           </div>
         </div>
       )}
-    </div>
+    </Card>
   );
 };

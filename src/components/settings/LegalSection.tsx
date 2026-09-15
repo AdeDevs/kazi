@@ -1,21 +1,17 @@
 import React, { useState } from 'react';
-import { FileText, ExternalLink, X } from 'lucide-react';
+import { ExternalLink, X } from 'lucide-react';
+import { Card, CardHeader } from '../ui/Card';
 
 export const LegalSection: React.FC = () => {
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
-      <div className="flex items-center gap-2 pb-1 border-b border-slate-100 dark:border-slate-800">
-        <div className="w-8 h-8 rounded-xl bg-navy-800/10 text-navy-800 dark:text-navy-400 flex items-center justify-center">
-          <FileText className="w-4 h-4" />
-        </div>
-        <div>
-          <h3 className="font-extrabold text-sm text-slate-900 dark:text-slate-100">Legal & Terms</h3>
-          <p className="text-[11px] text-slate-400">Terms of service, escrow agreements, and data privacy.</p>
-        </div>
-      </div>
+    <Card className="space-y-4">
+      <CardHeader
+        title="Legal & Terms"
+        subtitle="Terms of service, escrow agreements, and data privacy."
+      />
 
       <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
         <div className="py-3 flex items-center justify-between">
@@ -101,6 +97,6 @@ export const LegalSection: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+    </Card>
   );
 };

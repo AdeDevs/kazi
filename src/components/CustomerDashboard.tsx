@@ -39,6 +39,8 @@ interface CustomerDashboardProps {
   initialMessageProId?: string;
   darkMode?: boolean;
   onToggleDarkMode?: () => void;
+  savedProIds: string[];
+  onToggleSavePro: (proId: string) => void;
 }
 
 export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
@@ -65,14 +67,15 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   onUpdateCustomerNotifications,
   initialMessageProId,
   darkMode,
-  onToggleDarkMode
+  onToggleDarkMode,
+  savedProIds,
+  onToggleSavePro
 }) => {
   const { user } = useAuth();
   const clientGreetingName = user?.first_name || (user?.email ? user.email.split('@')[0] : 'Client');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedNeighborhood, setSelectedNeighborhood] = useState<string>('All');
   const [defaultNeighborhood, setDefaultNeighborhood] = useState<string>('Bodija, Ibadan');
-  const [savedProIds, setSavedProIds] = useState<string[]>(['p1', 'p3']);
   const [recentlyViewedIds, setRecentlyViewedIds] = useState<string[]>(['p1', 'p2', 'p4']);
   const [searchMinRating, setSearchMinRating] = useState<number>(0);
   const [searchMinExperience, setSearchMinExperience] = useState<number>(0);
@@ -175,11 +178,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
 
   const toggleSavePro = (proId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (savedProIds.includes(proId)) {
-      setSavedProIds(savedProIds.filter(id => id !== proId));
-    } else {
-      setSavedProIds([...savedProIds, proId]);
-    }
+    onToggleSavePro(proId);
   };
 
   const searchTrimmed = searchTerm.trim().toLowerCase();

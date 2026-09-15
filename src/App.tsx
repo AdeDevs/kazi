@@ -149,6 +149,24 @@ export default function App() {
     return INITIAL_MESSAGES;
   });
 
+  // Customer's saved/favorited artisans -- lifted up from CustomerDashboard so ProfileView can
+  // also read it (for the saved-artisans preview) without duplicating state.
+  const [savedProIds, setSavedProIds] = useState<string[]>(() => {
+    const saved = localStorage.getItem('kazihub_ng_saved_pro_ids_v1');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { console.error(e); }
+    }
+    return ['p1', 'p3'];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('kazihub_ng_saved_pro_ids_v1', JSON.stringify(savedProIds));
+  }, [savedProIds]);
+
+  const toggleSaveProfessional = useCallback((proId: string) => {
+    setSavedProIds(prev => prev.includes(proId) ? prev.filter(id => id !== proId) : [...prev, proId]);
+  }, []);
+
   // Modals state
   const [selectedProForProfile, setSelectedProForProfile] = useState<Professional | null>(null);
   const [bookingTargetPro, setBookingTargetPro] = useState<Professional | null>(null);
@@ -728,6 +746,8 @@ export default function App() {
           currentRole={currentRole}
           activeProfessional={activeProfessional}
           bookings={bookings.filter(b => currentRole === 'customer' ? b.client_id === 'c1' : b.artisan_id === activeProfessional.id)}
+          professionals={professionals}
+          savedProIds={savedProIds}
           customerAvatar={customerAvatar}
           onUpdateCustomerAvatar={setCustomerAvatar}
           onUpdateProfile={handleUpdateProfile}
@@ -788,6 +808,8 @@ export default function App() {
           customerNotifications={customerNotifications}
           onUpdateCustomerNotifications={setCustomerNotifications}
           initialMessageProId={chatTargetPro?.id}
+          savedProIds={savedProIds}
+          onToggleSavePro={toggleSaveProfessional}
           darkMode={darkMode}
           onToggleDarkMode={() => setDarkMode(!darkMode)}
         />

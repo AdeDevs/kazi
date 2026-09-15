@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { HelpCircle, ChevronDown, ChevronUp, MessageSquare, PhoneCall, X, Send } from 'lucide-react';
+import { ChevronDown, ChevronUp, MessageSquare, PhoneCall, X, Send } from 'lucide-react';
+import { Card, CardHeader } from '../ui/Card';
 
 interface HelpSupportSectionProps {
   triggerToast: (msg: string) => void;
@@ -39,16 +40,11 @@ export const HelpSupportSection: React.FC<HelpSupportSectionProps> = ({ triggerT
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
-      <div className="flex items-center gap-2 pb-1 border-b border-slate-100 dark:border-slate-800">
-        <div className="w-8 h-8 rounded-xl bg-navy-800/10 text-navy-800 dark:text-navy-400 flex items-center justify-center">
-          <HelpCircle className="w-4 h-4" />
-        </div>
-        <div>
-          <h3 className="font-extrabold text-sm text-slate-900 dark:text-slate-100">Help & Support</h3>
-          <p className="text-[11px] text-slate-400">Help center FAQs, live concierge, and escalation hotlines.</p>
-        </div>
-      </div>
+    <Card className="space-y-4">
+      <CardHeader
+        title="Help & Support"
+        subtitle="Help center FAQs, live concierge, and escalation hotlines."
+      />
 
       {/* FAQs Accordion */}
       <div className="space-y-2">
@@ -161,6 +157,6 @@ export const HelpSupportSection: React.FC<HelpSupportSectionProps> = ({ triggerT
           </div>
         </div>
       )}
-    </div>
+    </Card>
   );
 };

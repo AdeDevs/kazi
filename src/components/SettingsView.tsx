@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { Role, Professional, Booking } from '../types';
 import { Language } from '../translations';
-import { 
-  Lock, Key, ShieldCheck, Eye, Globe2,
-  Download, Database, Snowflake, Trash2, CheckCircle2, 
-  X, AlertTriangle, ShieldAlert, Laptop, Radio
+import {
+  Key, Download, Snowflake, Trash2, CheckCircle2, X, Laptop
 } from 'lucide-react';
 import { ConfirmationModal } from './ui/ConfirmationModal';
+import { Card, CardHeader } from './ui/Card';
 import { useAuth } from '../context/AuthContext';
 import { PreferencesSection } from './settings/PreferencesSection';
 import { HelpSupportSection } from './settings/HelpSupportSection';
@@ -160,16 +159,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       />
 
       {/* 1. SECURITY & AUTHENTICATION */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
-        <div className="flex items-center gap-2 pb-1 border-b border-slate-100 dark:border-slate-800">
-          <div className="w-8 h-8 rounded-xl bg-navy-800/10 text-navy-800 dark:text-navy-400 flex items-center justify-center">
-            <Lock className="w-4 h-4" />
-          </div>
-          <div>
-            <h3 className="font-extrabold text-sm text-slate-900 dark:text-slate-100">Security & Authentication</h3>
-            <p className="text-[11px] text-slate-400">Manage your passwords, two-factor authentication, and login credentials.</p>
-          </div>
-        </div>
+      <Card className="space-y-4">
+        <CardHeader
+          title="Security & Authentication"
+          subtitle="Manage your passwords, two-factor authentication, and login credentials."
+        />
 
         <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
           {/* Password Reset */}
@@ -230,21 +224,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </label>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* 2. ACTIVE SESSIONS & DEVICE MANAGEMENT */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
-        <div className="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-navy-800/10 text-navy-800 dark:text-navy-400 flex items-center justify-center">
-              <Laptop className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="font-extrabold text-sm text-slate-900 dark:text-slate-100">Active Devices & Sessions</h3>
-              <p className="text-[11px] text-slate-400">Devices currently logged into this KaziHub account.</p>
-            </div>
-          </div>
-        </div>
+      <Card className="space-y-4">
+        <CardHeader
+          title="Active Devices & Sessions"
+          subtitle="Devices currently logged into this KaziHub account."
+        />
 
         <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
           <div className="py-3 flex items-center justify-between">
@@ -264,19 +251,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             Multi-device session tracking isn't available yet - this will show every device signed into your account once it's wired up.
           </p>
         </div>
-      </div>
+      </Card>
 
       {/* 3. PRIVACY & DATA VISIBILITY */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
-        <div className="flex items-center gap-2 pb-1 border-b border-slate-100 dark:border-slate-800">
-          <div className="w-8 h-8 rounded-xl bg-navy-800/10 text-navy-800 dark:text-navy-400 flex items-center justify-center">
-            <Eye className="w-4 h-4" />
-          </div>
-          <div>
-            <h3 className="font-extrabold text-sm text-slate-900 dark:text-slate-100">Privacy & Visibility</h3>
-            <p className="text-[11px] text-slate-400">Control who can discover your contact details and job history.</p>
-          </div>
-        </div>
+      <Card className="space-y-4">
+        <CardHeader
+          title="Privacy & Visibility"
+          subtitle="Control who can discover your contact details and job history."
+        />
 
         <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
           {/* Phone Visibility */}
@@ -333,19 +315,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </button>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* 4. ACCOUNT LIFECYCLE ACTIONS ONLY (Freeze & Delete) */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-rose-200 dark:border-rose-950/40 shadow-xs space-y-4">
-        <div className="flex items-center gap-2 pb-1 border-b border-slate-100 dark:border-slate-800">
-          <div className="w-8 h-8 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center">
-            <ShieldAlert className="w-4 h-4" />
-          </div>
-          <div>
-            <h3 className="font-extrabold text-sm text-slate-900 dark:text-slate-100">Account Lifecycle Actions</h3>
-            <p className="text-[11px] text-slate-400">Freeze account visibility temporarily or delete permanently.</p>
-          </div>
-        </div>
+      <Card tone="danger" className="space-y-4">
+        <CardHeader
+          title="Account Lifecycle Actions"
+          subtitle="Freeze account visibility temporarily or delete permanently."
+        />
 
         <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
           {/* Freeze Account */}
@@ -399,7 +376,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </button>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* HELP & SUPPORT (shared across both customer and artisan roles) */}
       <HelpSupportSection triggerToast={triggerToast} />
