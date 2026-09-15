@@ -103,14 +103,12 @@ export const AppShell: React.FC<AppShellProps> = ({
           />
         )}
 
-        {/* Spacer: reserves the collapsed rail's width in the page's layout. The sidebar itself is
-            always fixed/floating (below), so expanding it on hover never reflows this spacer or the
-            main content next to it -- only the sidebar's own (much smaller) contents re-layout. */}
-        <div className="hidden md:block md:w-[72px] shrink-0" aria-hidden="true" />
-
-        {/* ================= LEFT SIDEBAR ================= */}
+        {/* ================= LEFT SIDEBAR =================
+            A real flex item (not fixed/overlay) on desktop: its width animates and the main
+            content sits right beside it as flex-1, so they can never desync -- there's no
+            separate offset to keep in sync, the browser's flex layout does it every frame. */}
         <aside
-          className={`flex flex-col border-r border-zinc-200 dark:border-zinc-800 fixed inset-y-0 left-0 top-0 h-[100dvh] max-h-[100dvh] overflow-hidden shrink-0 z-50 bg-white dark:bg-zinc-950 group w-72 max-w-[85vw] md:w-[72px] md:hover:w-64 md:hover:shadow-2xl transition-[transform,width,box-shadow] duration-300 ease-in-out ${
+          className={`flex flex-col border-r border-zinc-200 dark:border-zinc-800 fixed inset-y-0 left-0 md:sticky top-0 h-[100dvh] max-h-[100dvh] md:h-screen overflow-hidden shrink-0 z-50 md:z-30 bg-white dark:bg-zinc-950 group w-72 max-w-[85vw] md:w-[72px] md:hover:w-64 transition-[transform,width] duration-300 ease-in-out ${
             isMobileSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'
           }`}
         >
@@ -176,10 +174,10 @@ export const AppShell: React.FC<AppShellProps> = ({
                     title={item.label}
                     aria-label={item.label}
                   >
-                    <div className="w-11 h-11 flex items-center justify-center shrink-0 absolute top-0 left-0 md:left-1/2 md:-translate-x-1/2 md:group-hover:left-0 md:group-hover:translate-x-0 transition-[left,transform] duration-300 ease-in-out">
+                    <div className="w-11 h-11 flex items-center justify-center shrink-0">
                       <Icon className="w-5 h-5 shrink-0" strokeWidth={1.5} />
                     </div>
-                    <span className={`pl-12 whitespace-nowrap overflow-hidden text-left flex-1 transition-opacity duration-300 ${
+                    <span className={`min-w-0 flex-1 whitespace-nowrap overflow-hidden text-left transition-opacity duration-300 ${
                       isMobileSidebarOpen ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
                     }`}>
                       {item.label}
@@ -207,10 +205,10 @@ export const AppShell: React.FC<AppShellProps> = ({
                   title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
                   aria-label="Toggle Dark Mode"
                 >
-                  <div className="w-11 h-11 flex items-center justify-center shrink-0 absolute top-0 left-0 md:left-1/2 md:-translate-x-1/2 md:group-hover:left-0 md:group-hover:translate-x-0 transition-[left,transform] duration-300 ease-in-out">
+                  <div className="w-11 h-11 flex items-center justify-center shrink-0">
                     {darkMode ? <Sun className="w-5 h-5 text-amber-500" strokeWidth={1.5} /> : <Moon className="w-5 h-5 text-zinc-500" strokeWidth={1.5} />}
                   </div>
-                  <span className={`pl-12 whitespace-nowrap overflow-hidden text-left flex-1 transition-opacity duration-300 ${
+                  <span className={`min-w-0 flex-1 whitespace-nowrap overflow-hidden text-left transition-opacity duration-300 ${
                     isMobileSidebarOpen ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
                   }`}>
                     {darkMode ? 'Light Theme' : 'Dark Theme'}
@@ -227,10 +225,10 @@ export const AppShell: React.FC<AppShellProps> = ({
                   title="Sign Out"
                   aria-label="Sign Out"
                 >
-                  <div className="w-11 h-11 flex items-center justify-center shrink-0 absolute top-0 left-0 md:left-1/2 md:-translate-x-1/2 md:group-hover:left-0 md:group-hover:translate-x-0 transition-[left,transform] duration-300 ease-in-out">
+                  <div className="w-11 h-11 flex items-center justify-center shrink-0">
                     <LogOut className="w-5 h-5" strokeWidth={1.5} />
                   </div>
-                  <span className={`pl-12 whitespace-nowrap overflow-hidden text-left flex-1 transition-opacity duration-300 ${
+                  <span className={`min-w-0 flex-1 whitespace-nowrap overflow-hidden text-left transition-opacity duration-300 ${
                     isMobileSidebarOpen ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
                   }`}>
                     Sign Out
@@ -256,7 +254,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                   title="View Profile"
                   aria-label="View Profile"
                 >
-                  <div className="w-11 h-11 flex items-center justify-center shrink-0 absolute top-0 left-0 md:left-1/2 md:-translate-x-1/2 md:group-hover:left-0 md:group-hover:translate-x-0 transition-[left,transform] duration-300 ease-in-out">
+                  <div className="w-11 h-11 flex items-center justify-center shrink-0">
                     <UserAvatar
                       src={currentRole === 'customer' ? customerAvatar : activeProfessional.profile_picture}
                       name={displayName}
@@ -266,7 +264,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                       verified={Boolean(user?.is_email_verified)}
                     />
                   </div>
-                  <div className={`pl-12 pr-2 whitespace-nowrap overflow-hidden text-left transition-opacity duration-300 ${
+                  <div className={`min-w-0 flex-1 pr-2 whitespace-nowrap overflow-hidden text-left transition-opacity duration-300 ${
                     isMobileSidebarOpen ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
                   }`}>
                     <div className="flex items-center gap-1">
@@ -287,12 +285,12 @@ export const AppShell: React.FC<AppShellProps> = ({
                 <button
                   type="button"
                   onClick={() => openAuthModal('login')}
-                  className="w-full relative flex items-center h-11 rounded-xl bg-navy-900 hover:bg-navy-800 text-white font-bold text-xs transition-colors cursor-pointer justify-center shadow-xs"
+                  className="w-full relative flex items-center h-11 rounded-xl bg-navy-900 hover:bg-navy-800 text-white font-bold text-xs transition-colors cursor-pointer shadow-xs"
                 >
-                  <div className="w-11 h-11 flex items-center justify-center shrink-0 absolute top-0 left-0 md:left-1/2 md:-translate-x-1/2 md:group-hover:left-0 md:group-hover:translate-x-0 transition-[left,transform] duration-300 ease-in-out">
+                  <div className="w-11 h-11 flex items-center justify-center shrink-0">
                     <LogIn className="w-4 h-4" />
                   </div>
-                  <span className={`pl-10 whitespace-nowrap overflow-hidden text-left transition-opacity duration-300 ${
+                  <span className={`min-w-0 flex-1 whitespace-nowrap overflow-hidden text-left transition-opacity duration-300 ${
                     isMobileSidebarOpen ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
                   }`}>
                     Sign In / Register
