@@ -1,11 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { Role, Professional, Booking } from '../types';
-import { Language, t, SUPPORTED_LANGUAGES } from '../translations';
-import { 
-  User, MapPin, Mail, Phone, Calendar, CheckCircle2, Camera, Edit3, 
-  Sliders, Moon, Sun, Globe, HelpCircle, MessageSquare, 
-  Ticket, FileText, AlertTriangle, X, Send, LogOut, ExternalLink,
-  ChevronDown, ChevronUp, Clock, PhoneCall, ShieldCheck
+import { Language } from '../translations';
+import {
+  User, MapPin, Calendar, CheckCircle2, Camera, Edit3,
+  X, LogOut, Settings as SettingsIcon, ChevronRight
 } from 'lucide-react';
 import { ConfirmationModal } from './ui/ConfirmationModal';
 import { UserAvatar } from './ui/UserAvatar';
@@ -25,6 +23,7 @@ interface ProfileViewProps {
   onDeleteAccount?: () => void;
   currentLanguage?: Language;
   onLanguageChange?: (lang: Language) => void;
+  onTabChange?: (tab: string) => void;
 }
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
@@ -39,7 +38,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onLogout,
   onDeleteAccount,
   currentLanguage = 'English (Nigeria)',
-  onLanguageChange
+  onLanguageChange,
+  onTabChange
 }) => {
   const { user, updateUser, uploadProfilePicture, logout: authLogout } = useAuth();
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
@@ -66,28 +66,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const customerName = `${customerFirstName} ${customerLastName}`.trim() || user?.email?.split('@')[0] || 'User Profile';
   const customerSince = user?.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'March 2024';
 
-  // Preferences
-  const [pushNotifications, setPushNotifications] = useState(true);
-  const [emailAlerts, setEmailAlerts] = useState(true);
-  const [selectedLanguage, setSelectedLanguage] = useState<Language>(currentLanguage);
-  const activeLang: Language = currentLanguage || selectedLanguage;
-
   // Modals & UI States
   const [isEditing, setIsEditing] = useState(false);
-  const [showLanguageModal, setShowLanguageModal] = useState(false);
-  const [showHelpCenter, setShowHelpCenter] = useState(false);
-  const [showContactSupport, setShowContactSupport] = useState(false);
-  const [showSupportRequests, setShowSupportRequests] = useState(false);
-  const [showTermsModal, setShowTermsModal] = useState(false);
-  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-
-  // FAQ Accordion State
-  const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
-
-  // Support Form State
-  const [supportMessage, setSupportMessage] = useState('');
-  const [supportSubject, setSupportSubject] = useState('General Inquiry');
   const [actionToast, setActionToast] = useState<string | null>(null);
 
   const triggerToast = (msg: string) => {
@@ -155,45 +136,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     }
   };
 
-  const handleContactSupportSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!supportMessage.trim()) return;
-    triggerToast('Support request submitted! Ticket #KZ-' + Math.floor(1000 + Math.random() * 9000) + ' created.');
-    setShowContactSupport(false);
-    setSupportMessage('');
-  };
-
-  const faqs = [
-    {
-      q: 'How does KaziHub secure escrow payments?',
-      a: 'When you book a service, your funds are securely held in the KaziHub Escrow Vault. Funds are only released to the artisan once you confirm completion or after our 4-day inspection window.'
-    },
-    {
-      q: 'What happens if an artisan does not arrive?',
-      a: 'You can cancel with zero penalty or reassign the request to another verified pro nearby. Our support concierge is also available 24/7 to resolve disputes.'
-    },
-    {
-      q: 'How are artisans verified?',
-      a: 'All KaziHub artisans undergo National Identity verification, trade certification audit, and local neighborhood endorsement checks before receiving a Verified Pro badge.'
-    },
-    {
-      q: 'Can I change my service address?',
-      a: 'Yes, click "Edit Profile" above to modify your primary location or specify custom delivery coordinates during booking.'
-    }
-  ];
-
   // If role is professional, render the dedicated Pro management component
   if (currentRole === 'professional') {
     return (
       <ProProfileManagement
         activeProfessional={activeProfessional}
         onUpdateProfile={onUpdateProfile}
-        darkMode={darkMode}
-        onToggleDarkMode={onToggleDarkMode}
+        onTabChange={onTabChange}
         onLogout={onLogout}
         onDeleteAccount={onDeleteAccount}
-        currentLanguage={currentLanguage}
-        onLanguageChange={onLanguageChange}
       />
     );
   }
@@ -295,23 +246,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       {/* 2. PERSONAL INFORMATION */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
-        <div className="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-navy-800/10 text-navy-800 dark:text-navy-400 flex items-center justify-center">
-              <User className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="font-extrabold text-sm text-slate-900 dark:text-slate-100">Personal Information</h3>
-              <p className="text-[11px] text-slate-400">Your contact info used for bookings & notifications.</p>
-            </div>
+        <div className="flex items-center gap-2 pb-1 border-b border-slate-100 dark:border-slate-800">
+          <div className="w-8 h-8 rounded-xl bg-navy-800/10 text-navy-800 dark:text-navy-400 flex items-center justify-center">
+            <User className="w-4 h-4" />
           </div>
-          <button
-            type="button"
-            onClick={() => setIsEditing(true)}
-            className="text-xs font-bold text-navy-800 dark:text-navy-400 hover:underline cursor-pointer"
-          >
-            Edit
-          </button>
+          <div>
+            <h3 className="font-extrabold text-sm text-slate-900 dark:text-slate-100">Personal Information</h3>
+            <p className="text-[11px] text-slate-400">Your contact info used for bookings & notifications. Use "Edit Details" above to update.</p>
+          </div>
         </div>
 
         <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
@@ -334,190 +276,28 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
       </div>
 
-      {/* 3. PREFERENCES */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
-        <div className="flex items-center gap-2 pb-1 border-b border-slate-100 dark:border-slate-800">
-          <div className="w-8 h-8 rounded-xl bg-navy-800/10 text-navy-800 dark:text-navy-400 flex items-center justify-center">
-            <Sliders className="w-4 h-4" />
-          </div>
-          <div>
-            <h3 className="font-extrabold text-sm text-slate-900 dark:text-slate-100">Preferences</h3>
-            <p className="text-[11px] text-slate-400">Language, display mode, and notification channels.</p>
-          </div>
-        </div>
-
-        <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
-          {/* Push Notifications */}
-          <div className="py-3 flex items-center justify-between">
-            <div>
-              <p className="font-bold text-slate-900 dark:text-slate-100">Push Notifications</p>
-              <p className="text-[11px] text-slate-500">Real-time alerts for booking acceptances & chats.</p>
+      {/* 3. ACCOUNT SETTINGS LINK -- preferences, security, privacy, help & legal all live in the
+          shared Settings page so both customer and artisan accounts get the same controls. */}
+      {onTabChange && (
+        <button
+          type="button"
+          onClick={() => onTabChange('settings')}
+          className="w-full bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between gap-4 cursor-pointer hover:border-slate-300 dark:hover:border-slate-700 transition-colors text-left"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-navy-800/10 text-navy-800 dark:text-navy-400 flex items-center justify-center shrink-0">
+              <SettingsIcon className="w-4 h-4" />
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={pushNotifications}
-                onChange={(e) => setPushNotifications(e.target.checked)}
-                aria-label="Push notifications"
-                className="sr-only peer"
-              />
-              <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-navy-800"></div>
-            </label>
-          </div>
-
-          {/* Email Alerts */}
-          <div className="py-3 flex items-center justify-between">
             <div>
-              <p className="font-bold text-slate-900 dark:text-slate-100">Email Summaries</p>
-              <p className="text-[11px] text-slate-500">Escrow payment receipts and job completion reports.</p>
+              <h3 className="font-extrabold text-sm text-slate-900 dark:text-slate-100">Account Settings</h3>
+              <p className="text-[11px] text-slate-400">Preferences, security, privacy, help & legal.</p>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={emailAlerts}
-                onChange={(e) => setEmailAlerts(e.target.checked)}
-                aria-label="Email summaries"
-                className="sr-only peer"
-              />
-              <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-navy-800"></div>
-            </label>
           </div>
+          <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+        </button>
+      )}
 
-          {/* Theme Toggle */}
-          <div className="py-3 flex items-center justify-between">
-            <div>
-              <p className="font-bold text-slate-900 dark:text-slate-100">Display Theme</p>
-              <p className="text-[11px] text-slate-500">{darkMode ? 'Dark mode enabled' : 'Light mode enabled'}</p>
-            </div>
-            <button
-              type="button"
-              onClick={onToggleDarkMode}
-              className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
-            >
-              {darkMode ? <Sun className="w-3.5 h-3.5 text-amber-500" /> : <Moon className="w-3.5 h-3.5 text-zinc-500" />}
-              <span>{darkMode ? 'Light Theme' : 'Dark Theme'}</span>
-            </button>
-          </div>
-
-          {/* Language Selection */}
-          <div className="py-3 flex items-center justify-between">
-            <div>
-              <p className="font-bold text-slate-900 dark:text-slate-100">Interface Language</p>
-              <p className="text-[11px] text-slate-500">{activeLang}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowLanguageModal(true)}
-              className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
-            >
-              <Globe className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400" />
-              <span>Change</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* 4. HELP & SUPPORT */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
-        <div className="flex items-center gap-2 pb-1 border-b border-slate-100 dark:border-slate-800">
-          <div className="w-8 h-8 rounded-xl bg-navy-800/10 text-navy-800 dark:text-navy-400 flex items-center justify-center">
-            <HelpCircle className="w-4 h-4" />
-          </div>
-          <div>
-            <h3 className="font-extrabold text-sm text-slate-900 dark:text-slate-100">Help & Support</h3>
-            <p className="text-[11px] text-slate-400">Help center FAQs, live concierge, and escalation hotlines.</p>
-          </div>
-        </div>
-
-        {/* FAQs Accordion */}
-        <div className="space-y-2">
-          {faqs.map((faq, idx) => {
-            const isExp = expandedFaq === idx;
-            return (
-              <div key={idx} className="border border-slate-200/80 dark:border-slate-800 rounded-xl overflow-hidden bg-slate-50/50 dark:bg-slate-800/30">
-                <button
-                  type="button"
-                  onClick={() => setExpandedFaq(isExp ? null : idx)}
-                  className="w-full p-3 text-left font-bold text-xs text-slate-800 dark:text-slate-200 flex items-center justify-between hover:bg-slate-100/60 dark:hover:bg-slate-800/60 transition-colors cursor-pointer"
-                >
-                  <span>{faq.q}</span>
-                  {isExp ? <ChevronUp className="w-4 h-4 text-slate-400 shrink-0 ml-2" /> : <ChevronDown className="w-4 h-4 text-slate-400 shrink-0 ml-2" />}
-                </button>
-                {isExp && (
-                  <div className="p-3 pt-0 text-xs text-slate-600 dark:text-slate-400 border-t border-slate-200/40 dark:border-slate-800 leading-relaxed bg-white dark:bg-slate-900">
-                    {faq.a}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="flex flex-wrap gap-2 pt-2">
-          <button
-            type="button"
-            onClick={() => setShowContactSupport(true)}
-            className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
-          >
-            <MessageSquare className="w-3.5 h-3.5" />
-            <span>Contact Support Concierge</span>
-          </button>
-          <a
-            href="tel:+2348000005294"
-            className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs transition-colors cursor-pointer flex items-center gap-1.5 border border-slate-200 dark:border-slate-700"
-          >
-            <PhoneCall className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-            <span>Emergency Toll-Free Helpline</span>
-          </a>
-        </div>
-      </div>
-
-      {/* 5. LEGAL & COMPLIANCE */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
-        <div className="flex items-center gap-2 pb-1 border-b border-slate-100 dark:border-slate-800">
-          <div className="w-8 h-8 rounded-xl bg-navy-800/10 text-navy-800 dark:text-navy-400 flex items-center justify-center">
-            <FileText className="w-4 h-4" />
-          </div>
-          <div>
-            <h3 className="font-extrabold text-sm text-slate-900 dark:text-slate-100">Legal & Terms</h3>
-            <p className="text-[11px] text-slate-400">Terms of service, escrow agreements, and data privacy.</p>
-          </div>
-        </div>
-
-        <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
-          <div className="py-3 flex items-center justify-between">
-            <div>
-              <p className="font-bold text-slate-900 dark:text-slate-100">Terms of Service</p>
-              <p className="text-[11px] text-slate-500">Rules of the platform and service level guarantees.</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowTermsModal(true)}
-              className="text-navy-800 dark:text-navy-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
-            >
-              <span>View</span>
-              <ExternalLink className="w-3 h-3" />
-            </button>
-          </div>
-
-          <div className="py-3 flex items-center justify-between">
-            <div>
-              <p className="font-bold text-slate-900 dark:text-slate-100">Privacy Policy</p>
-              <p className="text-[11px] text-slate-500">How your personal details and location data are handled.</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowPrivacyModal(true)}
-              className="text-navy-800 dark:text-navy-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
-            >
-              <span>View</span>
-              <ExternalLink className="w-3 h-3" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* 6. LOGOUT BUTTON ONLY (With Universal Confirmation Modal) */}
+      {/* 4. LOGOUT BUTTON ONLY (With Universal Confirmation Modal) */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h3 className="font-extrabold text-sm text-slate-900 dark:text-slate-100">Sign Out</h3>
@@ -638,172 +418,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* LANGUAGE SELECTION MODAL */}
-      {showLanguageModal && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in"
-          onClick={() => setShowLanguageModal(false)}
-        >
-          <div 
-            className="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl p-5 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setShowLanguageModal(false)}
-              className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <h3 className="text-lg font-black text-slate-900 dark:text-slate-100">Select Interface Language</h3>
-            <div className="space-y-2 max-h-80 overflow-y-auto">
-              {SUPPORTED_LANGUAGES.map((lang) => (
-                <button
-                  key={lang}
-                  type="button"
-                  onClick={() => {
-                    setSelectedLanguage(lang);
-                    if (onLanguageChange) onLanguageChange(lang);
-                    setShowLanguageModal(false);
-                    triggerToast(`Language changed to ${lang}`);
-                  }}
-                  className={`w-full p-3 rounded-xl text-xs font-bold flex items-center justify-between transition-colors cursor-pointer ${
-                    activeLang === lang 
-                      ? 'bg-navy-800 text-white' 
-                      : 'bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  <span>{lang}</span>
-                  {activeLang === lang && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* CONTACT SUPPORT MODAL */}
-      {showContactSupport && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in"
-          onClick={() => setShowContactSupport(false)}
-        >
-          <div 
-            className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl p-5 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setShowContactSupport(false)}
-              className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="space-y-1">
-              <h3 className="text-lg font-black text-slate-900 dark:text-slate-100">KaziHub Support Concierge</h3>
-              <p className="text-xs text-slate-500">Send an inquiry or raise an issue regarding your bookings.</p>
-            </div>
-
-            <form onSubmit={handleContactSupportSubmit} className="space-y-3">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Subject</label>
-                <select
-                  value={supportSubject}
-                  onChange={(e) => setSupportSubject(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-slate-100"
-                >
-                  <option value="General Inquiry">General Inquiry</option>
-                  <option value="Booking & Artisan Issue">Booking & Artisan Issue</option>
-                  <option value="Payment & Escrow Question">Payment & Escrow Question</option>
-                  <option value="Account & Security">Account & Security</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Message Details</label>
-                <textarea
-                  rows={4}
-                  value={supportMessage}
-                  onChange={(e) => setSupportMessage(e.target.value)}
-                  placeholder="Describe your request or issue with full details..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-slate-100"
-                  required
-                />
-              </div>
-
-              <div className="flex justify-end gap-2.5 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowContactSupport(false)}
-                  className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Submit Ticket</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* TERMS OF SERVICE MODAL */}
-      {showTermsModal && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in"
-          onClick={() => setShowTermsModal(false)}
-        >
-          <div 
-            className="bg-white dark:bg-slate-900 w-full max-w-xl rounded-2xl p-5 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[85vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setShowTermsModal(false)}
-              className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <h3 className="text-lg font-black text-slate-900 dark:text-slate-100">KaziHub Terms of Service</h3>
-            <div className="text-xs text-slate-600 dark:text-slate-400 space-y-3 leading-relaxed">
-              <p>Welcome to KaziHub. By utilizing our marketplace and booking artisans, you agree to our escrow safety commitments and fair mediation policy.</p>
-              <p><strong>1. Escrow Protection:</strong> All booking deposits remain locked until customer sign-off or resolution of inspected milestones.</p>
-              <p><strong>2. Artisan Conduct:</strong> Artisans must maintain verified credentials, adhere to scheduled timelines, and respect client premises.</p>
-              <p><strong>3. Cancellation Policy:</strong> Flexible cancellations are permitted up to 2 hours prior to scheduled arrival with zero penalty.</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* PRIVACY POLICY MODAL */}
-      {showPrivacyModal && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in"
-          onClick={() => setShowPrivacyModal(false)}
-        >
-          <div 
-            className="bg-white dark:bg-slate-900 w-full max-w-xl rounded-2xl p-5 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[85vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setShowPrivacyModal(false)}
-              className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <h3 className="text-lg font-black text-slate-900 dark:text-slate-100">Privacy Policy</h3>
-            <div className="text-xs text-slate-600 dark:text-slate-400 space-y-3 leading-relaxed">
-              <p>KaziHub treats your location and personal contact data with bank-grade encryption standards under NDPR and GDPR requirements.</p>
-              <p>• Your phone number is only revealed to an artisan after an escrow booking is confirmed.</p>
-              <p>• We never sell or share customer contact records with third-party advertisers.</p>
-            </div>
           </div>
         </div>
       )}

@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
 import { Professional, ServiceItem, PortfolioItem, ServicePricingType, Category } from '../types';
-import { Language } from '../translations';
 import { formatCurrency } from '../utils';
 import { CATEGORIES } from '../mockData';
 import { ConfirmationModal } from './ui/ConfirmationModal';
@@ -8,26 +7,24 @@ import { KYCVerificationModal } from './ui/KYCVerificationModal';
 import { UserAvatar } from './ui/UserAvatar';
 import { CustomDropdown } from './CustomDropdown';
 import { useAuth } from '../context/AuthContext';
-import { 
-  Mail, Phone, MapPin, CreditCard, AlertCircle, FileText,
+import {
+  Mail, Phone, MapPin,
   CheckCircle2, Camera, Edit3, Trash2, X, LogOut,
-  Plus, Clock, ShieldCheck, UserCheck, ChevronRight
+  Plus, Clock, ShieldCheck, UserCheck, ChevronRight, Settings as SettingsIcon
 } from 'lucide-react';
 
 interface ProProfileManagementProps {
   activeProfessional: Professional;
   onUpdateProfile?: (updated: Partial<Professional>) => void;
-  darkMode?: boolean;
-  onToggleDarkMode?: () => void;
+  onTabChange?: (tab: string) => void;
   onLogout?: () => void;
   onDeleteAccount?: () => void;
-  currentLanguage?: Language;
-  onLanguageChange?: (lang: Language) => void;
 }
 
 export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
   activeProfessional,
   onUpdateProfile,
+  onTabChange,
   onLogout
 }) => {
   const { uploadProfilePicture } = useAuth();
@@ -807,7 +804,28 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
         </div>
       </div>
 
-      {/* 6. SIGN OUT (Padding: 15px / p-[15px]) */}
+      {/* 6. ACCOUNT SETTINGS LINK -- preferences, security, privacy, help & legal all live in the
+          shared Settings page so both customer and artisan accounts get the same controls. */}
+      {onTabChange && (
+        <button
+          type="button"
+          onClick={() => onTabChange('settings')}
+          className="w-full bg-white dark:bg-slate-900 rounded-2xl p-[15px] border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between gap-4 cursor-pointer hover:border-slate-300 dark:hover:border-slate-700 transition-colors text-left"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-navy-800/10 text-navy-800 dark:text-navy-400 flex items-center justify-center shrink-0">
+              <SettingsIcon className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-slate-100">Account Settings</h3>
+              <p className="text-[11px] text-slate-400">Preferences, security, privacy, help & legal.</p>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+        </button>
+      )}
+
+      {/* 7. SIGN OUT (Padding: 15px / p-[15px]) */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl p-[15px] border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h3 className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-slate-100">Sign Out</h3>

@@ -8,6 +8,9 @@ import {
 } from 'lucide-react';
 import { ConfirmationModal } from './ui/ConfirmationModal';
 import { useAuth } from '../context/AuthContext';
+import { PreferencesSection } from './settings/PreferencesSection';
+import { HelpSupportSection } from './settings/HelpSupportSection';
+import { LegalSection } from './settings/LegalSection';
 
 interface SettingsViewProps {
   currentRole: Role;
@@ -146,6 +149,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <p className="text-xs text-slate-500 dark:text-slate-400">Security credentials, privacy controls, and account lifecycle.</p>
         </div>
       </div>
+
+      {/* PREFERENCES (shared across both customer and artisan roles) */}
+      <PreferencesSection
+        darkMode={darkMode}
+        onToggleDarkMode={onToggleDarkMode}
+        currentLanguage={currentLanguage}
+        onLanguageChange={onLanguageChange}
+        triggerToast={triggerToast}
+      />
 
       {/* 1. SECURITY & AUTHENTICATION */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
@@ -388,6 +400,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* HELP & SUPPORT (shared across both customer and artisan roles) */}
+      <HelpSupportSection triggerToast={triggerToast} />
+
+      {/* LEGAL & TERMS (shared across both customer and artisan roles) */}
+      <LegalSection />
 
       {/* Toast Notification */}
       {toastMessage && (

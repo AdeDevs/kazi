@@ -736,6 +736,7 @@ export default function App() {
           currentLanguage={currentLanguage}
           onLanguageChange={setCurrentLanguage}
           onLogout={handleLogout}
+          onTabChange={handleTabChange}
           onDeleteAccount={() => {
             if (window.confirm('Are you sure you want to permanently delete your KaziHub account? All bookings and history will be removed.')) {
               handleLogout();
