@@ -46,7 +46,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onLanguageChange,
   onTabChange
 }) => {
-  const { user, updateUser, uploadProfilePicture, logout: authLogout } = useAuth();
+  const { user, updateUser, uploadProfilePicture } = useAuth();
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   // Customer Profile Information initialized with backend user data

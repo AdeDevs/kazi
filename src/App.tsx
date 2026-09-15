@@ -18,7 +18,7 @@ const SettingsView = lazy(() => import('./components/SettingsView').then(m => ({
 const ProfessionalNotifications = lazy(() => import('./components/ProfessionalNotifications').then(m => ({ default: m.ProfessionalNotifications })));
 
 export default function App() {
-  const { user, loginAsDemo } = useAuth();
+  const { user, loginAsDemo, logout: authLogout } = useAuth();
 
   const [currentRole, setCurrentRole] = useState<Role>(() => {
     return (localStorage.getItem('kazihub_role') as Role) || 'customer';
@@ -394,6 +394,7 @@ export default function App() {
 
   const handleLogout = () => {
     setProfessionals(prev => prev.map(p => p.id === activeProId ? { ...p, is_available_now: false } : p));
+    authLogout();
     setActiveTab('explore');
   };
 

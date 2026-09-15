@@ -54,7 +54,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   currentLanguage = 'English (Nigeria)' as Language,
   children
 }) => {
-  const { user, isAuthenticated, openAuthModal, logout: authLogout, loginAsDemo } = useAuth();
+  const { user, isAuthenticated, openAuthModal, loginAsDemo } = useAuth();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
@@ -73,7 +73,6 @@ export const AppShell: React.FC<AppShellProps> = ({
   const displayLocation = user?.state ? `${user.state}, Nigeria` : (currentRole === 'customer' ? 'Oyo, Nigeria' : activeProfessional.state);
 
   const handleLogoutAction = () => {
-    authLogout();
     if (onLogout) onLogout();
   };
 

@@ -40,7 +40,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   currentLanguage = 'English (Nigeria)',
   onLanguageChange
 }) => {
-  const { user, deleteAccount, resetPassword, logout: authLogout } = useAuth();
+  const { user, deleteAccount } = useAuth();
   // Security States - 2FA and biometric login aren't backed by a real auth backend yet,
   // so these are shown disabled/"Coming soon" rather than falsely reporting them as active.
   const [twoFactorAuth] = useState(false);
