@@ -108,7 +108,7 @@ export const AppShell: React.FC<AppShellProps> = ({
             content sits right beside it as flex-1, so they can never desync -- there's no
             separate offset to keep in sync, the browser's flex layout does it every frame. */}
         <aside
-          className={`flex flex-col border-r border-zinc-200 dark:border-zinc-800 fixed inset-y-0 left-0 md:sticky top-0 h-[100dvh] max-h-[100dvh] md:h-screen overflow-hidden shrink-0 z-50 md:z-30 bg-white dark:bg-zinc-950 group w-72 max-w-[85vw] md:w-[72px] md:hover:w-64 transition-[transform,width] duration-300 ease-in-out ${
+          className={`flex flex-col border-r border-zinc-200 dark:border-zinc-800 fixed inset-y-0 left-0 md:sticky top-0 h-[100dvh] max-h-[100dvh] md:h-screen overflow-hidden shrink-0 z-50 md:z-30 bg-white dark:bg-zinc-950 group w-72 max-w-[85vw] md:w-[73px] md:hover:w-64 transition-[transform,width] duration-300 ease-in-out ${
             isMobileSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'
           }`}
         >
@@ -249,7 +249,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                   className={`w-full relative flex items-center h-11 rounded-xl transition-all cursor-pointer select-none group/profile ${
                     activeTab === 'profile'
                       ? 'bg-navy-900 text-white font-semibold shadow-xs'
-                      : 'bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700'
+                      : 'bg-zinc-50 dark:bg-zinc-900/80 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
                   }`}
                   title="View Profile"
                   aria-label="View Profile"
