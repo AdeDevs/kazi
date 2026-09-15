@@ -9,7 +9,6 @@ interface UserAvatarProps {
   textClassName?: string;
   roundedClassName?: string;
   alt?: string;
-  verified?: boolean;
 }
 
 export function getInitials(name?: string): string {

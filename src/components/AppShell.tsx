@@ -257,10 +257,9 @@ export const AppShell: React.FC<AppShellProps> = ({
                     <UserAvatar
                       src={currentRole === 'customer' ? customerAvatar : activeProfessional.profile_picture}
                       name={displayName}
-                      sizeClassName="w-7 h-7 sm:w-8 sm:h-8"
+                      sizeClassName="w-9 h-9"
                       textClassName="text-[11px] font-black"
                       roundedClassName="rounded-lg"
-                      verified={Boolean(user?.is_email_verified)}
                     />
                   </div>
                   <div className={`min-w-0 flex-1 pr-2 whitespace-nowrap overflow-hidden text-left transition-opacity duration-300 ${
