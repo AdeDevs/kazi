@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Star, ShieldCheck, MapPin, Briefcase, Award, Phone, Mail, CheckCircle2, MessageSquare, Calendar, AlertCircle, ShieldAlert, Check, Tag } from 'lucide-react';
 import { Professional, ServiceItem, ServicePricingType } from '../types';
+import { VerifiedBadge } from './ui/VerifiedBadge';
 
 
 interface ProfessionalProfileModalProps {
@@ -96,9 +97,11 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                   )}
                 </div>
                 {professional.is_verified && (
-                  <span className="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 rounded-full bg-navy-800/80 text-navy-200 text-[10px] sm:text-xs font-semibold border border-navy-700 self-center">
-                    <ShieldCheck className="w-3.5 h-3.5 text-navy-300" /> Verified Pro
-                  </span>
+                  <VerifiedBadge
+                    label="Verified Pro"
+                    iconClassName="w-3.5 h-3.5"
+                    pillClassName="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-900/80 text-emerald-300 text-[10px] sm:text-xs font-semibold border border-emerald-500/30 self-center"
+                  />
                 )}
               </div>
               <p className="text-navy-300 font-medium text-xs sm:text-sm mb-3 line-clamp-2">{professional.tagline}</p>

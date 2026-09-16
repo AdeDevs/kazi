@@ -5,6 +5,7 @@ import { CATEGORIES } from '../mockData';
 import { ConfirmationModal } from './ui/ConfirmationModal';
 import { KYCVerificationModal } from './ui/KYCVerificationModal';
 import { UserAvatar } from './ui/UserAvatar';
+import { VerifiedBadge } from './ui/VerifiedBadge';
 import { Card, CardHeader } from './ui/Card';
 import { CustomDropdown } from './CustomDropdown';
 import { useAuth } from '../context/AuthContext';
@@ -388,10 +389,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
                   {name}
                 </h1>
                 {isVerified ? (
-                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[11px] font-bold border border-emerald-500/20 inline-flex items-center gap-1">
-                    <ShieldCheck className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                    <span>Verified</span>
-                  </span>
+                  <VerifiedBadge label="Verified" />
                 ) : (
                   <button
                     type="button"

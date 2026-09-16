@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CustomDropdown } from './CustomDropdown';
+import { VerifiedBadge } from './ui/VerifiedBadge';
 import { formatCurrency, formatServicePrice } from '../utils';
 import { 
   X, Calendar, Clock, MapPin, FileText, CheckCircle2, 
@@ -272,13 +273,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           <div className="flex items-center gap-2.5 sm:gap-3">
             <div className="relative shrink-0">
               <img src={professional.profile_picture} alt={professional.name} className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl object-cover shadow-xs border border-navy-800/30" />
-              {professional.is_verified && (
-                <ShieldCheck className="absolute -bottom-1 -right-1 w-3.5 h-3.5 sm:w-4 sm:h-4 text-navy-800 dark:text-navy-400 bg-white dark:bg-slate-900 rounded-full" />
-              )}
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                 <h3 className="font-extrabold text-slate-900 dark:text-slate-100 text-sm sm:text-base">{professional.name}</h3>
+                {professional.is_verified && <VerifiedBadge />}
                 <span className="px-2 py-0.5 rounded-full bg-navy-800/10 text-navy-800 dark:text-navy-400 font-bold text-[10px] border border-navy-800/20">
                   ★ {professional.rating_average} ({professional.review_count})
                 </span>

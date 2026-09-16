@@ -6,10 +6,11 @@ import { formatCurrency } from '../utils';
 import { ProfessionalMessages } from './ProfessionalMessages';
 import { ProfessionalNotifications } from './ProfessionalNotifications';
 import { ProfessionalGigs } from './ProfessionalGigs';
-import { 
-  Briefcase, DollarSign, Star, CheckCircle2, Clock, Plus, Trash2, 
-  MapPin, ShieldCheck, User, Settings, Image as ImageIcon, Calendar, 
-  MessageSquare, ClipboardList, ArrowRight, Eye, X, Check, AlertCircle 
+import { VerifiedBadge } from './ui/VerifiedBadge';
+import {
+  Briefcase, DollarSign, Star, CheckCircle2, Clock, Plus, Trash2,
+  MapPin, User, Settings, Image as ImageIcon, Calendar,
+  MessageSquare, ClipboardList, ArrowRight, Eye, X, Check, AlertCircle
 } from 'lucide-react';
 
 interface ProfessionalDashboardProps {
@@ -1015,7 +1016,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
               {getGreeting()}, {firstName}.
             </h1>
-            {professional.is_verified && <ShieldCheck className="w-5 h-5 text-emerald-500 fill-emerald-500/10" />}
+            {professional.is_verified && <VerifiedBadge iconClassName="w-5 h-5" />}
           </div>
           <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400">
             {getFormattedDate()}

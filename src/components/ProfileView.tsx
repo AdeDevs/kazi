@@ -2,11 +2,12 @@ import React, { useState, useRef } from 'react';
 import { Role, Professional, Booking } from '../types';
 import { Language } from '../translations';
 import {
-  User, MapPin, Calendar, CheckCircle2, Edit3,
+  MapPin, Calendar, CheckCircle2, Edit3,
   LogOut, ChevronRight, Star
 } from 'lucide-react';
 import { ConfirmationModal } from './ui/ConfirmationModal';
 import { UserAvatar } from './ui/UserAvatar';
+import { VerifiedBadge } from './ui/VerifiedBadge';
 import { Card, CardHeader } from './ui/Card';
 import { ProProfileManagement } from './ProProfileManagement';
 import { useAuth } from '../context/AuthContext';
@@ -245,10 +246,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
               <div className="space-y-1">
                 {Boolean(user?.is_email_verified) && (
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-navy-50 dark:bg-navy-950 text-navy-800 dark:text-navy-300 text-[11px] font-bold border border-navy-100 dark:border-navy-900">
-                    <User className="w-3 h-3 text-navy-600 dark:text-navy-400" />
-                    <span>Verified Customer</span>
-                  </div>
+                  <VerifiedBadge label="Verified Customer" />
                 )}
                 <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100">{customerName}</h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center justify-center sm:justify-start gap-1">

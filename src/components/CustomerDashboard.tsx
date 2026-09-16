@@ -4,6 +4,7 @@ import { CATEGORIES, CATEGORY_SERVICES_CATALOG } from '../mockData';
 import { CustomDropdown } from './CustomDropdown';
 import { CustomerMessages } from './CustomerMessages';
 import { ConfirmationModal } from './ui/ConfirmationModal';
+import { VerifiedBadge } from './ui/VerifiedBadge';
 import { formatCurrency, formatServicePrice, isBookingArchived } from '../utils';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -681,10 +682,12 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     <div className="flex items-center gap-3">
                       <div className="relative">
                         <img src={pro.profile_picture} alt={pro.name} className="w-14 h-14 rounded-2xl object-cover shadow-xs group-hover:scale-105 transition-transform" />
-                        {pro.is_verified && <ShieldCheck className="absolute -bottom-1 -right-1 w-4 h-4 text-navy-800 fill-navy-100 dark:text-navy-400" />}
                       </div>
                       <div>
-                        <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 hover:text-navy-800 dark:hover:text-navy-400">{pro.name}</h3>
+                        <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 hover:text-navy-800 dark:hover:text-navy-400 flex items-center gap-1.5">
+                          <span>{pro.name}</span>
+                          {pro.is_verified && <VerifiedBadge />}
+                        </h3>
                         <p className="text-xs text-navy-800 dark:text-navy-400 font-semibold">{pro.category}</p>
                         <p className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5"><MapPin className="w-3 h-3" /> {pro.neighborhood}</p>
                       </div>
@@ -1064,7 +1067,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                       <div className="min-w-0">
                         <h3 className="font-extrabold text-base text-slate-900 dark:text-slate-100 flex items-center gap-1.5 truncate">
                           <span className="truncate">{b.professionalName}</span>
-                          {pro?.is_verified && <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />}
+                          {pro?.is_verified && <VerifiedBadge />}
                         </h3>
                         <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate mt-0.5">
                           {b.title || b.category}
@@ -2057,11 +2060,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                           <h3 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-slate-100 group-hover:text-navy-800 dark:group-hover:text-navy-400 transition-colors truncate">
                             {pro.name}
                           </h3>
-                          {pro.is_verified && (
-                            <span title="Verified Professional">
-                              <ShieldCheck className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400 shrink-0" />
-                            </span>
-                          )}
+                          {pro.is_verified && <VerifiedBadge title="Verified Professional" />}
                         </div>
                         <div className="flex items-center gap-1.5 mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                           <span className="font-semibold text-navy-800 dark:text-navy-300">
