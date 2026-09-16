@@ -245,10 +245,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           <div className="flex-1 min-w-0 w-full space-y-1 text-center sm:text-left">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
               <div className="space-y-1">
-                {Boolean(user?.is_email_verified) && (
-                  <VerifiedBadge label="Verified Customer" />
-                )}
-                <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100">{customerName}</h2>
+                <div className="flex items-center justify-center sm:justify-start gap-1.5">
+                  <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100">{customerName}</h2>
+                  {Boolean(user?.is_email_verified) && (
+                    <>
+                      <span className="sm:hidden"><VerifiedBadge title="Verified Customer" /></span>
+                      <span className="hidden sm:inline-flex"><VerifiedBadge label="Verified Customer" /></span>
+                    </>
+                  )}
+                </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center justify-center sm:justify-start gap-1">
                   <MapPin className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400 shrink-0" />
                   <span>{customerLocation}</span>

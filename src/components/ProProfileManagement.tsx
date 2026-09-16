@@ -389,7 +389,10 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
                   {name}
                 </h1>
                 {isVerified ? (
-                  <VerifiedBadge label="Verified" />
+                  <>
+                    <span className="sm:hidden"><VerifiedBadge /></span>
+                    <span className="hidden sm:inline-flex"><VerifiedBadge label="Verified" /></span>
+                  </>
                 ) : (
                   <button
                     type="button"
