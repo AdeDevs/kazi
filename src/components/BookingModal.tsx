@@ -596,7 +596,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                     { value: '05:00 PM - 07:00 PM', label: '05:00 PM - 07:00 PM' }
                   ]}
                   className="w-full"
-                  buttonClassName="py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-950"
+                  buttonClassName="bg-slate-50 dark:bg-slate-950"
                 />
               </div>
             </div>

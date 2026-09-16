@@ -193,8 +193,11 @@ export const AppShell: React.FC<AppShellProps> = ({
               })}
             </nav>
 
-            {/* Bottom Controls & Profile */}
-            <div className="pt-3 mt-auto border-t border-zinc-200 dark:border-zinc-800 space-y-1.5 shrink-0 overflow-hidden pb-4 md:pb-0">
+            {/* Bottom Controls & Profile -- no padding-bottom of its own; the scroll wrapper's
+                own p-3.5 pb-4 md:pb-3.5 already provides it, and stacking a second pb-4 here on
+                top of that doubled the gap beneath the last button specifically on mobile/tablet
+                (32px total there vs. 14px on desktop, where this div's own bottom padding was 0). */}
+            <div className="pt-3 mt-auto border-t border-zinc-200 dark:border-zinc-800 space-y-1.5 shrink-0 overflow-hidden">
               <div className="md:hidden space-y-1.5">
                 {/* Theme Toggle Button */}
                 <button

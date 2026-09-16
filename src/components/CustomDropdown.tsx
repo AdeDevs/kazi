@@ -67,7 +67,10 @@ export function CustomDropdown<T extends string | number>({
 
   return (
     <div ref={containerRef} className={`relative block text-left ${isOpen ? 'z-50' : 'z-10'} ${className}`}>
-      {/* Trigger Button with Rounded Corners & Brand Styling */}
+      {/* Trigger Button. Sizing/spacing/radius are fixed here, not part of buttonClassName --
+          every dropdown in the app should be pixel-identical by construction (same padding, same
+          radius, same chevron position) rather than by each caller happening to pass the same
+          values; buttonClassName is for color/border/background only. */}
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
