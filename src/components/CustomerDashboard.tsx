@@ -2245,7 +2245,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                       setComplaintModalBooking(null);
                       setComplaintStep('form');
                     }}
-                    className="flex-1 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                    className="flex-1 py-3 rounded-2xl border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 font-bold text-xs hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer"
                   >
                     Cancel
                   </button>

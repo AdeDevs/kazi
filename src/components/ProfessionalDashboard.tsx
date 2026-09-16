@@ -984,7 +984,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                   <button
                     type="button"
                     onClick={() => setCompletingJob(null)}
-                    className="px-5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-200 cursor-pointer"
+                    className="px-5 py-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-bold text-xs hover:bg-rose-100 dark:hover:bg-rose-950/60 cursor-pointer"
                   >
                     Cancel
                   </button>

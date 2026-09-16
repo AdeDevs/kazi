@@ -351,7 +351,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                     <button
                       type="button"
                       onClick={() => setShowWriteReview(false)}
-                      className="text-slate-400 hover:text-slate-600 text-xs font-bold"
+                      className="text-rose-500 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 text-xs font-bold"
                     >
                       Cancel
                     </button>
@@ -423,7 +423,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                     <button
                       type="button"
                       onClick={() => setShowWriteReview(false)}
-                      className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                      className="px-4 py-2 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40"
                     >
                       Cancel
                     </button>
@@ -623,7 +623,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                     <button
                       type="button"
                       onClick={() => setShowComplaintModal(false)}
-                      className="flex-1 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                      className="flex-1 py-3 rounded-2xl border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 font-bold text-xs hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer"
                     >
                       Cancel
                     </button>

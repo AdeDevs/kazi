@@ -194,7 +194,7 @@ export const GigCreationForm: React.FC<GigCreationFormProps> = ({ onCancel, onSu
               type="button"
               onClick={onCancel}
               disabled={loading}
-              className="px-6 py-3 rounded-xl font-bold text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="px-6 py-3 rounded-xl font-bold text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>

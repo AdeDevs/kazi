@@ -936,7 +936,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowEditInfoModal(false)}
-                  className="px-4 py-2.5 rounded-xl text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer text-center"
+                  className="px-4 py-2.5 rounded-xl text-rose-600 dark:text-rose-400 font-bold text-xs hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer text-center"
                 >
                   Cancel
                 </button>
@@ -1051,7 +1051,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowServiceModal(false)}
-                  className="px-3.5 py-2 rounded-xl text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer text-center"
+                  className="px-3.5 py-2 rounded-xl text-rose-600 dark:text-rose-400 font-bold text-xs hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer text-center"
                 >
                   Cancel
                 </button>
@@ -1158,7 +1158,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowPortfolioModal(false)}
-                  className="px-3.5 py-2 rounded-xl text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer text-center"
+                  className="px-3.5 py-2 rounded-xl text-rose-600 dark:text-rose-400 font-bold text-xs hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer text-center"
                 >
                   Cancel
                 </button>
