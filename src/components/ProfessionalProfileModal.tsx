@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { X, Star, ShieldCheck, MapPin, Briefcase, Award, Phone, Mail, CheckCircle2, MessageSquare, Calendar, AlertCircle, ShieldAlert, Check, Tag } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { X, Star, ShieldCheck, MapPin, Briefcase, Award, Phone, Mail, CheckCircle2, MessageSquare, Calendar, AlertCircle, ShieldAlert, Check, Tag, Clock } from 'lucide-react';
 import { Professional, ServiceItem, ServicePricingType } from '../types';
 import { VerifiedBadge } from './ui/VerifiedBadge';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 
 interface ProfessionalProfileModalProps {
@@ -14,7 +15,7 @@ interface ProfessionalProfileModalProps {
 }
 
 export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> = ({
-  professional,
+  professional: professionalProp,
   isOpen,
   onClose,
   onOpenBooking,
@@ -35,7 +36,70 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
   const [complaintDetails, setComplaintDetails] = useState('');
   const [complaintSubmittedTicket, setComplaintSubmittedTicket] = useState<{ id: string; reason: string } | null>(null);
 
-  if (!isOpen || !professional) return null;
+  // Keeps the last real professional around while closing -- the parent typically clears its
+  // `professional` state in the same tick it flips `isOpen` to false, but this component stays
+  // mounted a little longer than that to play its exit animation, so it needs its own copy to
+  // render from during that window instead of going blank.
+  const [cachedProfessional, setCachedProfessional] = useState(professionalProp);
+  useEffect(() => {
+    if (professionalProp) setCachedProfessional(professionalProp);
+  }, [professionalProp]);
+
+  // Same mount-for-one-more-frame pattern as ConfirmationModal, so this can slide/zoom back out
+  // instead of just vanishing when isOpen goes false.
+  const [shouldRender, setShouldRender] = useState(isOpen);
+  const [isClosing, setIsClosing] = useState(false);
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const EXIT_ANIMATION_MS = 200;
+
+  useEffect(() => {
+    if (isOpen) {
+      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
+      setShouldRender(true);
+      setIsClosing(false);
+    } else if (shouldRender) {
+      setIsClosing(true);
+      closeTimeoutRef.current = setTimeout(() => {
+        setShouldRender(false);
+        setIsClosing(false);
+      }, EXIT_ANIMATION_MS);
+    }
+    return () => {
+      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
+  useBodyScrollLock(shouldRender);
+
+  // Real drag-to-dismiss on the mobile handle bar, identical mechanics to ConfirmationModal's.
+  const [dragY, setDragY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartYRef = useRef<number | null>(null);
+  const DRAG_DISMISS_THRESHOLD = 96;
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    dragStartYRef.current = e.clientY;
+    setIsDragging(true);
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (dragStartYRef.current === null) return;
+    const delta = e.clientY - dragStartYRef.current;
+    setDragY(delta > 0 ? delta : 0);
+  };
+  const endDrag = () => {
+    if (dragStartYRef.current === null) return;
+    dragStartYRef.current = null;
+    setIsDragging(false);
+    if (dragY > DRAG_DISMISS_THRESHOLD) {
+      onClose();
+    }
+    setDragY(0);
+  };
+
+  if (!shouldRender || !cachedProfessional) return null;
+  const professional = cachedProfessional;
 
   const handleOpenRateForm = () => {
     setActiveTab('reviews');
@@ -43,21 +107,42 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
   };
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/70 backdrop-blur-xs"
+    <div
+      className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-xs transition-opacity duration-200 ${
+        isClosing ? 'opacity-0' : 'opacity-100'
+      }`}
       onClick={onClose}
     >
-      <div 
-        className="bg-white dark:bg-slate-900 rounded-2xl max-w-3xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 dark:border-slate-800 relative flex flex-col"
+      <div
+        className={`bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-2xl max-w-3xl w-full max-h-[92vh] sm:max-h-[90vh] shadow-2xl border-t sm:border border-slate-200 dark:border-slate-800 relative flex flex-col ${
+          isDragging ? '' : 'transition-transform duration-200 ease-out'
+        } ${
+          isClosing
+            ? 'animate-out slide-out-to-bottom-full sm:slide-out-to-bottom-0 sm:zoom-out-95 duration-200 ease-in'
+            : 'animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-250 ease-out'
+        }`}
+        style={dragY ? { transform: `translateY(${dragY}px)` } : undefined}
         onClick={(e) => e.stopPropagation()}
       >
-        
+        {/* Mobile drag handle -- small visible pill, generous invisible grab zone around it,
+            matching ConfirmationModal's handle exactly so every sheet in the app behaves the same. */}
+        <div
+          className="sm:hidden absolute top-0 left-0 right-0 pt-3 pb-2 cursor-grab active:cursor-grabbing touch-none z-20"
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
+        >
+          <div className="w-12 h-1.5 bg-white/60 rounded-full mx-auto" aria-hidden="true" />
+        </div>
+
+
         {/* Cover / Header section. Desktop keeps the banner + overlapping-avatar treatment;
             mobile switches to a full-bleed portrait hero instead -- banner-plus-small-avatar
             wastes vertical space on a phone, and every professional has a real photo to show. */}
 
         {/* Mobile: full-bleed portrait hero */}
-        <div className="sm:hidden relative h-[260px] shrink-0 rounded-t-2xl overflow-hidden">
+        <div className="sm:hidden relative h-[260px] shrink-0 rounded-t-3xl overflow-hidden">
           <img
             src={professional.profile_picture}
             alt={professional.name}
@@ -102,6 +187,12 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
             </span>
             <span className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 px-2.5 py-1 rounded-lg">
               <Briefcase className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400 shrink-0" /> {professional.completed_jobs_count} jobs
+            </span>
+            <span className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 px-2.5 py-1 rounded-lg">
+              <Award className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400 shrink-0" /> {professional.years_of_experience} yrs exp
+            </span>
+            <span className="flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-400 px-2.5 py-1 rounded-lg">
+              <Clock className="w-3.5 h-3.5 shrink-0" /> ~15 min reply
             </span>
           </div>
         </div>
@@ -158,7 +249,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
         </div>
 
         {/* Navigation Tabs - Horizontal Scrollable on Mobile */}
-        <div className="flex border-b border-slate-200 dark:border-slate-800 px-4 sm:px-8 bg-slate-50 dark:bg-slate-950 overflow-x-auto scrollbar-none whitespace-nowrap flex-nowrap">
+        <div className="flex shrink-0 border-b border-slate-200 dark:border-slate-800 px-4 sm:px-8 bg-slate-50 dark:bg-slate-950 overflow-x-auto scrollbar-none whitespace-nowrap flex-nowrap">
           <button
             onClick={() => setActiveTab('about')}
             className={`py-3.5 sm:py-4 px-4 sm:px-6 text-xs sm:text-sm font-semibold border-b-2 transition-colors cursor-pointer flex-shrink-0 ${
@@ -191,8 +282,11 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
           </button>
         </div>
 
-        {/* Tab Content */}
-        <div className="p-3.5 sm:p-4 flex-1 overflow-y-auto">
+        {/* Tab Content -- the only scrollable region in the sheet. min-h-0 is load-bearing here:
+            without it, a flex-1 child defaults to a min-height of its own content size and refuses
+            to shrink, which pushed the *whole sheet* taller than its max-h and made the header and
+            footer scroll away with it instead of staying pinned. */}
+        <div className="p-3.5 sm:p-4 flex-1 min-h-0 overflow-y-auto">
           {activeTab === 'about' && (
             <div className="space-y-6 animate-in fade-in duration-200">
               <div>
@@ -515,8 +609,9 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
           )}
         </div>
 
-        {/* Footer actions */}
-        <div className="px-4 sm:px-8 py-4 sm:py-5 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 rounded-b-2xl">
+        {/* Footer actions -- square on mobile (flush with the bottom-sheet's screen edge),
+            rounded to match the dialog's own corners on desktop. */}
+        <div className="shrink-0 px-4 sm:px-8 py-4 sm:py-5 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 sm:rounded-b-2xl">
           <div className="flex items-center justify-between sm:block">
             <div>
               <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">Response & Booking</p>
