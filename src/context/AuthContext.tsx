@@ -283,6 +283,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
     try {
       if (!user) throw new Error('No user is currently authenticated.');
+      // Demo sessions have no real backend token -- PUT /auth/me would 401 every time.
+      // Apply the update to the local demo profile instead of hitting the real API.
+      if (isDemoSession()) {
+        const updated: AuthUser = { ...user, ...payload } as AuthUser;
+        persistUser(updated);
+        setUser(updated);
+        return updated;
+      }
       const updated = await authApi.updateMe(payload);
       persistUser(updated);
       setUser(updated);
@@ -301,6 +309,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
     try {
       if (!user) throw new Error('No user is currently authenticated.');
+      if (isDemoSession()) {
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve((reader.result as string) || '');
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(file);
+        });
+        const updated: AuthUser = { ...user, profile_picture: dataUrl };
+        persistUser(updated);
+        setUser(updated);
+        return updated;
+      }
       const updated = await authApi.uploadProfilePicture(file);
       persistUser(updated);
       setUser(updated);

@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Role, Professional, Booking } from '../types';
 import { Language } from '../translations';
 import {
-  User, MapPin, Calendar, CheckCircle2, Camera, Edit3,
+  User, MapPin, Calendar, CheckCircle2, Edit3,
   LogOut, ChevronRight, Star
 } from 'lucide-react';
 import { ConfirmationModal } from './ui/ConfirmationModal';
@@ -71,10 +71,44 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const customerName = `${customerFirstName} ${customerLastName}`.trim() || user?.email?.split('@')[0] || 'User Profile';
   const customerSince = user?.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'March 2024';
 
+  // Edit-mode draft state: the form edits these, NOT the display values above, so nothing
+  // appears to "save" until Save Changes actually runs -- and Cancel just discards the draft
+  // instead of needing to unwind changes that were never applied to the real display state.
+  const [draftFirstName, setDraftFirstName] = useState('');
+  const [draftLastName, setDraftLastName] = useState('');
+  const [draftPhone, setDraftPhone] = useState('');
+  const [draftEmail, setDraftEmail] = useState('');
+  const [draftLocation, setDraftLocation] = useState('');
+
   // Modals & UI States
   const [isEditing, setIsEditing] = useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [actionToast, setActionToast] = useState<string | null>(null);
+
+  const isDraftDirty =
+    draftFirstName !== customerFirstName ||
+    draftLastName !== customerLastName ||
+    draftPhone !== customerPhone ||
+    draftEmail !== customerEmail ||
+    draftLocation !== customerLocation;
+
+  const startEditing = () => {
+    setDraftFirstName(customerFirstName);
+    setDraftLastName(customerLastName);
+    setDraftPhone(customerPhone);
+    setDraftEmail(customerEmail);
+    setDraftLocation(customerLocation);
+    setIsEditing(true);
+  };
+
+  const requestCancelEdit = () => {
+    if (isDraftDirty) {
+      setShowDiscardConfirm(true);
+    } else {
+      setIsEditing(false);
+    }
+  };
 
   const triggerToast = (msg: string) => {
     setActionToast(msg);
@@ -128,10 +162,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     try {
       if (user) {
         await updateUser({
-          first_name: customerFirstName,
-          last_name: customerLastName,
-          phone_number: customerPhone,
-          state: customerLocation.split(',')[0].trim() || user.state
+          first_name: draftFirstName,
+          last_name: draftLastName,
+          phone_number: draftPhone,
+          state: draftLocation.split(',')[0].trim() || user.state
         });
       }
       setIsEditing(false);
@@ -176,11 +210,18 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       {/* 1. IDENTITY & PERSONAL INFORMATION -- one card, single source of truth. Editing happens
           in place (the read-only rows below become a form) instead of a popup, and the only way
-          to change the photo is the avatar itself (hover overlay on desktop, the small camera
-          badge for touch devices) -- no separate "Change Photo" button duplicating that action. */}
+          to change the photo is tapping the avatar itself -- no separate "Change Photo" button
+          duplicating that action, and no icon overlaid on the photo. */}
       <Card className="relative overflow-hidden space-y-4">
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
-          <div className="relative group shrink-0">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploadingAvatar}
+            className="relative shrink-0 cursor-pointer rounded-2xl"
+            title="Tap to change your photo"
+            aria-label="Change profile photo"
+          >
             <UserAvatar
               src={currentAvatar}
               name={customerName}
@@ -188,41 +229,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               textClassName="text-3xl font-black"
               roundedClassName="rounded-2xl"
             />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploadingAvatar}
-              className={`absolute inset-0 rounded-2xl bg-slate-950/60 transition-opacity hidden sm:flex flex-col items-center justify-center text-white cursor-pointer ${
-                isUploadingAvatar ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-              }`}
-              title="Change Photo"
-              aria-label="Change Photo"
-            >
-              {isUploadingAvatar ? (
+            {isUploadingAvatar && (
+              <div className="absolute inset-0 rounded-2xl bg-slate-950/50 flex items-center justify-center">
                 <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <>
-                  <Camera className="w-6 h-6" />
-                  <span className="text-[10px] font-bold mt-1">Change</span>
-                </>
-              )}
-            </button>
-            {/* Always-visible camera badge: the touch-friendly equivalent of the hover overlay above */}
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploadingAvatar}
-              className="absolute -bottom-1 -right-1 p-1.5 rounded-full bg-navy-800 hover:bg-navy-900 text-white ring-2 ring-white dark:ring-slate-900 shadow-xs cursor-pointer transition-colors"
-              title="Change Photo"
-              aria-label="Change Photo"
-            >
-              {isUploadingAvatar ? (
-                <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <Camera className="w-3.5 h-3.5" />
-              )}
-            </button>
-          </div>
+              </div>
+            )}
+          </button>
 
           <div className="flex-1 min-w-0 w-full space-y-1 text-center sm:text-left">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -247,7 +259,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               {!isEditing && (
                 <button
                   type="button"
-                  onClick={() => setIsEditing(true)}
+                  onClick={startEditing}
                   className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-extrabold text-xs shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0 mx-auto sm:mx-0"
                 >
                   <Edit3 className="w-3.5 h-3.5" />
@@ -281,8 +293,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">First Name</label>
                   <input
                     type="text"
-                    value={customerFirstName}
-                    onChange={(e) => setCustomerFirstName(e.target.value)}
+                    value={draftFirstName}
+                    onChange={(e) => setDraftFirstName(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-navy-500/50"
                     required
                   />
@@ -291,8 +303,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Last Name</label>
                   <input
                     type="text"
-                    value={customerLastName}
-                    onChange={(e) => setCustomerLastName(e.target.value)}
+                    value={draftLastName}
+                    onChange={(e) => setDraftLastName(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-navy-500/50"
                     required
                   />
@@ -303,8 +315,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Phone Number</label>
                 <input
                   type="text"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  value={draftPhone}
+                  onChange={(e) => setDraftPhone(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-navy-500/50"
                   required
                 />
@@ -314,8 +326,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Email Address</label>
                 <input
                   type="email"
-                  value={customerEmail}
-                  onChange={(e) => setCustomerEmail(e.target.value)}
+                  value={draftEmail}
+                  onChange={(e) => setDraftEmail(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-navy-500/50"
                   required
                 />
@@ -325,8 +337,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Primary Neighborhood / Address</label>
                 <input
                   type="text"
-                  value={customerLocation}
-                  onChange={(e) => setCustomerLocation(e.target.value)}
+                  value={draftLocation}
+                  onChange={(e) => setDraftLocation(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-navy-500/50"
                   required
                 />
@@ -335,7 +347,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setIsEditing(false)}
+                  onClick={requestCancelEdit}
                   className="px-4 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
                 >
                   Cancel
@@ -448,6 +460,18 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       )}
 
       {/* ================= MODALS ================= */}
+
+      {/* DISCARD UNSAVED CHANGES CONFIRMATION */}
+      <ConfirmationModal
+        isOpen={showDiscardConfirm}
+        onClose={() => setShowDiscardConfirm(false)}
+        onConfirm={() => setIsEditing(false)}
+        title="Discard Unsaved Changes?"
+        description="You've made changes to your personal information that haven't been saved. If you leave now, they'll be lost."
+        confirmText="Discard Changes"
+        cancelText="Keep Editing"
+        type="danger"
+      />
 
       {/* UNIVERSAL SLIDE-UP LOGOUT CONFIRMATION MODAL */}
       <ConfirmationModal
