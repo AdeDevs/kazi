@@ -4,7 +4,7 @@ import { formatCurrency } from '../utils';
 import { CATEGORIES } from '../mockData';
 import { ConfirmationModal } from './ui/ConfirmationModal';
 import { KYCVerificationModal } from './ui/KYCVerificationModal';
-import { UserAvatar } from './ui/UserAvatar';
+import { UserAvatar, getInitials, getAvatarColor } from './ui/UserAvatar';
 import { VerifiedBadge } from './ui/VerifiedBadge';
 import { Card, CardHeader } from './ui/Card';
 import { CustomDropdown } from './CustomDropdown';
@@ -31,6 +31,8 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
 }) => {
   const { uploadProfilePicture } = useAuth();
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [heroPhotoFailed, setHeroPhotoFailed] = useState(false);
+  const hasHeroPhoto = Boolean(activeProfessional.profile_picture && activeProfessional.profile_picture.trim().length > 0 && !heroPhotoFailed);
 
   // Basic Pro Info State
   const [name, setName] = useState(activeProfessional.name);
@@ -343,116 +345,212 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
         className="hidden"
       />
 
-      {/* 1. PRIMARY ARTISAN IDENTITY CARD */}
-      <Card className="space-y-3.5">
+      {/* 1. PRIMARY ARTISAN IDENTITY CARD. No space-y-* at the top level here: Tailwind's space-y
+          selector only excludes elements carrying the literal `hidden` HTML attribute, not ones
+          hidden via a responsive class like sm:hidden -- so it can't tell the mobile-only and
+          desktop-only blocks below apart from any other sibling, and would add its margin-top
+          onto whichever one happens to render, regardless of breakpoint. Each block below is
+          self-spaced instead. */}
+      <Card>
 
-        {/* Banner + avatar overlap live in one wrapper so the internal -mt-11 overlap can't collide
-            with the Card's own space-y-3.5 rule (which only spaces between space-y-3.5's *direct*
-            children -- this whole wrapper counts as a single one of those). */}
-        <div className="-mx-[15px] -mt-[15px]">
-          <div className="h-[104px] rounded-t-2xl bg-gradient-to-br from-navy-900 to-navy-950" />
-          <div className="flex items-end justify-between gap-3.5 px-[15px] -mt-11">
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploadingAvatar}
-              className="relative shrink-0 cursor-pointer rounded-2xl border-4 border-white dark:border-slate-900 shadow-lg"
-              title="Tap to change your photo"
-              aria-label="Change profile photo"
-            >
-              <UserAvatar
+        {/* Mobile: full-bleed hero -- the real photo if there is one, otherwise the same
+            deterministic color + initials UserAvatar falls back to everywhere else, just at
+            full-bleed scale. Tapping anywhere on it still opens the photo picker. */}
+        <div className="sm:hidden -mx-[15px] -mt-[15px] relative h-[220px] rounded-t-2xl overflow-hidden">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploadingAvatar}
+            className="absolute inset-0 w-full h-full cursor-pointer"
+            title="Tap to change your photo"
+            aria-label="Change profile photo"
+          >
+            {hasHeroPhoto ? (
+              <img
                 src={activeProfessional.profile_picture}
-                name={activeProfessional.name}
-                sizeClassName="w-20 h-20"
-                textClassName="text-2xl font-black"
-                roundedClassName="rounded-2xl"
+                alt={activeProfessional.name}
+                className="w-full h-full object-cover"
+                onError={() => setHeroPhotoFailed(true)}
               />
-              {isUploadingAvatar && (
-                <div className="absolute inset-0 rounded-2xl bg-slate-950/50 flex items-center justify-center">
-                  <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                </div>
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setShowEditInfoModal(true)}
-              className="px-4 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 active:scale-[0.98] text-white font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
-            >
-              <Edit3 className="w-3.5 h-3.5" />
-              <span>Edit Profile</span>
-            </button>
+            ) : (
+              <div className={`w-full h-full flex items-center justify-center ${getAvatarColor(activeProfessional.name)}`}>
+                <span className="text-[110px] font-black leading-none opacity-20 select-none">{getInitials(activeProfessional.name)}</span>
+              </div>
+            )}
+          </button>
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/15 to-transparent pointer-events-none" />
+          {isUploadingAvatar && (
+            <div className="absolute inset-0 bg-slate-950/50 flex items-center justify-center pointer-events-none">
+              <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            </div>
+          )}
+          <div className="absolute left-4 right-4 bottom-3.5 text-white pointer-events-none">
+            <div className="flex items-center gap-1.5">
+              <h1 className="text-lg font-black tracking-tight truncate">{name}</h1>
+              {isVerified && <VerifiedBadge title="Verified" />}
+            </div>
+            <p className="text-xs font-semibold text-white/85 flex items-center gap-1">
+              <span>{category}</span>
+              <span>&middot;</span>
+              <span className="text-amber-400">★</span>
+              <span>{activeProfessional.rating_average} ({activeProfessional.review_count})</span>
+            </p>
           </div>
         </div>
+        <div className="sm:hidden pt-3 space-y-3">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+            <span className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 px-2.5 py-1 rounded-lg">
+              <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" /> {primaryLocation}
+            </span>
+            <span className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 px-2.5 py-1 rounded-lg font-bold">
+              {activeProfessional.completed_jobs_count || 34} jobs
+            </span>
+          </div>
 
-        {/* Identity Hierarchy: Name + Verified Badge -> Category & Location -> Phone/Email */}
-        <div className="space-y-1.5">
+          {!isVerified && (
+            <button
+              type="button"
+              onClick={() => setShowKYCModal(true)}
+              className="w-full px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-xs font-bold border border-amber-500/20 cursor-pointer flex items-center justify-center gap-1.5 transition-colors"
+            >
+              <span>Pending Verification</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          )}
 
-          {/* Name & Badge */}
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
-              {name}
-            </h1>
-            {isVerified ? (
-              <>
-                <span className="sm:hidden"><VerifiedBadge /></span>
-                <span className="hidden sm:inline-flex"><VerifiedBadge label="Verified" /></span>
-              </>
-            ) : (
+          {(phone || email) && (
+            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+              {phone && (
+                <a href={`tel:${phone}`} className="flex items-center gap-1 hover:text-navy-800 dark:hover:text-navy-400 transition-colors">
+                  <Phone className="w-3 h-3 text-slate-400" />
+                  <span>{phone}</span>
+                </a>
+              )}
+              {email && (
+                <a href={`mailto:${email}`} className="flex items-center gap-1 hover:text-navy-800 dark:hover:text-navy-400 transition-colors">
+                  <Mail className="w-3 h-3 text-slate-400" />
+                  <span>{email}</span>
+                </a>
+              )}
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setShowEditInfoModal(true)}
+            className="w-full px-4 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 active:scale-[0.98] text-white font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
+          >
+            <Edit3 className="w-3.5 h-3.5" />
+            <span>Edit Profile</span>
+          </button>
+        </div>
+
+        {/* Desktop: banner + overlapping avatar. Banner + avatar overlap live in one wrapper so
+            the internal -mt-11 overlap only has to reckon with its one sibling (the banner right
+            above it), not fight anything else for control of its own margin-top. */}
+        <div className="hidden sm:block">
+          <div className="-mx-[15px] -mt-[15px]">
+            <div className="h-[104px] rounded-t-2xl bg-gradient-to-br from-navy-900 to-navy-950" />
+            <div className="flex items-end justify-between gap-3.5 px-[15px] -mt-11">
               <button
                 type="button"
-                onClick={() => setShowKYCModal(true)}
-                className="px-2.5 py-0.5 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-[11px] font-bold border border-amber-500/20 cursor-pointer inline-flex items-center gap-1 transition-colors"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingAvatar}
+                className="relative shrink-0 cursor-pointer rounded-2xl border-4 border-white dark:border-slate-900 shadow-lg"
+                title="Tap to change your photo"
+                aria-label="Change profile photo"
               >
-                <span>Pending Verification</span>
-                <ChevronRight className="w-3 h-3" />
+                <UserAvatar
+                  src={activeProfessional.profile_picture}
+                  name={activeProfessional.name}
+                  sizeClassName="w-20 h-20"
+                  textClassName="text-2xl font-black"
+                  roundedClassName="rounded-2xl"
+                />
+                {isUploadingAvatar && (
+                  <div className="absolute inset-0 rounded-2xl bg-slate-950/50 flex items-center justify-center">
+                    <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  </div>
+                )}
               </button>
-            )}
+
+              <button
+                type="button"
+                onClick={() => setShowEditInfoModal(true)}
+                className="px-4 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 active:scale-[0.98] text-white font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>Edit Profile</span>
+              </button>
+            </div>
           </div>
 
-          {/* Trade Category & Location */}
-          <div className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
-            <span className="px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold">
-              {category}
-            </span>
-            <span className="text-slate-300 dark:text-slate-600">•</span>
-            <span className="flex items-center gap-1 text-slate-600 dark:text-slate-400">
-              <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-              <span>{primaryLocation}</span>
-            </span>
-          </div>
+          {/* Identity Hierarchy: Name + Verified Badge -> Category & Location -> Phone/Email */}
+          <div className="space-y-1.5 mt-4">
 
-          {/* Direct Contact Details */}
-          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400 pt-0.5">
-            {phone && (
-              <a href={`tel:${phone}`} className="flex items-center gap-1 hover:text-navy-800 dark:hover:text-navy-400 transition-colors">
-                <Phone className="w-3 h-3 text-slate-400" />
-                <span>{phone}</span>
-              </a>
-            )}
-            {email && (
-              <a href={`mailto:${email}`} className="flex items-center gap-1 hover:text-navy-800 dark:hover:text-navy-400 transition-colors">
-                <Mail className="w-3 h-3 text-slate-400" />
-                <span>{email}</span>
-              </a>
-            )}
-          </div>
+            {/* Name & Badge */}
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
+                {name}
+              </h1>
+              {isVerified ? (
+                <VerifiedBadge label="Verified" />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowKYCModal(true)}
+                  className="px-2.5 py-0.5 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-[11px] font-bold border border-amber-500/20 cursor-pointer inline-flex items-center gap-1 transition-colors"
+                >
+                  <span>Pending Verification</span>
+                  <ChevronRight className="w-3 h-3" />
+                </button>
+              )}
+            </div>
 
-          {/* Key Trust Stats */}
-          <div className="flex items-center gap-2.5 text-xs font-bold pt-0.5 text-slate-600 dark:text-slate-300">
-            <span className="px-2 py-0.5 rounded-md bg-slate-50 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60">
-              {activeProfessional.completed_jobs_count || 34} Jobs Completed
-            </span>
-            <span className="text-slate-300 dark:text-slate-700">•</span>
-            <span className="text-amber-600 dark:text-amber-400">
-              ★ {activeProfessional.rating_average} <span className="text-slate-500 font-medium">({activeProfessional.review_count} Reviews)</span>
-            </span>
+            {/* Trade Category & Location */}
+            <div className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
+              <span className="px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold">
+                {category}
+              </span>
+              <span className="text-slate-300 dark:text-slate-600">•</span>
+              <span className="flex items-center gap-1 text-slate-600 dark:text-slate-400">
+                <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                <span>{primaryLocation}</span>
+              </span>
+            </div>
+
+            {/* Direct Contact Details */}
+            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400 pt-0.5">
+              {phone && (
+                <a href={`tel:${phone}`} className="flex items-center gap-1 hover:text-navy-800 dark:hover:text-navy-400 transition-colors">
+                  <Phone className="w-3 h-3 text-slate-400" />
+                  <span>{phone}</span>
+                </a>
+              )}
+              {email && (
+                <a href={`mailto:${email}`} className="flex items-center gap-1 hover:text-navy-800 dark:hover:text-navy-400 transition-colors">
+                  <Mail className="w-3 h-3 text-slate-400" />
+                  <span>{email}</span>
+                </a>
+              )}
+            </div>
+
+            {/* Key Trust Stats */}
+            <div className="flex items-center gap-2.5 text-xs font-bold pt-0.5 text-slate-600 dark:text-slate-300">
+              <span className="px-2 py-0.5 rounded-md bg-slate-50 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60">
+                {activeProfessional.completed_jobs_count || 34} Jobs Completed
+              </span>
+              <span className="text-slate-300 dark:text-slate-700">•</span>
+              <span className="text-amber-600 dark:text-amber-400">
+                ★ {activeProfessional.rating_average} <span className="text-slate-500 font-medium">({activeProfessional.review_count} Reviews)</span>
+              </span>
+            </div>
           </div>
         </div>
 
         {/* Bio Description */}
         {bio && (
-          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
+          <div className="mt-3.5 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
             <p className="text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800/80">
               {bio}
             </p>

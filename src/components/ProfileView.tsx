@@ -6,7 +6,7 @@ import {
   LogOut, ChevronRight, Star
 } from 'lucide-react';
 import { ConfirmationModal } from './ui/ConfirmationModal';
-import { UserAvatar } from './ui/UserAvatar';
+import { UserAvatar, getInitials, getAvatarColor } from './ui/UserAvatar';
 import { VerifiedBadge } from './ui/VerifiedBadge';
 import { Card, CardHeader } from './ui/Card';
 import { ProProfileManagement } from './ProProfileManagement';
@@ -50,6 +50,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const { user, updateUser, uploadProfilePicture } = useAuth();
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [heroPhotoFailed, setHeroPhotoFailed] = useState(false);
 
   // Customer Profile Information initialized with backend user data
   const [customerFirstName, setCustomerFirstName] = useState(() => user?.first_name || (user?.email ? user.email.split('@')[0] : 'Client'));
@@ -195,6 +196,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   }
 
   const currentAvatar = customerAvatar;
+  const hasHeroPhoto = Boolean(currentAvatar && currentAvatar.trim().length > 0 && !heroPhotoFailed);
   const completedBookingsCount = bookings.filter(b => b.status === 'paid_out').length;
   const activeBookingsCount = bookings.filter(b => ['pending', 'quote_requested', 'accepted', 'in_progress'].includes(b.status)).length;
   const savedPros = professionals.filter(p => savedProIds.includes(p.id)).slice(0, 3);
@@ -218,69 +220,128 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           in place (the read-only rows below become a form) instead of a popup, and the only way
           to change the photo is tapping the avatar itself -- no separate "Change Photo" button
           duplicating that action, and no icon overlaid on the photo. */}
-      <Card className="relative overflow-hidden space-y-4">
-        {/* Banner + avatar overlap live in one wrapper so the internal -mt-11 overlap can't collide
-            with the Card's own space-y-4 rule (which only spaces between space-y-4's *direct*
-            children -- this whole wrapper counts as a single one of those). */}
-        <div className="-mx-[15px] -mt-[15px]">
-          <div className="h-[104px] rounded-t-2xl bg-gradient-to-br from-navy-900 to-navy-950" />
-          <div className="flex items-end justify-between gap-3.5 px-[15px] -mt-11">
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploadingAvatar}
-              className="relative shrink-0 cursor-pointer rounded-2xl border-4 border-white dark:border-slate-900 shadow-lg"
-              title="Tap to change your photo"
-              aria-label="Change profile photo"
-            >
-              <UserAvatar
+      {/* This card intentionally doesn't use space-y-* for its top-level sections: Tailwind's
+          space-y selector only excludes elements carrying the literal `hidden` HTML attribute,
+          not ones hidden via a responsive class like sm:hidden -- so it can't tell the mobile-only
+          and desktop-only blocks below apart from any other sibling, and would add its margin-top
+          onto whichever one happens to render, regardless of breakpoint. Each block below is
+          self-spaced instead, and the rows/form block carries its own mt-4. */}
+      <Card className="relative overflow-hidden">
+        {/* Mobile: full-bleed hero -- the real photo if there is one, otherwise the same
+            deterministic color + initials UserAvatar falls back to everywhere else, just at
+            full-bleed scale. Tapping anywhere on it still opens the photo picker. */}
+        <div className="sm:hidden -mx-[15px] -mt-[15px] relative h-[220px] rounded-t-2xl overflow-hidden">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploadingAvatar}
+            className="absolute inset-0 w-full h-full cursor-pointer"
+            title="Tap to change your photo"
+            aria-label="Change profile photo"
+          >
+            {hasHeroPhoto ? (
+              <img
                 src={currentAvatar}
-                name={customerName}
-                sizeClassName="w-24 h-24"
-                textClassName="text-3xl font-black"
-                roundedClassName="rounded-2xl"
+                alt={customerName}
+                className="w-full h-full object-cover"
+                onError={() => setHeroPhotoFailed(true)}
               />
-              {isUploadingAvatar && (
-                <div className="absolute inset-0 rounded-2xl bg-slate-950/50 flex items-center justify-center">
-                  <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                </div>
-              )}
-            </button>
-
-            {!isEditing && (
-              <button
-                type="button"
-                onClick={startEditing}
-                className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-extrabold text-xs shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
-              >
-                <Edit3 className="w-3.5 h-3.5" />
-                <span>Edit</span>
-              </button>
+            ) : (
+              <div className={`w-full h-full flex items-center justify-center ${getAvatarColor(customerName)}`}>
+                <span className="text-[110px] font-black leading-none opacity-20 select-none">{getInitials(customerName)}</span>
+              </div>
             )}
+          </button>
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/15 to-transparent pointer-events-none" />
+          {isUploadingAvatar && (
+            <div className="absolute inset-0 bg-slate-950/50 flex items-center justify-center pointer-events-none">
+              <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            </div>
+          )}
+          <div className="absolute left-4 right-4 bottom-3.5 text-white pointer-events-none">
+            <div className="flex items-center gap-1.5">
+              <h2 className="text-lg font-black truncate">{customerName}</h2>
+              {Boolean(user?.is_email_verified) && <VerifiedBadge title="Verified Customer" />}
+            </div>
+            <p className="text-xs font-semibold text-white/85 truncate">Client &middot; {customerLocation}</p>
           </div>
         </div>
-
-        <div className="space-y-1">
-          <div className="flex items-center gap-1.5">
-            <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100">{customerName}</h2>
-            {Boolean(user?.is_email_verified) && (
-              <>
-                <span className="sm:hidden"><VerifiedBadge title="Verified Customer" /></span>
-                <span className="hidden sm:inline-flex"><VerifiedBadge label="Verified Customer" /></span>
-              </>
-            )}
-          </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
-            <MapPin className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400 shrink-0" />
-            <span>{customerLocation}</span>
-          </p>
-          <p className="text-[11px] font-medium text-slate-400 flex items-center gap-1 pt-0.5">
+        <div className="sm:hidden pt-3 flex items-center justify-between gap-3">
+          <p className="text-[11px] font-medium text-slate-400 flex items-center gap-1">
             <Calendar className="w-3 h-3 text-slate-400" />
             <span>Customer since {customerSince}</span>
           </p>
+          {!isEditing && (
+            <button
+              type="button"
+              onClick={startEditing}
+              className="px-3.5 py-1.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-extrabold text-[11px] shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+            >
+              <Edit3 className="w-3 h-3" />
+              <span>Edit</span>
+            </button>
+          )}
         </div>
 
-        <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+        {/* Desktop: banner + overlapping avatar. Banner + avatar overlap live in one wrapper so
+            the internal -mt-11 overlap only has to reckon with its one sibling (the banner right
+            above it), not fight anything else for control of its own margin-top. */}
+        <div className="hidden sm:block">
+          <div className="-mx-[15px] -mt-[15px]">
+            <div className="h-[104px] rounded-t-2xl bg-gradient-to-br from-navy-900 to-navy-950" />
+            <div className="flex items-end justify-between gap-3.5 px-[15px] -mt-11">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingAvatar}
+                className="relative shrink-0 cursor-pointer rounded-2xl border-4 border-white dark:border-slate-900 shadow-lg"
+                title="Tap to change your photo"
+                aria-label="Change profile photo"
+              >
+                <UserAvatar
+                  src={currentAvatar}
+                  name={customerName}
+                  sizeClassName="w-24 h-24"
+                  textClassName="text-3xl font-black"
+                  roundedClassName="rounded-2xl"
+                />
+                {isUploadingAvatar && (
+                  <div className="absolute inset-0 rounded-2xl bg-slate-950/50 flex items-center justify-center">
+                    <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  </div>
+                )}
+              </button>
+
+              {!isEditing && (
+                <button
+                  type="button"
+                  onClick={startEditing}
+                  className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-extrabold text-xs shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Edit</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-1 mt-4">
+            <div className="flex items-center gap-1.5">
+              <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100">{customerName}</h2>
+              {Boolean(user?.is_email_verified) && <VerifiedBadge label="Verified Customer" />}
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+              <MapPin className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400 shrink-0" />
+              <span>{customerLocation}</span>
+            </p>
+            <p className="text-[11px] font-medium text-slate-400 flex items-center gap-1 pt-0.5">
+              <Calendar className="w-3 h-3 text-slate-400" />
+              <span>Customer since {customerSince}</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
           {!isEditing ? (
             <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
               <div className="py-3 flex items-center justify-between">

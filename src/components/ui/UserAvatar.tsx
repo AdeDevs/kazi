@@ -22,6 +22,18 @@ export function getInitials(name?: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
+/** Deterministic per-name color, so the same person always gets the same fallback color
+    everywhere they appear without a photo -- the avatar, and the full-bleed hero alike. */
+export function getAvatarColor(n?: string): string {
+  if (!n) return 'bg-navy-900 text-white';
+  const charCode = (n.charCodeAt(0) + (n.charCodeAt(1) || 0)) % 3;
+  switch (charCode) {
+    case 0: return 'bg-navy-900 text-white';
+    case 1: return 'bg-slate-800 text-white dark:bg-slate-700';
+    default: return 'bg-brand-orange-600 text-white';
+  }
+}
+
 export const UserAvatar: React.FC<UserAvatarProps> = ({
   src,
   name,
@@ -35,20 +47,10 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
   const initials = getInitials(name);
   const hasValidSrc = Boolean(src && src.trim().length > 0 && !hasError);
 
-  const getBgColor = (n?: string) => {
-    if (!n) return 'bg-navy-900 text-white';
-    const charCode = (n.charCodeAt(0) + (n.charCodeAt(1) || 0)) % 3;
-    switch (charCode) {
-      case 0: return 'bg-navy-900 text-white';
-      case 1: return 'bg-slate-800 text-white dark:bg-slate-700';
-      default: return 'bg-brand-orange-600 text-white';
-    }
-  };
-
   return (
     <div className={`relative shrink-0 ${sizeClassName} ${className}`}>
       <div className={`w-full h-full ${roundedClassName} overflow-hidden flex items-center justify-center border border-zinc-200 dark:border-zinc-700/80 select-none ${
-        hasValidSrc ? 'bg-zinc-100 dark:bg-zinc-800' : getBgColor(name)
+        hasValidSrc ? 'bg-zinc-100 dark:bg-zinc-800' : getAvatarColor(name)
       }`}>
         {hasValidSrc ? (
           <img
