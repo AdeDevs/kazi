@@ -36,7 +36,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({
     resendOtp,
     forgotPassword,
     resetPassword,
-    loginAsDemo,
     isLoading,
     error,
     clearError,
@@ -302,13 +301,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({
     }
   };
 
-  const handleDemoAccess = (role: 'client' | 'artisan') => {
-    loginAsDemo(role);
-    if (onAuthSuccess) {
-      onAuthSuccess(role);
-    }
-  };
-
   return (
     <div className="h-screen w-full bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col selection:bg-brand-orange-500 selection:text-white overflow-hidden">
       {/* Top Edge-to-Edge Bar */}
@@ -366,77 +358,15 @@ export const AuthPage: React.FC<AuthPageProps> = ({
               </div>
             </div>
           </div>
-
-          {/* Bottom RBAC Quick Test Links (Text links instead of large cards) */}
-          <div className="relative z-10 pt-4 border-t border-white/10 space-y-2 max-w-lg shrink-0">
-            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
-              Quick Portal Evaluation (RBAC)
-            </span>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
-              <button
-                type="button"
-                onClick={() => handleDemoAccess('client')}
-                className="text-zinc-300 hover:text-brand-orange-400 transition-colors font-medium flex items-center gap-1 cursor-pointer"
-              >
-                <span>Test Client Portal</span>
-                <span className="text-zinc-500 text-[10px]">(Nneka)</span>
-                <ArrowRight className="w-3 h-3 text-zinc-500" />
-              </button>
-
-              <span className="text-zinc-600">•</span>
-
-              <button
-                type="button"
-                onClick={() => handleDemoAccess('artisan')}
-                className="text-zinc-300 hover:text-brand-orange-400 transition-colors font-medium flex items-center gap-1 cursor-pointer"
-              >
-                <span>Test Artisan Portal</span>
-                <span className="text-zinc-500 text-[10px]">(Babatunde)</span>
-                <ArrowRight className="w-3 h-3 text-zinc-500" />
-              </button>
-            </div>
-          </div>
         </section>
 
-        {/* Right Side Form Column */}
-        <section className={`lg:w-7/12 xl:w-1/2 bg-white dark:bg-zinc-900 px-6 sm:px-10 lg:px-14 py-8 sm:py-10 overflow-y-auto min-h-0 flex-1 flex flex-col ${
-          currentView === 'signin' ? 'justify-center' : 'justify-start'
-        }`}>
-          <div className={`w-full max-w-md mx-auto space-y-5 ${
-            currentView === 'signin' ? 'my-auto' : 'my-0 py-2'
-          }`}>
-
-            {/* Condensed value prop + instant demo access for mobile/tablet, where the
-                desktop poster panel (and its only copy of these links) is hidden. */}
-            {currentView === 'signin' && (
-              <div className="lg:hidden -mx-1 mb-1 p-4 rounded-xl bg-navy-950 text-white space-y-3">
-                <p className="text-sm font-bold leading-snug">
-                  Vetted Artisans. Guaranteed Escrow.
-                </p>
-                <p className="text-[11px] text-zinc-300 leading-relaxed">
-                  Verified electricians, plumbers, AC technicians, solar installers, and carpenters across all 36 Nigerian states.
-                </p>
-                <div className="pt-2.5 border-t border-white/10 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => handleDemoAccess('client')}
-                    className="text-zinc-300 hover:text-brand-orange-400 transition-colors font-medium flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>Test Client Portal</span>
-                    <ArrowRight className="w-3 h-3 text-zinc-500" />
-                  </button>
-                  <span className="text-zinc-600">&middot;</span>
-                  <button
-                    type="button"
-                    onClick={() => handleDemoAccess('artisan')}
-                    className="text-zinc-300 hover:text-brand-orange-400 transition-colors font-medium flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>Test Artisan Portal</span>
-                    <ArrowRight className="w-3 h-3 text-zinc-500" />
-                  </button>
-                </div>
-              </div>
-            )}
+        {/* Right Side Form Column. Always top-aligned rather than vertically centered -- centering
+            looked fine for the short sign-in form on a tall screen, but produced an odd symmetric
+            gap above and below on shorter viewports, and centering a form taller than the viewport
+            (signup) would have cut off its top the same way. Top-aligned reads naturally at every
+            content/viewport ratio and just scrolls when content is taller than the screen. */}
+        <section className="lg:w-7/12 xl:w-1/2 bg-white dark:bg-zinc-900 px-4 sm:px-10 lg:px-14 py-6 sm:py-10 overflow-y-auto min-h-0 flex-1 flex flex-col justify-start">
+          <div className="w-full max-w-md mx-auto space-y-5 my-0 py-2">
 
             {/* Feedback Notifications */}
             {error && (
@@ -813,8 +743,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                     )}
                   </div>
 
-                  {/* Phone with +234 Nigerian Formatter & State */}
-                  <div className="grid grid-cols-2 gap-3">
+                  {/* Phone with +234 Nigerian Formatter & State -- stacked on mobile since the
+                      phone field (country-code prefix + a 10-digit number) needs more room than
+                      a half-width column leaves it; shares a row again from sm up. */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
                         Phone Number *

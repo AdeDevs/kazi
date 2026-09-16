@@ -54,7 +54,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   currentLanguage = 'English (Nigeria)' as Language,
   children
 }) => {
-  const { user, isAuthenticated, openAuthModal, loginAsDemo } = useAuth();
+  const { user, isAuthenticated, openAuthModal } = useAuth();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 

@@ -31,7 +31,6 @@ export const AuthModal: React.FC = () => {
     resendOtp,
     forgotPassword,
     resetPassword,
-    loginAsDemo,
     isLoading,
     error,
     clearError,
@@ -484,38 +483,6 @@ export const AuthModal: React.FC = () => {
                   .
                 </p>
               </form>
-
-              {/* Instant Demo Role Switch */}
-              <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800">
-                <p className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 text-center mb-2">
-                  Or test immediately with preconfigured verified accounts:
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => loginAsDemo('customer')}
-                    className="p-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/80 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-left transition-colors cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-1.5 font-bold text-xs text-navy-900 dark:text-zinc-100">
-                      <User className="w-3.5 h-3.5 text-navy-600 dark:text-navy-400" />
-                      <span>Customer Mode</span>
-                    </div>
-                    <p className="text-[10px] text-zinc-500 mt-0.5 truncate">Nneka Okonkwo (Ibadan)</p>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => loginAsDemo('artisan')}
-                    className="p-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/80 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-left transition-colors cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-1.5 font-bold text-xs text-navy-900 dark:text-zinc-100">
-                      <Briefcase className="w-3.5 h-3.5 text-brand-orange-500" />
-                      <span>Pro Partner Mode</span>
-                    </div>
-                    <p className="text-[10px] text-zinc-500 mt-0.5 truncate">Babatunde (Solar/Electric)</p>
-                  </button>
-                </div>
-              </div>
 
               {/* Switch to Register */}
               <div className="text-center pt-2">
