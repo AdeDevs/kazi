@@ -302,8 +302,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           {/* Data Export */}
           <div className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <p className="font-bold text-slate-900 dark:text-slate-100">Download Account Data Archive</p>
-              <p className="text-[11px] text-slate-500">Export your booking logs, escrow receipts, and profile history in JSON format.</p>
+              <p className="font-bold text-slate-900 dark:text-slate-100">Download My Data</p>
+              <p className="text-[11px] text-slate-500">Get a copy of your booking history, escrow receipts, and profile info.</p>
             </div>
             <button
               type="button"
@@ -311,13 +311,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs transition-colors cursor-pointer shrink-0 flex items-center gap-1.5 border border-slate-200 dark:border-slate-700"
             >
               <Download className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400" />
-              <span>Export JSON Archive</span>
+              <span>Download</span>
             </button>
           </div>
         </div>
       </Card>
 
-      {/* 4. ACCOUNT LIFECYCLE ACTIONS ONLY (Freeze & Delete) */}
+      {/* HELP & SUPPORT (shared across both customer and artisan roles) */}
+      <HelpSupportSection triggerToast={triggerToast} />
+
+      {/* LEGAL & TERMS (shared across both customer and artisan roles) */}
+      <LegalSection />
+
+      {/* ACCOUNT LIFECYCLE ACTIONS (Freeze & Delete) -- kept last on the page, since these are
+          the most consequential actions here and shouldn't be something someone reaches on the
+          way to something else. */}
       <Card tone="danger" className="space-y-4">
         <CardHeader
           title="Account Lifecycle Actions"
@@ -363,7 +371,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <div className="space-y-0.5">
               <p className="font-bold text-rose-600 dark:text-rose-400">Delete Account Permanently</p>
               <p className="text-[11px] text-slate-500 max-w-lg leading-relaxed">
-                Permanently erase your identity, booking records, and stored payment profiles from KaziHub. This operation is irreversible.
+                Permanently erase your identity, booking records, and stored payment profiles from KaziHub. This can't be undone.
               </p>
             </div>
             <button
@@ -377,12 +385,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         </div>
       </Card>
-
-      {/* HELP & SUPPORT (shared across both customer and artisan roles) */}
-      <HelpSupportSection triggerToast={triggerToast} />
-
-      {/* LEGAL & TERMS (shared across both customer and artisan roles) */}
-      <LegalSection />
 
       {/* Toast Notification */}
       {toastMessage && (
@@ -409,7 +411,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         cancelText="Keep as is"
         type="freeze"
         details={[
-          'All past transaction receipts remain securely archived in your vault',
+          'All past transaction receipts stay saved and safe',
           'You can reactivate your account at any moment by signing in'
         ]}
       />
@@ -427,7 +429,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         details={[
           'All pending escrow transactions and bookings will be cancelled',
           'Your phone number and verified reputation credentials will be permanently erased',
-          'This action CANNOT be reversed or restored'
+          "This can't be undone"
         ]}
       />
 

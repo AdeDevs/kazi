@@ -2362,11 +2362,18 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
 
             <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-xs text-slate-700 dark:text-slate-300 text-left space-y-1">
               <div className="font-bold text-slate-900 dark:text-slate-100">Next Steps:</div>
-              <ul className="list-disc list-inside text-[11px] text-slate-500 space-y-0.5">
-                <li>Escrow payout is frozen for 48 hours.</li>
-                <li>Support officer will contact you via email/phone within 2 hours.</li>
-                <li>You can attach photos or extra details in customer support chat.</li>
-              </ul>
+              <div className="space-y-1">
+                {[
+                  'Escrow payout is frozen for 48 hours.',
+                  'Support officer will contact you via email/phone within 2 hours.',
+                  'You can attach photos or extra details in customer support chat.'
+                ].map((item) => (
+                  <div key={item} className="flex items-start gap-1.5 text-[11px] text-slate-500">
+                    <CheckCircle2 className="w-3 h-3 text-navy-800 dark:text-navy-400 shrink-0 mt-0.5" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <button
@@ -2552,11 +2559,14 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                   <span className="text-[10px] font-extrabold uppercase text-slate-400 block">
                     Probable Root Causes:
                   </span>
-                  <ul className="list-disc list-inside text-xs text-slate-600 dark:text-slate-300 space-y-0.5">
+                  <div className="space-y-1">
                     {aiDiagnosisReport.likelyCauses.map((cause, i) => (
-                      <li key={i}>{cause}</li>
+                      <div key={i} className="flex items-start gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0 mt-[5px]" />
+                        <span>{cause}</span>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
 
                 {/* Direct Matching Specialists */}

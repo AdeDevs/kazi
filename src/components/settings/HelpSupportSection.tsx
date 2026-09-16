@@ -9,11 +9,11 @@ interface HelpSupportSectionProps {
 const FAQS = [
   {
     q: 'How does KaziHub secure escrow payments?',
-    a: 'When you book a service, your funds are securely held in the KaziHub Escrow Vault. Funds are only released to the artisan once you confirm completion or after our 4-day inspection window.'
+    a: 'When you book a service, your funds are held securely by KaziHub. They\'re only released to the artisan once you confirm the job is done, or after our 4-day inspection window.'
   },
   {
     q: 'What happens if an artisan does not arrive?',
-    a: 'You can cancel with zero penalty or reassign the request to another verified pro nearby. Our support concierge is also available 24/7 to resolve disputes.'
+    a: 'You can cancel with zero penalty or reassign the request to another verified pro nearby. Our support team is also available 24/7 to help sort out any issues.'
   },
   {
     q: 'How are artisans verified?',
@@ -43,7 +43,7 @@ export const HelpSupportSection: React.FC<HelpSupportSectionProps> = ({ triggerT
     <Card className="space-y-4">
       <CardHeader
         title="Help & Support"
-        subtitle="Help center FAQs, live concierge, and escalation hotlines."
+        subtitle="Answers to common questions, plus ways to reach us."
       />
 
       {/* FAQs Accordion */}
@@ -77,14 +77,14 @@ export const HelpSupportSection: React.FC<HelpSupportSectionProps> = ({ triggerT
           className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
         >
           <MessageSquare className="w-3.5 h-3.5" />
-          <span>Contact Support Concierge</span>
+          <span>Contact Support</span>
         </button>
         <a
           href="tel:+2348000005294"
           className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs transition-colors cursor-pointer flex items-center gap-1.5 border border-slate-200 dark:border-slate-700"
         >
           <PhoneCall className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-          <span>Emergency Toll-Free Helpline</span>
+          <span>Call Us (Toll-Free)</span>
         </a>
       </div>
 
@@ -106,7 +106,7 @@ export const HelpSupportSection: React.FC<HelpSupportSectionProps> = ({ triggerT
             </button>
 
             <div className="space-y-1">
-              <h3 className="text-lg font-black text-slate-900 dark:text-slate-100">KaziHub Support Concierge</h3>
+              <h3 className="text-lg font-black text-slate-900 dark:text-slate-100">Contact Support</h3>
               <p className="text-xs text-slate-500">Send an inquiry or raise an issue regarding your bookings.</p>
             </div>
 

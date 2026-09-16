@@ -63,7 +63,7 @@ export const LegalSection: React.FC = () => {
             </button>
             <h3 className="text-lg font-black text-slate-900 dark:text-slate-100">KaziHub Terms of Service</h3>
             <div className="text-xs text-slate-600 dark:text-slate-400 space-y-3 leading-relaxed">
-              <p>Welcome to KaziHub. By utilizing our marketplace and booking artisans, you agree to our escrow safety commitments and fair mediation policy.</p>
+              <p>Welcome to KaziHub. By using our marketplace to book artisans, you agree to our escrow protections and dispute resolution process.</p>
               <p><strong>1. Escrow Protection:</strong> All booking deposits remain locked until customer sign-off or resolution of inspected milestones.</p>
               <p><strong>2. Artisan Conduct:</strong> Artisans must maintain verified credentials, adhere to scheduled timelines, and respect client premises.</p>
               <p><strong>3. Cancellation Policy:</strong> Flexible cancellations are permitted up to 2 hours prior to scheduled arrival with zero penalty.</p>
@@ -90,7 +90,7 @@ export const LegalSection: React.FC = () => {
             </button>
             <h3 className="text-lg font-black text-slate-900 dark:text-slate-100">Privacy Policy</h3>
             <div className="text-xs text-slate-600 dark:text-slate-400 space-y-3 leading-relaxed">
-              <p>KaziHub treats your location and personal contact data with bank-grade encryption standards under NDPR and GDPR requirements.</p>
+              <p>We protect your location and personal contact data with strong encryption, in line with NDPR and GDPR data protection rules.</p>
               <p>• Your phone number is only revealed to an artisan after an escrow booking is confirmed.</p>
               <p>• We never sell or share customer contact records with third-party advertisers.</p>
             </div>

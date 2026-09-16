@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AlertTriangle, Info, Snowflake, X } from 'lucide-react';
+import { AlertTriangle, Check, Info, Snowflake, X } from 'lucide-react';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 export type ConfirmationType = 'danger' | 'warning' | 'info' | 'logout' | 'freeze';
@@ -190,12 +190,15 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           </div>
         </div>
 
-        {/* Optional Bulleted Details */}
+        {/* Optional Details -- a small check per line rather than a plain bullet dot, since these
+            are facts about what the action does, not an open-ended list. */}
         {details && details.length > 0 && (
           <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 text-xs text-slate-600 dark:text-slate-300 space-y-1.5 font-medium">
             {details.map((item, idx) => (
               <div key={idx} className="flex items-start gap-2">
-                <span className="text-slate-400 shrink-0 mt-0.5">•</span>
+                <span className="w-3.5 h-3.5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 flex items-center justify-center shrink-0 mt-px">
+                  <Check className="w-2.5 h-2.5" strokeWidth={3} />
+                </span>
                 <span>{item}</span>
               </div>
             ))}
