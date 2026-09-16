@@ -11,7 +11,7 @@ import { CustomDropdown } from './CustomDropdown';
 import { useAuth } from '../context/AuthContext';
 import {
   Mail, Phone, MapPin,
-  CheckCircle2, Camera, Edit3, Trash2, X, LogOut,
+  CheckCircle2, Edit3, Trash2, X, LogOut,
   Plus, Clock, ShieldCheck, UserCheck, ChevronRight
 } from 'lucide-react';
 
@@ -345,109 +345,35 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
 
       {/* 1. PRIMARY ARTISAN IDENTITY CARD */}
       <Card className="space-y-3.5">
-        
-        {/* Top Header Row: Mobile stacked -> Desktop (sm+) horizontal with Edit Profile in far right corner */}
-        <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-3.5 sm:gap-4 w-full text-center sm:text-left">
-          
-          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-3.5 sm:gap-4 flex-1 min-w-0 w-full">
-            {/* Avatar with Camera Overlay (Centered on mobile) */}
-            <div className="relative group shrink-0 mx-auto sm:mx-0">
+
+        {/* Banner + avatar overlap live in one wrapper so the internal -mt-11 overlap can't collide
+            with the Card's own space-y-3.5 rule (which only spaces between space-y-3.5's *direct*
+            children -- this whole wrapper counts as a single one of those). */}
+        <div className="-mx-[15px] -mt-[15px]">
+          <div className="h-[104px] rounded-t-2xl bg-gradient-to-br from-navy-900 to-navy-950" />
+          <div className="flex items-end justify-between gap-3.5 px-[15px] -mt-11">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploadingAvatar}
+              className="relative shrink-0 cursor-pointer rounded-2xl border-4 border-white dark:border-slate-900 shadow-lg"
+              title="Tap to change your photo"
+              aria-label="Change profile photo"
+            >
               <UserAvatar
                 src={activeProfessional.profile_picture}
                 name={activeProfessional.name}
-                sizeClassName="w-20 h-20 sm:w-20 sm:h-20"
+                sizeClassName="w-20 h-20"
                 textClassName="text-2xl font-black"
                 roundedClassName="rounded-2xl"
               />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploadingAvatar}
-                className={`absolute inset-0 rounded-2xl bg-slate-950/60 transition-opacity flex flex-col items-center justify-center text-white cursor-pointer ${
-                  isUploadingAvatar ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                }`}
-                title="Change Photo"
-                aria-label="Change Photo"
-              >
-                {isUploadingAvatar ? (
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <Camera className="w-4 h-4 mb-0.5" />
-                    <span className="text-[10px] font-bold">Photo</span>
-                  </>
-                )}
-              </button>
-            </div>
+              {isUploadingAvatar && (
+                <div className="absolute inset-0 rounded-2xl bg-slate-950/50 flex items-center justify-center">
+                  <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                </div>
+              )}
+            </button>
 
-            {/* Identity Hierarchy: Name + Verified Badge -> Category & Location -> Phone/Email */}
-            <div className="space-y-1.5 flex-1 min-w-0 w-full flex flex-col items-center sm:items-start">
-              
-              {/* Name & Badge */}
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                <h1 className="text-xl sm:text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
-                  {name}
-                </h1>
-                {isVerified ? (
-                  <>
-                    <span className="sm:hidden"><VerifiedBadge /></span>
-                    <span className="hidden sm:inline-flex"><VerifiedBadge label="Verified" /></span>
-                  </>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setShowKYCModal(true)}
-                    className="px-2.5 py-0.5 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-[11px] font-bold border border-amber-500/20 cursor-pointer inline-flex items-center gap-1 transition-colors"
-                  >
-                    <span>Pending Verification</span>
-                    <ChevronRight className="w-3 h-3" />
-                  </button>
-                )}
-              </div>
-
-              {/* Trade Category & Location */}
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                <span className="px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold">
-                  {category}
-                </span>
-                <span className="text-slate-300 dark:text-slate-600">•</span>
-                <span className="flex items-center gap-1 text-slate-600 dark:text-slate-400">
-                  <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                  <span>{primaryLocation}</span>
-                </span>
-              </div>
-
-              {/* Direct Contact Details */}
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 text-xs text-slate-500 dark:text-slate-400 pt-0.5">
-                {phone && (
-                  <a href={`tel:${phone}`} className="flex items-center gap-1 hover:text-navy-800 dark:hover:text-navy-400 transition-colors">
-                    <Phone className="w-3 h-3 text-slate-400" />
-                    <span>{phone}</span>
-                  </a>
-                )}
-                {email && (
-                  <a href={`mailto:${email}`} className="flex items-center gap-1 hover:text-navy-800 dark:hover:text-navy-400 transition-colors">
-                    <Mail className="w-3 h-3 text-slate-400" />
-                    <span>{email}</span>
-                  </a>
-                )}
-              </div>
-
-              {/* Key Trust Stats */}
-              <div className="flex items-center justify-center sm:justify-start gap-2.5 text-xs font-bold pt-0.5 text-slate-600 dark:text-slate-300">
-                <span className="px-2 py-0.5 rounded-md bg-slate-50 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60">
-                  {activeProfessional.completed_jobs_count || 34} Jobs Completed
-                </span>
-                <span className="text-slate-300 dark:text-slate-700">•</span>
-                <span className="text-amber-600 dark:text-amber-400">
-                  ★ {activeProfessional.rating_average} <span className="text-slate-500 font-medium">({activeProfessional.review_count} Reviews)</span>
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Desktop Edit Profile Trigger (Far Right Corner) */}
-          <div className="hidden sm:flex shrink-0 self-start">
             <button
               type="button"
               onClick={() => setShowEditInfoModal(true)}
@@ -459,26 +385,79 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
           </div>
         </div>
 
+        {/* Identity Hierarchy: Name + Verified Badge -> Category & Location -> Phone/Email */}
+        <div className="space-y-1.5">
+
+          {/* Name & Badge */}
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
+              {name}
+            </h1>
+            {isVerified ? (
+              <>
+                <span className="sm:hidden"><VerifiedBadge /></span>
+                <span className="hidden sm:inline-flex"><VerifiedBadge label="Verified" /></span>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowKYCModal(true)}
+                className="px-2.5 py-0.5 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-[11px] font-bold border border-amber-500/20 cursor-pointer inline-flex items-center gap-1 transition-colors"
+              >
+                <span>Pending Verification</span>
+                <ChevronRight className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
+          {/* Trade Category & Location */}
+          <div className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
+            <span className="px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold">
+              {category}
+            </span>
+            <span className="text-slate-300 dark:text-slate-600">•</span>
+            <span className="flex items-center gap-1 text-slate-600 dark:text-slate-400">
+              <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+              <span>{primaryLocation}</span>
+            </span>
+          </div>
+
+          {/* Direct Contact Details */}
+          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400 pt-0.5">
+            {phone && (
+              <a href={`tel:${phone}`} className="flex items-center gap-1 hover:text-navy-800 dark:hover:text-navy-400 transition-colors">
+                <Phone className="w-3 h-3 text-slate-400" />
+                <span>{phone}</span>
+              </a>
+            )}
+            {email && (
+              <a href={`mailto:${email}`} className="flex items-center gap-1 hover:text-navy-800 dark:hover:text-navy-400 transition-colors">
+                <Mail className="w-3 h-3 text-slate-400" />
+                <span>{email}</span>
+              </a>
+            )}
+          </div>
+
+          {/* Key Trust Stats */}
+          <div className="flex items-center gap-2.5 text-xs font-bold pt-0.5 text-slate-600 dark:text-slate-300">
+            <span className="px-2 py-0.5 rounded-md bg-slate-50 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60">
+              {activeProfessional.completed_jobs_count || 34} Jobs Completed
+            </span>
+            <span className="text-slate-300 dark:text-slate-700">•</span>
+            <span className="text-amber-600 dark:text-amber-400">
+              ★ {activeProfessional.rating_average} <span className="text-slate-500 font-medium">({activeProfessional.review_count} Reviews)</span>
+            </span>
+          </div>
+        </div>
+
         {/* Bio Description */}
         {bio && (
           <div className="pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
-            <p className="text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800/80 text-center sm:text-left">
+            <p className="text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800/80">
               {bio}
             </p>
           </div>
         )}
-
-        {/* Mobile Action: Edit Profile Trigger (Shown only on small screens below bio) */}
-        <div className="pt-0.5 sm:hidden flex justify-stretch">
-          <button
-            type="button"
-            onClick={() => setShowEditInfoModal(true)}
-            className="w-full px-4 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 active:scale-[0.98] text-white font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
-          >
-            <Edit3 className="w-3.5 h-3.5" />
-            <span>Edit Profile</span>
-          </button>
-        </div>
       </Card>
 
       {/* 2. CONDITIONAL PROFILE COMPLETION BANNER (Padding: 15px) */}

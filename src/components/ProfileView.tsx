@@ -219,63 +219,65 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           to change the photo is tapping the avatar itself -- no separate "Change Photo" button
           duplicating that action, and no icon overlaid on the photo. */}
       <Card className="relative overflow-hidden space-y-4">
-        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploadingAvatar}
-            className="relative shrink-0 cursor-pointer rounded-2xl"
-            title="Tap to change your photo"
-            aria-label="Change profile photo"
-          >
-            <UserAvatar
-              src={currentAvatar}
-              name={customerName}
-              sizeClassName="w-24 h-24 sm:w-28 sm:h-28"
-              textClassName="text-3xl font-black"
-              roundedClassName="rounded-2xl"
-            />
-            {isUploadingAvatar && (
-              <div className="absolute inset-0 rounded-2xl bg-slate-950/50 flex items-center justify-center">
-                <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              </div>
-            )}
-          </button>
-
-          <div className="flex-1 min-w-0 w-full space-y-1 text-center sm:text-left">
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-              <div className="space-y-1">
-                <div className="flex items-center justify-center sm:justify-start gap-1.5">
-                  <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100">{customerName}</h2>
-                  {Boolean(user?.is_email_verified) && (
-                    <>
-                      <span className="sm:hidden"><VerifiedBadge title="Verified Customer" /></span>
-                      <span className="hidden sm:inline-flex"><VerifiedBadge label="Verified Customer" /></span>
-                    </>
-                  )}
+        {/* Banner + avatar overlap live in one wrapper so the internal -mt-11 overlap can't collide
+            with the Card's own space-y-4 rule (which only spaces between space-y-4's *direct*
+            children -- this whole wrapper counts as a single one of those). */}
+        <div className="-mx-[15px] -mt-[15px]">
+          <div className="h-[104px] rounded-t-2xl bg-gradient-to-br from-navy-900 to-navy-950" />
+          <div className="flex items-end justify-between gap-3.5 px-[15px] -mt-11">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploadingAvatar}
+              className="relative shrink-0 cursor-pointer rounded-2xl border-4 border-white dark:border-slate-900 shadow-lg"
+              title="Tap to change your photo"
+              aria-label="Change profile photo"
+            >
+              <UserAvatar
+                src={currentAvatar}
+                name={customerName}
+                sizeClassName="w-24 h-24"
+                textClassName="text-3xl font-black"
+                roundedClassName="rounded-2xl"
+              />
+              {isUploadingAvatar && (
+                <div className="absolute inset-0 rounded-2xl bg-slate-950/50 flex items-center justify-center">
+                  <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center justify-center sm:justify-start gap-1">
-                  <MapPin className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400 shrink-0" />
-                  <span>{customerLocation}</span>
-                </p>
-                <p className="text-[11px] font-medium text-slate-400 flex items-center justify-center sm:justify-start gap-1 pt-0.5">
-                  <Calendar className="w-3 h-3 text-slate-400" />
-                  <span>Customer since {customerSince}</span>
-                </p>
-              </div>
-
-              {!isEditing && (
-                <button
-                  type="button"
-                  onClick={startEditing}
-                  className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-extrabold text-xs shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0 mx-auto sm:mx-0"
-                >
-                  <Edit3 className="w-3.5 h-3.5" />
-                  <span>Edit</span>
-                </button>
               )}
-            </div>
+            </button>
+
+            {!isEditing && (
+              <button
+                type="button"
+                onClick={startEditing}
+                className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-extrabold text-xs shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>Edit</span>
+              </button>
+            )}
           </div>
+        </div>
+
+        <div className="space-y-1">
+          <div className="flex items-center gap-1.5">
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100">{customerName}</h2>
+            {Boolean(user?.is_email_verified) && (
+              <>
+                <span className="sm:hidden"><VerifiedBadge title="Verified Customer" /></span>
+                <span className="hidden sm:inline-flex"><VerifiedBadge label="Verified Customer" /></span>
+              </>
+            )}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+            <MapPin className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400 shrink-0" />
+            <span>{customerLocation}</span>
+          </p>
+          <p className="text-[11px] font-medium text-slate-400 flex items-center gap-1 pt-0.5">
+            <Calendar className="w-3 h-3 text-slate-400" />
+            <span>Customer since {customerSince}</span>
+          </p>
         </div>
 
         <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
