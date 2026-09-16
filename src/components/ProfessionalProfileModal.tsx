@@ -52,71 +52,60 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
         onClick={(e) => e.stopPropagation()}
       >
         
-        {/* Cover / Header section */}
-        <div className="relative bg-gradient-to-r from-navy-950 via-navy-900 to-slate-900 text-white p-4 sm:p-6 rounded-t-2xl">
+        {/* Cover / Header section -- banner bleeds full-bleed at the modal's top, the avatar drops
+            down to straddle the banner/body seam, and identity content lives in the white body
+            below it instead of inside the banner itself. */}
+        <div className="relative bg-gradient-to-r from-navy-950 via-navy-900 to-slate-900 h-[130px] sm:h-[150px] rounded-t-2xl shrink-0">
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 sm:top-6 sm:right-6 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer z-10"
+            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer z-10"
             title="Close Profile"
             aria-label="Close Profile"
           >
             <X className="w-5 h-5" />
           </button>
+          {professional.is_available_now && (
+            <span className="absolute top-4 left-4 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500 text-white text-[10px] sm:text-xs font-bold shadow">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white"></span>
+              </span>
+              Available Now
+            </span>
+          )}
+        </div>
 
-          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 mt-2 sm:mt-0">
-            <div className="relative shrink-0">
-              <img
-                src={professional.profile_picture}
-                alt={professional.name}
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-4 border-white/20 dark:border-slate-800/80 shadow-xl"
-              />
-              {professional.is_available_now && (
+        <div className="px-4 sm:px-6 pb-1 flow-root">
+          <div className="flex items-end justify-start -mt-12 sm:-mt-14 mb-3">
+            <img
+              src={professional.profile_picture}
+              alt={professional.name}
+              className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover border-4 border-white dark:border-slate-900 shadow-xl"
+            />
+          </div>
+
+          <div className="min-w-0">
+            <div className="flex items-center flex-wrap gap-2 mb-1.5">
+              <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100 truncate">{professional.name}</h2>
+              {professional.is_verified && (
                 <>
-                  {/* Mobile Pulse Dot */}
-                  <span className="sm:hidden absolute -bottom-1 -right-1 flex h-4 w-4">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-500 border-2 border-white dark:border-slate-900"></span>
-                  </span>
-                  {/* Desktop Full Badge */}
-                  <span className="hidden sm:inline-flex absolute -bottom-1 -right-1 px-2.5 py-0.5 bg-emerald-500 text-white text-[10px] font-bold rounded-full border-2 border-white dark:border-slate-900 shadow">
-                    Available Now
-                  </span>
+                  <span className="sm:hidden"><VerifiedBadge title="Verified Pro" /></span>
+                  <span className="hidden sm:inline-flex"><VerifiedBadge label="Verified Pro" /></span>
                 </>
               )}
             </div>
+            <p className="text-slate-500 dark:text-slate-400 font-medium text-xs sm:text-sm mb-3 line-clamp-2">{professional.tagline}</p>
 
-            <div className="text-center sm:text-left flex-1 min-w-0">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:flex-wrap justify-center sm:justify-start gap-2 mb-1.5">
-                <div className="flex items-center justify-center sm:justify-start gap-2">
-                  <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white truncate">{professional.name}</h2>
-                  {professional.is_available_now && (
-                    <span className="sm:hidden relative flex h-2.5 w-2.5 shrink-0" title="Available Now">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                    </span>
-                  )}
-                </div>
-                {professional.is_verified && (
-                  <VerifiedBadge
-                    label="Verified Pro"
-                    iconClassName="w-3.5 h-3.5"
-                    pillClassName="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-900/80 text-emerald-300 text-[10px] sm:text-xs font-semibold border border-emerald-500/30 self-center"
-                  />
-                )}
-              </div>
-              <p className="text-navy-300 font-medium text-xs sm:text-sm mb-3 line-clamp-2">{professional.tagline}</p>
-              
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-2 text-[11px] sm:text-xs text-slate-300">
-                <span className="flex items-center gap-1 bg-white/5 px-2.5 py-1 rounded-lg">
-                  <MapPin className="w-3.5 h-3.5 text-navy-400 shrink-0" /> <span className="truncate max-w-[150px]">{professional.neighborhood}, {professional.state}</span>
-                </span>
-                <span className="flex items-center gap-1 bg-white/5 px-2.5 py-1 rounded-lg">
-                  <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" /> <strong className="text-white">{professional.rating_average}</strong> ({professional.review_count} reviews)
-                </span>
-                <span className="flex items-center gap-1 bg-white/5 px-2.5 py-1 rounded-lg">
-                  <Briefcase className="w-3.5 h-3.5 text-navy-400 shrink-0" /> {professional.completed_jobs_count} jobs
-                </span>
-              </div>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-2 text-[11px] sm:text-xs text-slate-600 dark:text-slate-300">
+              <span className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 px-2.5 py-1 rounded-lg">
+                <MapPin className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400 shrink-0" /> <span className="truncate max-w-[150px]">{professional.neighborhood}, {professional.state}</span>
+              </span>
+              <span className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 px-2.5 py-1 rounded-lg">
+                <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" /> <strong className="text-slate-900 dark:text-slate-100">{professional.rating_average}</strong> ({professional.review_count} reviews)
+              </span>
+              <span className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 px-2.5 py-1 rounded-lg">
+                <Briefcase className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400 shrink-0" /> {professional.completed_jobs_count} jobs
+              </span>
             </div>
           </div>
         </div>
