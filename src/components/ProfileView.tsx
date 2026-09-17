@@ -2,8 +2,8 @@ import React, { useState, useRef } from 'react';
 import { Role, Professional, Booking } from '../types';
 import { Language } from '../translations';
 import {
-  MapPin, Calendar, CheckCircle2, Edit3,
-  LogOut, ChevronRight, Star
+  MapPin, CheckCircle2, Edit3,
+  ChevronRight, Star
 } from 'lucide-react';
 import { ConfirmationModal } from './ui/ConfirmationModal';
 import { UserAvatar, getInitials, getAvatarColor } from './ui/UserAvatar';
@@ -267,9 +267,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
         </div>
         <div className="sm:hidden pt-3 flex items-center justify-between gap-3">
-          <p className="text-[11px] font-medium text-slate-400 flex items-center gap-1">
-            <Calendar className="w-3 h-3 text-slate-400" />
-            <span>Customer since {customerSince}</span>
+          <p className="text-[11px] font-medium text-slate-400">
+            Customer since {customerSince}
           </p>
           {!isEditing && (
             <button
@@ -334,9 +333,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <MapPin className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400 shrink-0" />
               <span>{customerLocation}</span>
             </p>
-            <p className="text-[11px] font-medium text-slate-400 flex items-center gap-1 pt-0.5">
-              <Calendar className="w-3 h-3 text-slate-400" />
-              <span>Customer since {customerSince}</span>
+            <p className="text-[11px] font-medium text-slate-400 pt-0.5">
+              Customer since {customerSince}
             </p>
           </div>
         </div>
@@ -520,9 +518,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <button
           type="button"
           onClick={() => setShowLogoutConfirm(true)}
-          className="px-5 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 font-bold text-xs border border-rose-200 dark:border-rose-900/50 transition-colors cursor-pointer shrink-0 flex items-center justify-center gap-2"
+          className="px-5 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 font-bold text-xs border border-rose-200 dark:border-rose-900/50 transition-colors cursor-pointer shrink-0 flex items-center justify-center"
         >
-          <LogOut className="w-4 h-4" />
           <span>Sign Out of KaziHub</span>
         </button>
       </Card>
