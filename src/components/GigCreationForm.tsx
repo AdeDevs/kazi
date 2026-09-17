@@ -137,7 +137,7 @@ export const GigCreationForm: React.FC<GigCreationFormProps> = ({ professionalId
                 onChange={(val) => setFormData(prev => ({ ...prev, category: val as typeof prev.category }))}
                 options={CATEGORIES.map(cat => ({ value: cat, label: cat }))}
                 className="w-full"
-                buttonClassName="py-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium"
+                buttonClassName="py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium text-base!"
               />
             </div>
 
