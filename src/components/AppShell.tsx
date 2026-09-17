@@ -122,15 +122,20 @@ export const AppShell: React.FC<AppShellProps> = ({
             separate offset to keep in sync, the browser's flex layout does it every frame.
             Slides in from the left (it's a left-docked drawer, off-screen via -translate-x-full)
             with its own duration/easing per direction -- ease-out on open reads as responsive,
-            ease-in-out on close is a touch quicker so it doesn't linger. motion-reduce:transition-none
+            ease-in-out on close is a touch quicker so it doesn't linger. Transitioning `translate`
+            (not `transform`) is load-bearing: Tailwind v4 compiles translate-x-* utilities to the
+            native CSS `translate` property, so listing `transform` here animated nothing -- the
+            slide was silently snapping instantly the whole time despite the duration/easing being
+            declared correctly, which is why it only ever visibly animated on desktop (that's the
+            *width* hover-expand, a property this list did cover). motion-reduce:transition-none
             drops the animated slide entirely (position still changes, just instantly) rather than
             trying to fake a translate-free crossfade for an element that has to physically move
             on/off screen to do its job. */}
         <aside
           className={`flex flex-col border-r border-zinc-200 dark:border-zinc-800 fixed inset-y-0 left-0 md:sticky top-0 h-[100dvh] max-h-[100dvh] md:h-screen overflow-hidden shrink-0 z-50 md:z-30 bg-white dark:bg-zinc-950 group w-72 max-w-[85vw] md:w-[73px] md:hover:w-64 motion-reduce:transition-none ${
             isMobileSidebarOpen
-              ? 'translate-x-0 shadow-2xl transition-[transform,width] duration-[380ms] ease-out'
-              : '-translate-x-full md:translate-x-0 transition-[transform,width] duration-200 ease-in-out'
+              ? 'translate-x-0 shadow-2xl transition-[translate,width] duration-[380ms] ease-out'
+              : '-translate-x-full md:translate-x-0 transition-[translate,width] duration-200 ease-in-out'
           }`}
         >
           
