@@ -26,6 +26,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
 }) => {
   const [activeTab, setActiveTab] = useState<'about' | 'gigs' | 'portfolio' | 'reviews'>('about');
   const [gigs, setGigs] = useState<Gig[]>([]);
+  const [showAvatarLightbox, setShowAvatarLightbox] = useState(false);
   const [showWriteReview, setShowWriteReview] = useState(false);
   const [newRating, setNewRating] = useState(5);
   const [newHoverRating, setNewHoverRating] = useState(0);
@@ -88,13 +89,21 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
             wastes vertical space on a phone, and every professional has a real photo to show. */}
 
         {/* Mobile: full-bleed portrait hero */}
-        <div className="sm:hidden relative h-[260px] shrink-0 rounded-t-3xl overflow-hidden">
-          <img
-            src={professional.profile_picture}
-            alt={professional.name}
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/25 to-transparent" />
+        <div className="sm:hidden relative h-[200px] shrink-0 rounded-t-3xl overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setShowAvatarLightbox(true)}
+            className="absolute inset-0 w-full h-full cursor-pointer"
+            title="View photo"
+            aria-label="View photo full-screen"
+          >
+            <img
+              src={professional.profile_picture}
+              alt={professional.name}
+              className="w-full h-full object-cover"
+            />
+          </button>
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/25 to-transparent pointer-events-none" />
           <button
             onClick={onClose}
             className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer z-10"
@@ -112,7 +121,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
               Available Now
             </span>
           )}
-          <div className="absolute left-4 right-4 bottom-3.5 text-white">
+          <div className="absolute left-4 right-4 bottom-3.5 text-white pointer-events-none">
             <div className="flex items-center gap-1.5 mb-0.5">
               <h2 className="text-lg font-bold tracking-tight truncate">{professional.name}</h2>
               {professional.is_verified && <VerifiedBadge title="Verified Pro" />}
@@ -125,8 +134,8 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
             </p>
           </div>
         </div>
-        <div className="sm:hidden px-4 pt-3 pb-1">
-          <p className="text-slate-500 dark:text-slate-400 font-medium text-xs mb-2.5 line-clamp-2">{professional.tagline}</p>
+        <div className="sm:hidden px-4 pt-2 pb-1">
+          <p className="text-slate-500 dark:text-slate-400 font-medium text-xs mb-2 line-clamp-2">{professional.tagline}</p>
           <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-600 dark:text-slate-300">
             <span className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 px-2.5 py-1 rounded-lg">
               <MapPin className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400 shrink-0" /> <span className="truncate max-w-[150px]">{professional.neighborhood}, {professional.state}</span>
@@ -166,11 +175,19 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
 
         <div className="hidden sm:block px-6 pb-1 flow-root">
           <div className="flex items-end justify-start -mt-14 mb-3">
-            <img
-              src={professional.profile_picture}
-              alt={professional.name}
-              className="w-28 h-28 rounded-2xl object-cover border-4 border-white dark:border-slate-900 shadow-xl"
-            />
+            <button
+              type="button"
+              onClick={() => setShowAvatarLightbox(true)}
+              className="cursor-pointer rounded-2xl"
+              title="View photo"
+              aria-label="View photo full-screen"
+            >
+              <img
+                src={professional.profile_picture}
+                alt={professional.name}
+                className="w-28 h-28 rounded-2xl object-cover border-4 border-white dark:border-slate-900 shadow-xl"
+              />
+            </button>
           </div>
 
           <div className="min-w-0">
@@ -333,10 +350,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                       <div className="shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/60 dark:border-slate-800">
                         <button
                           type="button"
-                          onClick={() => {
-                            onClose();
-                            onOpenBooking(professional, svc.name);
-                          }}
+                          onClick={() => onOpenBooking(professional, svc.name)}
                           className="px-3 py-1.5 rounded-lg bg-navy-800 hover:bg-navy-900 text-white text-[11px] font-bold transition-colors cursor-pointer shadow-xs"
                         >
                           Request Service
@@ -359,10 +373,10 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                 {professional.portfolio.length === 0 ? (
                   <p className="text-xs text-slate-400 py-6 text-center">No portfolio items uploaded yet.</p>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex sm:grid sm:grid-cols-2 gap-3 sm:gap-4 overflow-x-auto sm:overflow-visible no-scrollbar snap-x snap-mandatory scroll-pl-3.5 sm:scroll-pl-0 -mx-3.5 px-3.5 sm:mx-0 sm:px-0 pb-1 sm:pb-0">
                     {professional.portfolio.map((item) => (
-                      <div key={item.id} className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden bg-white dark:bg-slate-900 shadow-xs hover:shadow-md transition-shadow flex flex-col">
-                        <img src={item.image_url} alt={item.title} className="w-full aspect-video sm:h-36 object-cover" />
+                      <div key={item.id} className="shrink-0 w-56 snap-start sm:w-auto sm:shrink border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden bg-white dark:bg-slate-900 shadow-xs hover:shadow-md transition-shadow flex flex-col">
+                        <img src={item.image_url} alt={item.title} className="w-full aspect-video object-cover" />
                         <div className="p-3.5 flex-1 flex flex-col justify-between">
                           <div>
                             <h5 className="font-bold text-slate-900 dark:text-slate-100 text-xs sm:text-sm mb-1">{item.title}</h5>
@@ -417,7 +431,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
               ) : (
                 professional.portfolio.map((item) => (
                   <div key={item.id} className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden bg-white dark:bg-slate-900 shadow-xs hover:shadow-md transition-shadow flex flex-col">
-                    <img src={item.image_url} alt={item.title} className="w-full aspect-video sm:h-40 object-cover" />
+                    <img src={item.image_url} alt={item.title} className="w-full aspect-video object-cover" />
                     <div className="p-4 flex-1 flex flex-col justify-between">
                       <div>
                         <h5 className="font-bold text-slate-900 dark:text-slate-100 text-sm mb-1">{item.title}</h5>
@@ -596,16 +610,11 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
 
         {/* Footer actions -- square on mobile (flush with the bottom-sheet's screen edge),
             rounded to match the dialog's own corners on desktop. */}
-        <div className="shrink-0 px-4 sm:px-8 py-4 sm:py-5 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 sm:rounded-b-2xl">
+        <div className="shrink-0 px-4 sm:px-8 py-3 sm:py-3.5 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:rounded-b-2xl">
           <div className="flex items-center justify-between sm:block">
-            <div>
-              <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">Response & Booking</p>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="text-sm font-black text-slate-900 dark:text-slate-100">
-                  Ready to Help
-                </span>
-              </div>
-            </div>
+            <span className="text-sm font-black text-slate-900 dark:text-slate-100">
+              Ready to Help
+            </span>
             {professional.is_available_now && (
               <span className="sm:hidden px-2 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold rounded-md border border-emerald-500/20">
                 Online
@@ -624,10 +633,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
               <span>Message</span>
             </button>
             <button
-              onClick={() => {
-                onClose();
-                onOpenBooking(professional);
-              }}
+              onClick={() => onOpenBooking(professional)}
               className="px-4 sm:px-6 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white text-xs sm:text-sm font-bold shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
             >
               <Calendar className="w-4 h-4 flex-shrink-0" />
@@ -638,9 +644,12 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
 
         {/* Complaint / Dispute Modal */}
         {showComplaintModal && (
-          <div 
+          <div
             className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in"
-            onClick={() => setShowComplaintModal(false)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowComplaintModal(false);
+            }}
           >
             <div 
               className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl p-4 sm:p-5 space-y-5 border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[90vh] overflow-y-auto"
@@ -752,6 +761,30 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
         )}
 
       </div>
+
+      {/* Full-screen dismissible avatar view */}
+      {showAvatarLightbox && (
+        <div
+          className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-xs flex items-center justify-center p-4"
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowAvatarLightbox(false);
+          }}
+        >
+          <div className="relative max-w-2xl max-h-[85vh] overflow-hidden rounded-2xl" onClick={(e) => e.stopPropagation()}>
+            <img src={professional.profile_picture} alt={professional.name} className="w-full h-full object-contain" />
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowAvatarLightbox(false);
+              }}
+              className="absolute top-3 right-3 p-2 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
