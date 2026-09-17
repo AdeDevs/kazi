@@ -91,16 +91,9 @@ export const ProfessionalGigs: React.FC<ProfessionalGigsProps> = ({ professional
             <Layers className="w-8 h-8 text-slate-400" />
           </div>
           <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">No Gigs Yet</h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 max-w-sm">
+          <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm">
             You haven't created any service offerings yet. Start building your catalog to attract more customers.
           </p>
-          <button
-            onClick={() => setIsCreating(true)}
-            className="px-6 py-3 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-sm shadow-md transition-all flex items-center gap-2 justify-center mx-auto"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Create Your First Gig</span>
-          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">

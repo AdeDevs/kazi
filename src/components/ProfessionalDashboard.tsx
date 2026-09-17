@@ -1301,7 +1301,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
       {homeSubTab === 'portfolio' && (
         <div className="space-y-6">
           {/* Header + Add Showcase toggle */}
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Portfolio Showcase</h3>
               <p className="text-xs text-slate-500">Photos of completed work that customers see on your profile.</p>
@@ -1309,7 +1309,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
             <button
               type="button"
               onClick={() => setShowAddPortfolioForm(v => !v)}
-              className="px-4 py-2.5 bg-navy-800 hover:bg-navy-900 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-2 shrink-0"
+              className="px-5 py-2.5 bg-navy-800 hover:bg-navy-900 text-white font-bold text-sm rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-2 justify-center shrink-0"
             >
               {showAddPortfolioForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
               <span>{showAddPortfolioForm ? 'Cancel' : 'Add Showcase'}</span>
@@ -1425,7 +1425,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                   </button>
                 )}
               </div>
-              <div className="flex gap-4 overflow-x-auto no-scrollbar pb-1 snap-x snap-mandatory -mx-4 px-4 sm:mx-0 sm:px-0">
+              <div className="flex gap-4 overflow-x-auto no-scrollbar pb-1 snap-x snap-mandatory scroll-pl-4 sm:scroll-pl-0 -mx-4 px-4 sm:mx-0 sm:px-0">
                 {professional.portfolio.map((item) => (
                   <div key={item.id} className="shrink-0 w-64 snap-start bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
                     <img src={item.image_url} alt={item.title} className="w-full h-40 object-cover" />
