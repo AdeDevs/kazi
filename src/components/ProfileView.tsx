@@ -28,6 +28,8 @@ interface ProfileViewProps {
   currentLanguage?: Language;
   onLanguageChange?: (lang: Language) => void;
   onTabChange?: (tab: string) => void;
+  scrollToSection?: string | null;
+  onScrollToSectionHandled?: () => void;
 }
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
@@ -45,7 +47,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onDeleteAccount,
   currentLanguage = 'English (Nigeria)',
   onLanguageChange,
-  onTabChange
+  onTabChange,
+  scrollToSection,
+  onScrollToSectionHandled
 }) => {
   const { user, updateUser, uploadProfilePicture } = useAuth();
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
@@ -191,6 +195,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         onTabChange={onTabChange}
         onLogout={onLogout}
         onDeleteAccount={onDeleteAccount}
+        scrollToSection={scrollToSection}
+        onScrollToSectionHandled={onScrollToSectionHandled}
       />
     );
   }

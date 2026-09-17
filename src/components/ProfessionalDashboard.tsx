@@ -11,7 +11,7 @@ import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import {
   Briefcase, DollarSign, Star, CheckCircle2, Clock, Plus, Trash2,
-  MapPin, User, Settings, Image as ImageIcon, Calendar, Edit3,
+  MapPin, User, Settings, Image as ImageIcon, Calendar, Layers,
   MessageSquare, ClipboardList, ArrowRight, ArrowLeft, Eye, X, Check, AlertCircle
 } from 'lucide-react';
 
@@ -22,6 +22,8 @@ interface ProfessionalDashboardProps {
   onUpdateProfile: (updated: Partial<Professional>) => void;
   activeTab?: string;
   onTabChange?: (tab: string, customerId?: string) => void;
+  /** Navigates to the Profile page and scrolls straight to the Work Portfolio section. */
+  onManagePortfolio?: () => void;
   unreadCount?: number;
   messages?: ChatMessage[];
   onSendMessage?: (customerId: string, text: string, mediaProps?: Partial<ChatMessage>) => void;
@@ -42,6 +44,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
   onUpdateProfile,
   activeTab = 'explore',
   onTabChange,
+  onManagePortfolio,
   unreadCount = 2,
   messages = [],
   onSendMessage,
@@ -1263,10 +1266,10 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
             </div>
             <button
               type="button"
-              onClick={() => onTabChange && onTabChange('profile')}
+              onClick={() => onManagePortfolio ? onManagePortfolio() : onTabChange && onTabChange('profile')}
               className="px-5 py-2.5 bg-navy-800 hover:bg-navy-900 text-white font-bold text-sm rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-2 justify-center shrink-0"
             >
-              <Edit3 className="w-4 h-4" />
+              <Layers className="w-4 h-4" />
               <span>Manage Portfolio</span>
             </button>
           </div>

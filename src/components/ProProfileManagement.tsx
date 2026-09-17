@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Professional, ServiceItem, PortfolioItem, ServicePricingType, Category } from '../types';
 import { formatCurrency } from '../utils';
 import { CATEGORIES } from '../mockData';
@@ -24,13 +24,19 @@ interface ProProfileManagementProps {
   onTabChange?: (tab: string) => void;
   onLogout?: () => void;
   onDeleteAccount?: () => void;
+  /** Section id to scroll to on mount/update -- lets a CTA elsewhere in the app (e.g. Home's
+   *  "Manage Portfolio") land directly on a specific section here instead of just the page top. */
+  scrollToSection?: string | null;
+  onScrollToSectionHandled?: () => void;
 }
 
 export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
   activeProfessional,
   onUpdateProfile,
   onTabChange,
-  onLogout
+  onLogout,
+  scrollToSection,
+  onScrollToSectionHandled
 }) => {
   const { uploadProfilePicture } = useAuth();
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
@@ -390,6 +396,14 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
     triggerToast('Account identity and liveness check verified!');
   };
 
+  useEffect(() => {
+    if (!scrollToSection) return;
+    const el = document.getElementById(scrollToSection);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    onScrollToSectionHandled?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scrollToSection]);
+
   return (
     <div className="w-full max-w-none space-y-4 animate-in fade-in">
       {/* Toast Notification */}
@@ -741,7 +755,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
       {/* 4. WORK PORTFOLIO */}
       {/* overflow-hidden: same reason as Services & Pricing above -- masks the horizontal-scroll
           row's bleed to the card's own rounded corners instead of a plain rectangular clip. */}
-      <Card className="space-y-3.5 overflow-hidden">
+      <Card id="work-portfolio" className="space-y-3.5 overflow-hidden">
         <CardHeader
           title="Work Portfolio"
           subtitle="Photos of completed installations and job sites."

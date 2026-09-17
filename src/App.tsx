@@ -40,6 +40,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<string>('explore');
   const previousTabRef = useRef<string>('explore');
   const pageScrollPositionsRef = useRef<Record<string, number>>({});
+  // Set alongside a tab change by any CTA that names a specific section (e.g. "Manage Portfolio")
+  // so the target page can scroll straight to that section instead of just landing at its top.
+  const [profileScrollTarget, setProfileScrollTarget] = useState<string | null>(null);
 
   // Continuously record scroll position for the current page
   useEffect(() => {
@@ -750,6 +753,8 @@ export default function App() {
           onLanguageChange={setCurrentLanguage}
           onLogout={handleLogout}
           onTabChange={handleTabChange}
+          scrollToSection={profileScrollTarget}
+          onScrollToSectionHandled={() => setProfileScrollTarget(null)}
           onDeleteAccount={() => {
             if (window.confirm('Are you sure you want to permanently delete your KaziHub account? All bookings and history will be removed.')) {
               handleLogout();
@@ -832,6 +837,10 @@ export default function App() {
           onUpdateProfile={handleUpdateProfile}
           activeTab={activeTab}
           onTabChange={handleTabChange}
+          onManagePortfolio={() => {
+            setProfileScrollTarget('work-portfolio');
+            handleTabChange('profile');
+          }}
           unreadCount={messages.filter(m => m.recipientId === activeProfessional.id && m.status !== 'read').length}
           messages={messages.filter(m => m.recipientId === activeProfessional.id || m.senderId === activeProfessional.id)}
           onSendMessage={handleProfessionalSendMessage}

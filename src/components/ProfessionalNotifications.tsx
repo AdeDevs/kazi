@@ -257,7 +257,7 @@ export const ProfessionalNotifications: React.FC<ProfessionalNotificationsProps>
                     <div className="flex items-center gap-2 min-w-0">
                       <h3 className={`text-sm tracking-tight truncate ${
                         notification.isRead
-                          ? 'font-bold text-slate-800 dark:text-slate-200'
+                          ? 'font-bold text-slate-400 dark:text-slate-500'
                           : 'font-black text-slate-900 dark:text-white'
                       }`}>
                         {notification.title}
@@ -285,7 +285,11 @@ export const ProfessionalNotifications: React.FC<ProfessionalNotificationsProps>
                     )}
                   </div>
 
-                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+                  <p className={`text-xs leading-relaxed font-medium ${
+                    notification.isRead
+                      ? 'text-slate-400 dark:text-slate-600'
+                      : 'text-slate-600 dark:text-slate-300'
+                  }`}>
                     {notification.description}
                   </p>
 

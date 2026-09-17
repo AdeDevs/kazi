@@ -1893,7 +1893,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
         <div className="flex md:hidden flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2.5">
-              <span>Notifications & Alerts</span>
+              <span>Notifications</span>
               {unreadCount > 0 && (
                 <span className="px-2.5 py-0.5 rounded-full bg-brand-orange-700 text-white text-xs font-bold shadow-xs flex items-center justify-center text-center">
                   {unreadCount} unread

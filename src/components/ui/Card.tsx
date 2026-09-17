@@ -12,9 +12,11 @@ interface CardProps {
   tone?: 'default' | 'danger';
   as?: 'div' | 'button';
   onClick?: () => void;
+  /** Lets a CTA elsewhere in the app scroll/anchor straight to this card via getElementById. */
+  id?: string;
 }
 
-export const Card: React.FC<CardProps> = ({ children, className = '', tone = 'default', as = 'div', onClick }) => {
+export const Card: React.FC<CardProps> = ({ children, className = '', tone = 'default', as = 'div', onClick, id }) => {
   const toneClasses =
     tone === 'danger'
       ? 'border-rose-200 dark:border-rose-950/40'
@@ -24,14 +26,14 @@ export const Card: React.FC<CardProps> = ({ children, className = '', tone = 'de
 
   if (as === 'button') {
     return (
-      <button type="button" className={classes} onClick={onClick}>
+      <button type="button" id={id} className={classes} onClick={onClick}>
         {children}
       </button>
     );
   }
 
   return (
-    <div className={classes} onClick={onClick}>
+    <div id={id} className={classes} onClick={onClick}>
       {children}
     </div>
   );

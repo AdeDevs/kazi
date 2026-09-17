@@ -357,8 +357,8 @@ export const AppShell: React.FC<AppShellProps> = ({
                  activeTab === 'bookings' ? (currentRole === 'customer' ? 'My Bookings & Jobs' : 'Service Jobs') :
                  activeTab === 'jobs' ? 'Service Jobs' :
                  activeTab === 'gigs' ? 'My Gigs' :
-                 activeTab === 'messages' ? 'Messages & Inquiries' :
-                 activeTab === 'notifications' ? 'Notifications & Alerts' :
+                 activeTab === 'messages' ? 'Messages' :
+                 activeTab === 'notifications' ? 'Notifications' :
                  activeTab === 'settings' ? 'Account Settings' :
                  activeTab === 'saved' ? 'Saved Professionals' :
                  activeTab === 'profile' ? 'Profile & Preferences' : activeTab}
@@ -371,7 +371,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                 </span>
               )}
               {activeTab === 'notifications' && (notificationsUnreadCount || 0) > 0 && (
-                <span className="px-2.5 py-0.5 rounded-full bg-brand-orange-700 text-white text-xs font-bold shadow-xs">
+                <span className="inline-flex items-center leading-none px-2.5 py-0.5 rounded-full bg-brand-orange-700 text-white text-xs font-bold shadow-xs">
                   {notificationsUnreadCount} unread
                 </span>
               )}
