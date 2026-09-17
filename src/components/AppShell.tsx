@@ -10,6 +10,7 @@ import { ConfirmationModal } from './ui/ConfirmationModal';
 import { UserAvatar } from './ui/UserAvatar';
 import { useAuth } from '../context/AuthContext';
 import { AuthModal } from './AuthModal';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 interface AppShellProps {
   currentRole: Role;
@@ -56,6 +57,7 @@ export const AppShell: React.FC<AppShellProps> = ({
 }) => {
   const { user, isAuthenticated, openAuthModal } = useAuth();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  useBodyScrollLock(isMobileSidebarOpen);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // Scroll to top whenever activeTab changes so new views don't inherit previous page scroll position

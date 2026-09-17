@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { CustomDropdown } from './CustomDropdown';
 import { VerifiedBadge } from './ui/VerifiedBadge';
+import { SheetDragHandle } from './ui/SheetDragHandle';
+import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
 import { formatCurrency, formatServicePrice } from '../utils';
 import { 
   X, Calendar, Clock, MapPin, FileText, CheckCircle2, 
@@ -30,7 +32,7 @@ const SAMPLE_LANDMARK_PHOTOS = [
 ];
 
 export const BookingModal: React.FC<BookingModalProps> = ({
-  professional,
+  professional: professionalProp,
   isOpen,
   onClose,
   onSubmitBooking,
@@ -41,16 +43,16 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [step, setStep] = useState<'form' | 'review' | 'confirmed'>('form');
 
   // Available services catalog for this specific professional
-  const servicesList: ServiceItem[] = professional?.services && professional.services.length > 0
-    ? professional.services
-    : professional
+  const servicesList: ServiceItem[] = professionalProp?.services && professionalProp.services.length > 0
+    ? professionalProp.services
+    : professionalProp
       ? [{
-          id: `custom-srv-${professional.id}`,
-          name: `${professional.category} Standard Service`,
-          category: professional.category,
-          description: professional.tagline || professional.bio,
-          pricing_type: professional.pricing_type || 'starting',
-          price: professional.base_price || professional.hourly_rate,
+          id: `custom-srv-${professionalProp.id}`,
+          name: `${professionalProp.category} Standard Service`,
+          category: professionalProp.category,
+          description: professionalProp.tagline || professionalProp.bio,
+          pricing_type: professionalProp.pricing_type || 'starting',
+          price: professionalProp.base_price || professionalProp.hourly_rate,
           duration_estimate: '1-2 hrs'
         }]
       : [];
@@ -76,16 +78,16 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   // Default initial service selection on opening
   useEffect(() => {
-    if (professional) {
-      const list = professional.services && professional.services.length > 0
-        ? professional.services
+    if (professionalProp) {
+      const list = professionalProp.services && professionalProp.services.length > 0
+        ? professionalProp.services
         : [{
-            id: `custom-srv-${professional.id}`,
-            name: `${professional.category} Standard Service`,
-            category: professional.category,
-            description: professional.tagline || professional.bio,
-            pricing_type: professional.pricing_type || 'starting',
-            price: professional.base_price || professional.hourly_rate,
+            id: `custom-srv-${professionalProp.id}`,
+            name: `${professionalProp.category} Standard Service`,
+            category: professionalProp.category,
+            description: professionalProp.tagline || professionalProp.bio,
+            pricing_type: professionalProp.pricing_type || 'starting',
+            price: professionalProp.base_price || professionalProp.hourly_rate,
             duration_estimate: '1-2 hrs'
           }];
 
@@ -100,15 +102,39 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         setSelectedServiceItem(list[0]);
       }
 
-      setAddress(`${professional.neighborhood}, Oyo State`);
+      setAddress(`${professionalProp.neighborhood}, Oyo State`);
       // Default date to tomorrow
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       setDate(tomorrow.toISOString().split('T')[0]);
     }
-  }, [professional, isOpen, preselectedService]);
+  }, [professionalProp, isOpen, preselectedService]);
 
-  if (!isOpen || !professional) return null;
+  // Keeps the last real professional around while closing, same reasoning as
+  // ProfessionalProfileModal: the parent typically clears its selected-professional state in the
+  // same tick it flips isOpen to false, but this sheet stays mounted a little longer to play its
+  // exit animation and needs real content to render during that window.
+  const [cachedProfessional, setCachedProfessional] = useState(professionalProp);
+  useEffect(() => {
+    if (professionalProp) setCachedProfessional(professionalProp);
+  }, [professionalProp]);
+
+  const handleResetModal = () => {
+    setStep('form');
+    setIssueDescription('');
+    setProblemImages([]);
+    setLandmarkImages([]);
+    setLandmark('');
+    setGpsCoords(null);
+    setConfirmedBooking(null);
+    setValidationError(null);
+    onClose();
+  };
+
+  const sheet = useSlideUpSheet(isOpen, handleResetModal);
+
+  if (!sheet.shouldRender || !cachedProfessional) return null;
+  const professional = cachedProfessional;
 
   const currentPricingType: ServicePricingType = selectedServiceItem?.pricing_type || professional.pricing_type || 'starting';
   const isQuoteService = currentPricingType === 'quote_required';
@@ -246,30 +272,27 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     setStep('confirmed');
   };
 
-  const handleResetModal = () => {
-    setStep('form');
-    setIssueDescription('');
-    setProblemImages([]);
-    setLandmarkImages([]);
-    setLandmark('');
-    setGpsCoords(null);
-    setConfirmedBooking(null);
-    setValidationError(null);
-    onClose();
-  };
-
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200"
+    <div
+      className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-md ${sheet.backdropAnimationClasses}`}
       onClick={handleResetModal}
     >
-      <div 
-        className="bg-white dark:bg-slate-900 rounded-2xl max-w-2xl w-full max-h-[calc(100vh-1rem)] sm:max-h-[92vh] overflow-y-auto shadow-2xl border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 flex flex-col transition-all"
+      <div
+        className={`bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-2xl max-w-2xl w-full max-h-[92vh] overflow-y-auto shadow-2xl border-t sm:border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 flex flex-col ${sheet.sheetAnimationClasses}`}
+        style={sheet.dragStyle}
         onClick={(e) => e.stopPropagation()}
       >
-        
-        {/* Modal Sticky Header */}
-        <div className="sticky top-0 z-20 flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md">
+        {/* Modal Sticky Header -- the mobile drag handle lives in the same sticky container as a
+            top row, rather than as a separate stacked sticky element, so there's no pixel-offset
+            math between the two to keep in sync. */}
+        <div className="sticky top-0 z-20 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md">
+          <div
+            className="sm:hidden pt-3 pb-1.5 cursor-grab active:cursor-grabbing touch-none"
+            {...sheet.dragHandleProps}
+          >
+            <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto" aria-hidden="true" />
+          </div>
+          <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center gap-2.5 sm:gap-3">
             <div className="relative shrink-0">
               <img src={professional.profile_picture} alt={professional.name} className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl object-cover shadow-xs border border-navy-800/30" />
@@ -294,6 +317,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           >
             <X className="w-5 h-5" />
           </button>
+          </div>
         </div>
 
         {/* ========================================================= */}
