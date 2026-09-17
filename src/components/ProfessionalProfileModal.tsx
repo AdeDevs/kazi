@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Star, ShieldCheck, MapPin, Briefcase, Award, Phone, Mail, CheckCircle2, MessageSquare, Calendar, AlertCircle, ShieldAlert, Check, Tag, Clock } from 'lucide-react';
 import { Professional, ServiceItem, ServicePricingType } from '../types';
 import { VerifiedBadge } from './ui/VerifiedBadge';
-import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
+import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
 
 
 interface ProfessionalProfileModalProps {
@@ -45,60 +45,9 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
     if (professionalProp) setCachedProfessional(professionalProp);
   }, [professionalProp]);
 
-  // Same mount-for-one-more-frame pattern as ConfirmationModal, so this can slide/zoom back out
-  // instead of just vanishing when isOpen goes false.
-  const [shouldRender, setShouldRender] = useState(isOpen);
-  const [isClosing, setIsClosing] = useState(false);
-  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const EXIT_ANIMATION_MS = 200;
+  const sheet = useSlideUpSheet(isOpen, onClose);
 
-  useEffect(() => {
-    if (isOpen) {
-      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
-      setShouldRender(true);
-      setIsClosing(false);
-    } else if (shouldRender) {
-      setIsClosing(true);
-      closeTimeoutRef.current = setTimeout(() => {
-        setShouldRender(false);
-        setIsClosing(false);
-      }, EXIT_ANIMATION_MS);
-    }
-    return () => {
-      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
-
-  useBodyScrollLock(shouldRender);
-
-  // Real drag-to-dismiss on the mobile handle bar, identical mechanics to ConfirmationModal's.
-  const [dragY, setDragY] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStartYRef = useRef<number | null>(null);
-  const DRAG_DISMISS_THRESHOLD = 96;
-
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    dragStartYRef.current = e.clientY;
-    setIsDragging(true);
-    e.currentTarget.setPointerCapture(e.pointerId);
-  };
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (dragStartYRef.current === null) return;
-    const delta = e.clientY - dragStartYRef.current;
-    setDragY(delta > 0 ? delta : 0);
-  };
-  const endDrag = () => {
-    if (dragStartYRef.current === null) return;
-    dragStartYRef.current = null;
-    setIsDragging(false);
-    if (dragY > DRAG_DISMISS_THRESHOLD) {
-      onClose();
-    }
-    setDragY(0);
-  };
-
-  if (!shouldRender || !cachedProfessional) return null;
+  if (!sheet.shouldRender || !cachedProfessional) return null;
   const professional = cachedProfessional;
 
   const handleOpenRateForm = () => {
@@ -108,30 +57,20 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-xs transition-opacity duration-200 ${
-        isClosing ? 'opacity-0' : 'opacity-100'
-      }`}
+      className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-xs ${sheet.backdropAnimationClasses}`}
       onClick={onClose}
     >
       <div
-        className={`bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-2xl max-w-3xl w-full max-h-[92vh] sm:max-h-[90vh] shadow-2xl border-t sm:border border-slate-200 dark:border-slate-800 relative flex flex-col ${
-          isDragging ? '' : 'transition-transform duration-200 ease-out'
-        } ${
-          isClosing
-            ? 'animate-out slide-out-to-bottom-full sm:slide-out-to-bottom-0 sm:zoom-out-95 duration-200 ease-in'
-            : 'animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-250 ease-out'
-        }`}
-        style={dragY ? { transform: `translateY(${dragY}px)` } : undefined}
+        className={`bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-2xl max-w-3xl w-full max-h-[92vh] sm:max-h-[90vh] shadow-2xl border-t sm:border border-slate-200 dark:border-slate-800 relative flex flex-col ${sheet.sheetAnimationClasses}`}
+        style={sheet.dragStyle}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Mobile drag handle -- small visible pill, generous invisible grab zone around it,
-            matching ConfirmationModal's handle exactly so every sheet in the app behaves the same. */}
+            matching ConfirmationModal's handle exactly so every sheet in the app behaves the same.
+            Bespoke (not <SheetDragHandle>) because it sits over the photo hero, not a padded card. */}
         <div
           className="sm:hidden absolute top-0 left-0 right-0 pt-3 pb-2 cursor-grab active:cursor-grabbing touch-none z-20"
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={endDrag}
-          onPointerCancel={endDrag}
+          {...sheet.dragHandleProps}
         >
           <div className="w-12 h-1.5 bg-white/60 rounded-full mx-auto" aria-hidden="true" />
         </div>
