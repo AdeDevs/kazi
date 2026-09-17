@@ -8,7 +8,9 @@ import {
 import { UserCreate } from '../types/auth';
 import { TermsAndPrivacyModal } from './ui/TermsAndPrivacyModal';
 import { SheetDragHandle } from './ui/SheetDragHandle';
+import { ConfirmationModal } from './ui/ConfirmationModal';
 import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
+import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import { CustomDropdown } from './CustomDropdown';
 
 const NIGERIAN_STATES = [
@@ -67,6 +69,13 @@ export const AuthModal: React.FC = () => {
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [showRegConfirmPassword, setShowRegConfirmPassword] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(true);
+
+  // Only the signup form is substantial enough to warrant an unsaved-changes guard -- login is
+  // two low-stakes fields, and OTP/forgot/reset steps are short-lived by nature.
+  const isSignupFormDirty =
+    authModalView === 'register' &&
+    Boolean(regFirstName || regLastName || regEmail || regPassword || regConfirmPassword || regPhone || regNin || regState !== 'Oyo');
+  const closeGuard = useUnsavedChangesGuard(isSignupFormDirty, closeAuthModal);
   const [modalTouched, setModalTouched] = useState<Record<string, boolean>>({});
 
   // Password strength helper
@@ -142,14 +151,15 @@ export const AuthModal: React.FC = () => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isAuthModalOpen) {
-        closeAuthModal();
+        closeGuard.requestClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthModalOpen, closeAuthModal]);
 
-  const sheet = useSlideUpSheet(isAuthModalOpen, closeAuthModal);
+  const sheet = useSlideUpSheet(isAuthModalOpen, closeGuard.requestClose);
 
   if (!sheet.shouldRender) return null;
 
@@ -347,7 +357,7 @@ export const AuthModal: React.FC = () => {
 
           <button
             type="button"
-            onClick={closeAuthModal}
+            onClick={closeGuard.requestClose}
             className="p-1.5 rounded-xl text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
             title="Close modal"
             aria-label="Close modal"
@@ -1100,6 +1110,17 @@ export const AuthModal: React.FC = () => {
         isOpen={isTermsOpen}
         onClose={() => setIsTermsOpen(false)}
         initialTab={termsTab}
+      />
+
+      <ConfirmationModal
+        isOpen={closeGuard.showDiscardConfirm}
+        onClose={() => closeGuard.setShowDiscardConfirm(false)}
+        onConfirm={closeGuard.confirmDiscard}
+        title="Discard Unsaved Changes?"
+        description="You haven't finished creating your account yet. Closing now will discard what you've entered."
+        confirmText="Discard Changes"
+        cancelText="Keep Editing"
+        type="warning"
       />
     </div>
   );
