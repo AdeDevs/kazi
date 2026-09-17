@@ -135,6 +135,17 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
     }
   }, [selectedCustomerId, activeMessages.length]);
 
+  // Esc closes the open chat (WhatsApp Web behavior) -- this only deselects the conversation, it
+  // never touches the list pane's own state or scroll position.
+  useEffect(() => {
+    if (!selectedCustomerId) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedCustomerId(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedCustomerId]);
+
   // Recording Timer
   useEffect(() => {
     if (isRecording) {
@@ -402,22 +413,23 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
     </div>
   );
 
-  // Chat header -- identical between the mobile full-screen chat and the desktop pane, except the
-  // back arrow: desktop keeps the list visible alongside, so there's nothing to "go back" to there.
+  // Chat header -- shared between the mobile full-screen chat and the desktop pane, except the
+  // leading control: mobile gets a back arrow (there's a separate list page to return to), desktop
+  // gets a close button in that same slot (the list pane is already visible alongside, so this
+  // just deselects the conversation rather than navigating anywhere). Both call the same handler.
   // Shares MESSAGES_HEADER_HEIGHT with the desktop sidebar's search header below it, so their
   // bottom edges line up across both panes instead of each sizing to its own content.
-  const renderChatHeader = (showBackButton: boolean) => (
+  const renderChatHeader = (isMobile: boolean) => (
     <div className={`${MESSAGES_HEADER_HEIGHT} px-3.5 sm:px-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900 shrink-0`}>
       <div className="flex items-center gap-3 min-w-0">
-        {showBackButton && (
-          <button
-            onClick={() => setSelectedCustomerId(null)}
-            className="-ml-1.5 p-1.5 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
-            title="Back to all messages" aria-label="Back to all messages"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-        )}
+        <button
+          onClick={() => setSelectedCustomerId(null)}
+          className="-ml-1.5 p-1.5 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
+          title={isMobile ? 'Back to all messages' : 'Close chat'}
+          aria-label={isMobile ? 'Back to all messages' : 'Close chat'}
+        >
+          {isMobile ? <ArrowLeft className="w-5 h-5" /> : <X className="w-5 h-5" />}
+        </button>
         <div className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300 font-bold text-sm border border-slate-200/80 dark:border-slate-700/80 shrink-0">
           {activeConversation?.customerName.charAt(0)}
         </div>

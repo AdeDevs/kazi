@@ -400,6 +400,17 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
     }
   }, [selectedProId, activeMessages.length]);
 
+  // Esc closes the open chat (WhatsApp Web behavior) -- this only deselects the conversation, it
+  // never touches the list pane's own state or scroll position.
+  useEffect(() => {
+    if (!selectedProId) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedProId(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedProId]);
+
   const handleSendText = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!inputText.trim() || !selectedProId || !onSendMessage) return;
@@ -492,22 +503,23 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
   // Decibel waveform sample heights for WhatsApp style full-width wave
   const waveformBars = [8, 14, 22, 12, 28, 18, 10, 24, 30, 16, 26, 12, 20, 28, 14, 8, 22, 16, 24, 10, 14, 26, 18, 30, 12, 20, 28, 14, 22, 16, 24, 12, 18, 26, 10, 22, 14, 28, 16, 20];
 
-  // Chat header -- identical between the mobile full-screen chat and the desktop pane, except the
-  // back arrow: desktop keeps the list visible alongside, so there's nothing to "go back" to there.
-  const renderChatHeader = (showBackButton: boolean) => {
+  // Chat header -- shared between the mobile full-screen chat and the desktop pane, except the
+  // leading control: mobile gets a back arrow (there's a separate list page to return to), desktop
+  // gets a close button in that same slot (the list pane is already visible alongside, so this
+  // just deselects the conversation rather than navigating anywhere). Both call the same handler.
+  const renderChatHeader = (isMobile: boolean) => {
     if (!activeConversation) return null;
     return (
       <div className={`${MESSAGES_HEADER_HEIGHT} px-3 sm:px-3.5 border-b border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between gap-2 sm:gap-3 shrink-0`}>
         <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
-          {showBackButton && (
-            <button
-              onClick={() => setSelectedProId(null)}
-              className="-ml-1 p-1.5 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
-              title="Back to all messages" aria-label="Back to all messages"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-          )}
+          <button
+            onClick={() => setSelectedProId(null)}
+            className="-ml-1 p-1.5 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
+            title={isMobile ? 'Back to all messages' : 'Close chat'}
+            aria-label={isMobile ? 'Back to all messages' : 'Close chat'}
+          >
+            {isMobile ? <ArrowLeft className="w-5 h-5" /> : <X className="w-5 h-5" />}
+          </button>
           {/* Clickable Artisan Info -> Opens Profile */}
           <div
             onClick={() => onSelectProForProfile && onSelectProForProfile(activeConversation.professional)}
