@@ -792,16 +792,10 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
                 <span className="hidden sm:inline">Verified</span>
               </span>
             ) : (
-              <button
-                type="button"
-                onClick={() => setShowKYCModal(true)}
-                className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
-                title="Start KYC Verification"
-                aria-label="Start KYC Verification"
-              >
-                <UserCheck className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                <span className="hidden sm:inline">Start KYC</span>
-              </button>
+              <span className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-400 font-extrabold text-xs border border-amber-500/20 flex items-center gap-1.5 shrink-0">
+                <Clock className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-amber-600 dark:text-amber-400" />
+                <span className="hidden sm:inline">Pending</span>
+              </span>
             )
           }
         />

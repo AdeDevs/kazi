@@ -2051,7 +2051,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                       onTabChange('bookings');
                     }
                   }}
-                  className={`p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border transition-all cursor-pointer flex items-start justify-between gap-4 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 ${
+                  className={`p-[10px] sm:p-[15px] rounded-2xl bg-white dark:bg-slate-900 border transition-all cursor-pointer flex items-start justify-between gap-4 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 ${
                     isUnread
                       ? 'border-navy-800/30 dark:border-navy-400/30 bg-navy-800/5 dark:bg-navy-950/20'
                       : 'border-slate-200 dark:border-slate-800 opacity-90'
