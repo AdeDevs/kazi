@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Notification } from '../types';
-import { 
-  ClipboardList, CheckCircle2, XCircle, MessageSquare, Calendar, Bell, ArrowRight, Check, CheckCheck
+import {
+  ClipboardList, CheckCircle2, XCircle, MessageSquare, Calendar, Bell, ArrowRight, Check, CheckCheck, Search, X
 } from 'lucide-react';
+import { CustomDropdown } from './CustomDropdown';
 
 interface ProfessionalNotificationsProps {
   notifications: Notification[];
@@ -83,6 +84,23 @@ export const ProfessionalNotifications: React.FC<ProfessionalNotificationsProps>
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState<'All' | 'unread' | Notification['type']>('All');
+
+  const searchTrimmed = searchTerm.trim().toLowerCase();
+  const filteredNotifications = notifications.filter((n) => {
+    if (filterType === 'unread') {
+      if (n.isRead) return false;
+    } else if (filterType !== 'All') {
+      if (n.type !== filterType) return false;
+    }
+    if (searchTrimmed) {
+      const text = `${n.title} ${n.description}`.toLowerCase();
+      if (!text.includes(searchTrimmed)) return false;
+    }
+    return true;
+  });
+
   return (
     <div className="w-full max-w-none space-y-6">
       <h1 className="sr-only">Notifications</h1>
@@ -116,33 +134,81 @@ export const ProfessionalNotifications: React.FC<ProfessionalNotificationsProps>
         )}
       </div>
 
-      {/* Notifications List Header & Actions */}
-      <div className="flex items-center justify-between px-1">
-        <div className="text-xs font-bold text-slate-600 dark:text-slate-400">
-          {notifications.length} {notifications.length === 1 ? 'Notification' : 'Notifications'}
-          {unreadCount > 0 && (
-            <span className="ml-2 font-normal text-slate-400 dark:text-slate-500">
-              ({unreadCount} unread)
-            </span>
-          )}
+      {/* Search & Filter Toolbar */}
+      <div className="p-2.5 sm:p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-3">
+        <div className="flex flex-col lg:flex-row gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search alerts by keyword, job, or customer..."
+              className="w-full pl-10 pr-9 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-orange-500/50 focus:border-brand-orange-500"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-3 p-0.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
+                title="Clear Search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex flex-col sm:flex-row lg:items-center gap-2 w-full lg:w-auto">
+            <CustomDropdown
+              value={filterType}
+              onChange={(val) => setFilterType(val)}
+              icon={<Bell className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
+              options={[
+                { value: 'All', label: 'All Notifications' },
+                { value: 'unread', label: 'Unread Only' },
+                { value: 'new_job', label: 'New Job Requests' },
+                { value: 'job_accepted', label: 'Job Accepted' },
+                { value: 'job_cancelled', label: 'Job Cancelled' },
+                { value: 'new_message', label: 'Messages' },
+                { value: 'upcoming_booking', label: 'Upcoming Bookings' }
+              ]}
+              placeholder="All Notifications"
+              className="w-full sm:w-auto lg:min-w-[190px]"
+              buttonClassName="bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-900 dark:text-slate-100 hover:border-slate-300 dark:hover:border-slate-600"
+              dropdownWidth="w-56"
+            />
+
+            {unreadCount > 0 && onMarkAllAsRead && (
+              <button
+                type="button"
+                onClick={onMarkAllAsRead}
+                className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+                title="Mark all notifications as read"
+              >
+                <CheckCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span className="whitespace-nowrap">Mark all read</span>
+              </button>
+            )}
+
+            {(searchTerm || filterType !== 'All') && (
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setFilterType('All');
+                }}
+                className="w-full sm:w-auto px-3.5 py-2.5 text-xs font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer text-center"
+              >
+                Clear Filters
+              </button>
+            )}
+          </div>
         </div>
-        {unreadCount > 0 && onMarkAllAsRead && (
-          <button
-            type="button"
-            onClick={onMarkAllAsRead}
-            className="px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-brand-orange-600 dark:hover:text-brand-orange-400 bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
-          >
-            <CheckCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-            <span>Mark all as read</span>
-          </button>
-        )}
       </div>
 
       {/* Notifications Container */}
       {notifications.length === 0 ? (
         /* Empty State */
         <div className="text-center py-24 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-8 shadow-xs animate-in fade-in duration-300">
-          <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-850 flex items-center justify-center mx-auto mb-4 border border-slate-200/40 dark:border-slate-800">
+          <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-4 border border-slate-200/40 dark:border-slate-800">
             <Bell className="w-8 h-8 text-slate-400" />
           </div>
           <h4 className="text-base font-bold text-slate-800 dark:text-slate-200">
@@ -152,19 +218,32 @@ export const ProfessionalNotifications: React.FC<ProfessionalNotificationsProps>
             We'll notify you when new bookings, messages, or updates arrive.
           </p>
         </div>
+      ) : filteredNotifications.length === 0 ? (
+        /* No Search/Filter Results */
+        <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-8 shadow-xs animate-in fade-in duration-300">
+          <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-4 border border-slate-200/40 dark:border-slate-800">
+            <Search className="w-8 h-8 text-slate-400" />
+          </div>
+          <h4 className="text-base font-bold text-slate-800 dark:text-slate-200">
+            No matching notifications.
+          </h4>
+          <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
+            Try a different search term or clear the active filter.
+          </p>
+        </div>
       ) : (
         /* List */
         <div className="space-y-3">
-          {notifications.map((notification) => {
+          {filteredNotifications.map((notification) => {
             const { icon: Icon, bgClass } = getNotificationIcon(notification.type);
             return (
               <div
                 key={notification.id}
                 onClick={() => onNotificationClick(notification)}
-                className={`group flex items-start gap-4 p-5 rounded-2xl border transition-all duration-200 cursor-pointer ${
+                className={`group flex items-start gap-4 p-[10px] sm:p-[15px] rounded-2xl border transition-all duration-200 cursor-pointer ${
                   notification.isRead
-                    ? 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:bg-slate-50/50 dark:hover:bg-slate-850/30'
-                    : 'bg-navy-50/20 dark:bg-navy-950/20 border-navy-200/50 dark:border-navy-900/50 shadow-xs hover:bg-navy-50/30 dark:hover:bg-navy-950/30'
+                    ? 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                    : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 border-l-4 border-l-brand-orange-500 dark:border-l-brand-orange-500 shadow-xs hover:bg-slate-50 dark:hover:bg-slate-800/60'
                 }`}
               >
                 {/* Icon Column */}

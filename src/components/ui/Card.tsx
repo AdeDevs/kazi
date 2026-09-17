@@ -3,7 +3,7 @@ import React from 'react';
 // The single source of truth for card padding across the app. Every card-shaped container
 // should use <Card> rather than hand-writing these classes, so padding can never drift between
 // pages again -- change it once here and every card follows.
-export const CARD_PADDING = 'p-[15px]';
+export const CARD_PADDING = 'p-[10px] sm:p-[15px]';
 
 interface CardProps {
   children: React.ReactNode;
