@@ -10,7 +10,7 @@ import {
   ResetPasswordSchema,
 } from '../types/auth';
 import * as authApi from '../lib/authApi';
-import { getAccessToken, clearTokens } from '../lib/apiClient';
+import { getAccessToken, clearTokens, setOnSessionExpired } from '../lib/apiClient';
 
 export type AuthModalView = 'login' | 'register' | 'verify' | 'forgot' | 'reset';
 
@@ -152,6 +152,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(null);
         setToken(null);
       });
+  }, []);
+
+  // apiClient has no access to this component's state on its own, so it can't redirect back to
+  // sign-in by itself when a token expires mid-session (as opposed to the one-time check above,
+  // which only runs at cold load) -- it calls this instead. Without it, a mid-session expiry left
+  // `user` populated while every request kept failing underneath, instead of bouncing to Auth.
+  useEffect(() => {
+    setOnSessionExpired(() => {
+      clearSession();
+      setUser(null);
+      setToken(null);
+      setError(null);
+    });
+    return () => setOnSessionExpired(null);
   }, []);
 
   const openAuthModal = useCallback((view: AuthModalView = 'login', email?: string) => {

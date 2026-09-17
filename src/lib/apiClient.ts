@@ -41,6 +41,16 @@ export function clearTokens(): void {
   }
 }
 
+// AuthContext registers a listener here on mount so it can clear its own `user`/`token` React
+// state (and trigger App.tsx's `!user` redirect to the Auth screen) whenever this module decides
+// a session is dead -- this module has no access to React state on its own, and without this hook
+// a mid-session token expiry left the UI believing it was still logged in (see the one call site
+// below) while every subsequent request kept 401ing, instead of bouncing back to sign-in.
+let onSessionExpired: (() => void) | null = null;
+export function setOnSessionExpired(callback: (() => void) | null): void {
+  onSessionExpired = callback;
+}
+
 export interface ValidationErrorDetail {
   loc: (string | number)[];
   msg: string;
@@ -108,6 +118,7 @@ async function tryRefreshTokens(): Promise<boolean> {
         });
         if (!response.ok) {
           clearTokens();
+          onSessionExpired?.();
           return false;
         }
         const pair = await response.json();

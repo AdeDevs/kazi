@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { CustomDropdown } from './CustomDropdown';
 import { VerifiedBadge } from './ui/VerifiedBadge';
 import { SheetDragHandle } from './ui/SheetDragHandle';
@@ -67,6 +67,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [landmark, setLandmark] = useState<string>('');
   const [address, setAddress] = useState<string>('');
   const [date, setDate] = useState<string>('');
+  const dateInputRef = useRef<HTMLInputElement>(null);
   const [timeSlot, setTimeSlot] = useState<string>('09:00 AM - 11:00 AM');
   const [customerName, setCustomerName] = useState<string>('Nneka Okonkwo');
   const [customerPhone, setCustomerPhone] = useState<string>('+234 803 123 4567');
@@ -601,8 +602,21 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   5. Preferred Date
                 </label>
                 <div className="relative">
-                  <Calendar className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
+                  {/* Real picker trigger, not decoration: input type="date" already supports typing
+                      the date directly, but its native picker affordance is easy to miss (and on
+                      some browsers doesn't render at all) -- showPicker() gives it an explicit,
+                      always-visible calendar button alongside manual entry, not instead of it. */}
+                  <button
+                    type="button"
+                    onClick={() => dateInputRef.current?.showPicker?.()}
+                    className="absolute left-3.5 top-3 text-slate-400 hover:text-navy-800 dark:hover:text-navy-400 transition-colors cursor-pointer"
+                    title="Open calendar"
+                    aria-label="Open calendar picker"
+                  >
+                    <Calendar className="w-4 h-4" />
+                  </button>
                   <input
+                    ref={dateInputRef}
                     type="date"
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
@@ -628,7 +642,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                     { value: '05:00 PM - 07:00 PM', label: '05:00 PM - 07:00 PM' }
                   ]}
                   className="w-full"
-                  buttonClassName="bg-slate-50 dark:bg-slate-950"
+                  buttonClassName="bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 hover:border-navy-500/50 dark:hover:border-navy-400/50"
                 />
               </div>
             </div>
@@ -722,10 +736,12 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               </p>
             </div>
 
-            {/* Explanation box for quote service */}
+            {/* Explanation box for quote service -- neutral navy, not amber: this is routine
+                information about how the quote flow works, not a warning, so it shouldn't borrow
+                the color reserved for actual warning states. */}
             {isQuoteService && (
-              <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 flex items-start gap-2.5 text-xs text-amber-900 dark:text-amber-300">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+              <div className="p-3.5 rounded-2xl bg-navy-800/10 border border-navy-800/20 flex items-start gap-2.5 text-xs text-navy-900 dark:text-navy-200">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-navy-800 dark:text-navy-400" />
                 <p className="leading-snug">
                   <strong>Notice:</strong> This is a <strong>quote-based service</strong>. Submitting this form sends a request to the professional. The professional will evaluate your specifications and reply with a custom price quote.
                 </p>
@@ -811,15 +827,15 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 </div>
               )}
 
-              {/* Pricing breakdown summary */}
-              <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                <div>
-                  <span className="text-slate-400 font-bold block">Pricing Model</span>
-                  <p className="font-extrabold text-navy-800 dark:text-navy-300">
-                    {isQuoteService ? 'Custom Quote by Artisan' : 'Fixed Guaranteed Rate'}
-                  </p>
+              {/* Pricing summary -- one line, not three: a "Pricing Model" label, a separate
+                  escrow sentence, and the price itself used to each make the same claim
+                  separately. The shield icon plus one short caption now carries that meaning. */}
+              <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                  <ShieldCheck className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400 shrink-0" />
+                  <span>{isQuoteService ? 'Reviewed & quoted by artisan' : 'Fixed price · Escrow protected'}</span>
                 </div>
-                <div className="text-right">
+                <div className="text-right shrink-0">
                   {isQuoteService ? (
                     <span className="text-xs sm:text-sm font-black text-navy-800 dark:text-navy-400 bg-navy-50 dark:bg-navy-950 px-2.5 py-1 rounded-lg border border-navy-200 dark:border-navy-800 inline-block">
                       Quote to be provided
@@ -831,13 +847,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   )}
                 </div>
               </div>
-
-              {!isQuoteService && (
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 pt-1">
-                  <ShieldCheck className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400 shrink-0" />
-                  <span>Your payment is held in escrow and only released to the artisan after you confirm the job is complete.</span>
-                </p>
-              )}
 
             </div>
 
