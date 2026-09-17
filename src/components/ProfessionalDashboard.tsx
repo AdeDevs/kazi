@@ -813,7 +813,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
               </div>
 
               <div className="space-y-3.5 text-xs sm:text-sm text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/80">
-                <div className="flex justify-between">
+                <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5 sm:gap-2">
                   <span className="font-semibold text-slate-500">Customer Name:</span>
                   <span className="font-bold text-slate-900 dark:text-white">{booking.customerName}</span>
                 </div>
@@ -821,17 +821,17 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                   <span className="font-semibold text-slate-500">Phone:</span>
                   <span className="font-bold text-slate-900 dark:text-white">{booking.customerPhone}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5 sm:gap-2">
                   <span className="font-semibold text-slate-500">Scheduled Date:</span>
                   <span className="font-bold text-slate-900 dark:text-white">{booking.scheduled_date} ({booking.timeSlot})</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5 sm:gap-2">
                   <span className="font-semibold text-slate-500">Location / Address:</span>
-                  <span className="font-bold text-slate-900 dark:text-white text-right">{booking.address}</span>
+                  <span className="font-bold text-slate-900 dark:text-white sm:text-right">{booking.address}</span>
                 </div>
-                <div className="flex justify-between items-center pt-2 border-t border-slate-200 dark:border-slate-700">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
                   <span className="font-semibold text-slate-500">Job Status:</span>
-                  <span className="font-extrabold uppercase px-2.5 py-1 rounded-full text-xs bg-navy-800 text-white">
+                  <span className="font-extrabold uppercase px-2.5 py-1 rounded-full text-xs bg-navy-800 text-white self-start sm:self-auto">
                     {booking.status === 'completed_by_artisan'
                       ? 'Completion Submitted'
                       : booking.status === 'disputed'
@@ -1223,7 +1223,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
         <div className="space-y-6">
 
 
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-4">
             <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Assigned Job Bookings</h3>
             <p className="text-xs text-slate-500">Accept requests, schedule visits, and complete jobs to grow your rating</p>
           </div>

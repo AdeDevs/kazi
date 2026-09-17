@@ -348,11 +348,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 <span className="font-semibold text-slate-500">Phone Number</span>
                 <span className="font-bold text-slate-900 dark:text-slate-100">{customerPhone}</span>
               </div>
-              <div className="py-3 flex items-center justify-between">
+              <div className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-0.5 sm:gap-2">
                 <span className="font-semibold text-slate-500">Email Address</span>
-                <span className="font-bold text-slate-900 dark:text-slate-100">{customerEmail}</span>
+                <span className="font-bold text-slate-900 dark:text-slate-100 break-all sm:break-normal">{customerEmail}</span>
               </div>
-              <div className="py-3 flex items-center justify-between">
+              <div className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-0.5 sm:gap-2">
                 <span className="font-semibold text-slate-500">Primary Location</span>
                 <span className="font-bold text-slate-900 dark:text-slate-100">{customerLocation}</span>
               </div>

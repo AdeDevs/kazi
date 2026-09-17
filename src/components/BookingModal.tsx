@@ -439,7 +439,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
             {/* 3. UPLOAD PROBLEM / SPECIFICATION PHOTOS */}
             <div className="space-y-2.5">
-              <label className="block text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center justify-between">
+              <label className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex flex-col sm:flex-row sm:items-center justify-between gap-0.5 sm:gap-2">
                 <span>3. Attach Photos & References (Optional)</span>
                 <span className="text-[10px] text-slate-400">Helps artisan prepare an accurate estimate</span>
               </label>
