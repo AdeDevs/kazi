@@ -669,7 +669,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
             </button>
           </div>
         ) : (
-          <div className="flex sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-3 overflow-x-auto sm:overflow-visible no-scrollbar snap-x snap-mandatory scroll-pl-[15px] sm:scroll-pl-0 -mx-[15px] px-[15px] sm:mx-0 sm:px-0 pb-1 sm:pb-0">
+          <div className="flex sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-3 overflow-x-auto sm:overflow-visible overscroll-x-contain no-scrollbar snap-x snap-mandatory scroll-pl-[15px] sm:scroll-pl-0 -mx-[15px] px-[15px] sm:mx-0 sm:px-0 pb-1 sm:pb-0">
             {services.map((srv) => (
               <div
                 key={srv.id}
@@ -766,7 +766,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
             </button>
           </div>
         ) : (
-          <div className="flex sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-3 overflow-x-auto sm:overflow-visible no-scrollbar snap-x snap-mandatory scroll-pl-[15px] sm:scroll-pl-0 -mx-[15px] px-[15px] sm:mx-0 sm:px-0 pb-1 sm:pb-0">
+          <div className="flex sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-3 overflow-x-auto sm:overflow-visible overscroll-x-contain no-scrollbar snap-x snap-mandatory scroll-pl-[15px] sm:scroll-pl-0 -mx-[15px] px-[15px] sm:mx-0 sm:px-0 pb-1 sm:pb-0">
             {portfolio.map((item) => (
               <div
                 key={item.id}

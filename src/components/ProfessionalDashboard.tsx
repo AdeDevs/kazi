@@ -1352,7 +1352,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                   </button>
                 )}
               </div>
-              <div className="flex gap-4 overflow-x-auto no-scrollbar pb-1 snap-x snap-mandatory scroll-pl-4 sm:scroll-pl-0 -mx-4 px-4 sm:mx-0 sm:px-0">
+              <div className="flex gap-4 overflow-x-auto overscroll-x-contain no-scrollbar pb-1 snap-x snap-mandatory scroll-pl-4 sm:scroll-pl-0 -mx-4 px-4 sm:mx-0 sm:px-0">
                 {professional.portfolio.map((item) => (
                   <div key={item.id} className="shrink-0 w-64 snap-start bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
                     <img src={item.image_url} alt={item.title} className="w-full h-40 object-cover" />

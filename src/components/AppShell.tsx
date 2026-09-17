@@ -99,13 +99,18 @@ export const AppShell: React.FC<AppShellProps> = ({
       {/* Shell Layout Wrapper */}
       <div className="w-full flex min-h-screen relative">
         
-        {/* ================= OVERLAY FOR MOBILE SIDEBAR ================= */}
-        {isMobileSidebarOpen && (
-          <div 
-            className="fixed inset-0 bg-navy-950/60 backdrop-blur-xs z-40 md:hidden transition-opacity duration-300 animate-in fade-in"
-            onClick={() => setIsMobileSidebarOpen(false)}
-          />
-        )}
+        {/* ================= OVERLAY FOR MOBILE SIDEBAR =================
+            Always mounted (not conditionally rendered) and animated via opacity, matching the
+            sidebar's own always-mounted + transform-toggle pattern right below -- a hard
+            {condition && <div/>} mount/unmount here would pop in fine (its own animate-in covers
+            that) but has no exit transition at all, since React removes it from the DOM the
+            instant isMobileSidebarOpen flips false. */}
+        <div
+          className={`fixed inset-0 bg-navy-950/60 backdrop-blur-xs z-40 md:hidden transition-opacity duration-300 ${
+            isMobileSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+          }`}
+          onClick={() => setIsMobileSidebarOpen(false)}
+        />
 
         {/* ================= LEFT SIDEBAR =================
             A real flex item (not fixed/overlay) on desktop: its width animates and the main

@@ -121,7 +121,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
               Available Now
             </span>
           )}
-          <div className="absolute left-4 right-4 bottom-3.5 text-white pointer-events-none">
+          <div className="absolute left-4 right-4 bottom-3.5 text-white">
             <div className="flex items-center gap-1.5 mb-0.5">
               <h2 className="text-lg font-bold tracking-tight truncate">{professional.name}</h2>
               {professional.is_verified && <VerifiedBadge title="Verified Pro" />}
@@ -373,7 +373,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                 {professional.portfolio.length === 0 ? (
                   <p className="text-xs text-slate-400 py-6 text-center">No portfolio items uploaded yet.</p>
                 ) : (
-                  <div className="flex sm:grid sm:grid-cols-2 gap-3 sm:gap-4 overflow-x-auto sm:overflow-visible no-scrollbar snap-x snap-mandatory scroll-pl-3.5 sm:scroll-pl-0 -mx-3.5 px-3.5 sm:mx-0 sm:px-0 pb-1 sm:pb-0">
+                  <div className="flex sm:grid sm:grid-cols-2 gap-3 sm:gap-4 overflow-x-auto sm:overflow-visible overscroll-x-contain no-scrollbar snap-x snap-mandatory scroll-pl-3.5 sm:scroll-pl-0 -mx-3.5 px-3.5 sm:mx-0 sm:px-0 pb-1 sm:pb-0">
                     {professional.portfolio.map((item) => (
                       <div key={item.id} className="shrink-0 w-56 snap-start sm:w-auto sm:shrink border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden bg-white dark:bg-slate-900 shadow-xs hover:shadow-md transition-shadow flex flex-col">
                         <img src={item.image_url} alt={item.title} className="w-full aspect-video object-cover" />
@@ -610,18 +610,8 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
 
         {/* Footer actions -- square on mobile (flush with the bottom-sheet's screen edge),
             rounded to match the dialog's own corners on desktop. */}
-        <div className="shrink-0 px-4 sm:px-8 py-3 sm:py-3.5 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:rounded-b-2xl">
-          <div className="flex items-center justify-between sm:block">
-            <span className="text-sm font-black text-slate-900 dark:text-slate-100">
-              Ready to Help
-            </span>
-            {professional.is_available_now && (
-              <span className="sm:hidden px-2 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold rounded-md border border-emerald-500/20">
-                Online
-              </span>
-            )}
-          </div>
-          <div className="grid grid-cols-2 sm:flex items-center gap-2.5">
+        <div className="shrink-0 px-4 sm:px-8 py-3 sm:py-3.5 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end sm:rounded-b-2xl">
+          <div className="grid grid-cols-2 sm:flex items-center gap-2.5 w-full sm:w-auto">
             <button
               onClick={() => {
                 onClose();

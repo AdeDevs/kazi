@@ -342,7 +342,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
           {!isEditing ? (
             <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
-              <div className="py-3 flex items-center justify-between">
+              <div className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-0.5 sm:gap-2">
                 <span className="font-semibold text-slate-500">Phone Number</span>
                 <span className="font-bold text-slate-900 dark:text-slate-100">{customerPhone}</span>
               </div>

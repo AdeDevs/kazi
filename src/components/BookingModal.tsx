@@ -657,47 +657,19 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               </div>
             </div>
 
-            {/* Pricing Summary Callout */}
+            {/* Pricing Summary */}
             {(() => {
               const svcPrice = selectedServiceItem?.price ?? professional.base_price ?? 0;
               const priceInfo = formatServicePrice(currentPricingType, svcPrice, professional.base_price);
 
               return (
-                <div className="p-4 rounded-2xl bg-navy-800/10 border border-navy-800/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <ShieldCheck className="w-5 h-5 text-navy-800 dark:text-navy-400" />
-                      <div className="flex items-center gap-2">
-                        <p className="font-extrabold text-navy-800 dark:text-navy-300 text-sm">
-                          {currentPricingType === 'fixed' && `Fixed Price: ${priceInfo.primaryText}`}
-                          {currentPricingType === 'quote_required' && `Price: Quote to be provided by pro`}
-                          {currentPricingType === 'starting' && `Starting Rate: ${priceInfo.primaryText}`}
-                        </p>
-                        {currentPricingType === 'fixed' && (
-                          <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/80 px-1.5 py-0.2 rounded border border-emerald-200/60">
-                            Fixed price
-                          </span>
-                        )}
-                        {currentPricingType === 'quote_required' && (
-                          <span className="text-[10px] font-bold text-navy-800 dark:text-navy-400 bg-navy-50 dark:bg-navy-950 px-1.5 py-0.2 rounded border border-navy-200/60 dark:border-navy-800">
-                            Quote required
-                          </span>
-                        )}
-                        {currentPricingType === 'starting' && (
-                          <span className="text-[10px] font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.2 rounded">
-                            Starting price
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
-                      {currentPricingType === 'fixed' && 'Guaranteed fixed rate for this service.'}
-                      {currentPricingType === 'quote_required' && 'Final price will be provided by the professional after reviewing your request scope.'}
-                      {currentPricingType === 'starting' && 'Base inspection & starter fee. Final scope determined after review.'}
-                    </p>
-                  </div>
-                  <span className="px-3 py-1 rounded-full bg-navy-800 text-white font-extrabold text-xs shadow-xs shrink-0">
-                    {isQuoteService ? 'Quote Flow' : 'Fixed Price'}
+                <div className="flex items-center gap-2 px-1">
+                  <ShieldCheck className="w-4 h-4 text-navy-800 dark:text-navy-400 shrink-0" />
+                  <span className="font-extrabold text-navy-800 dark:text-navy-300 text-sm">
+                    {priceInfo.primaryText}
+                  </span>
+                  <span className="text-xs font-bold text-slate-400">
+                    {priceInfo.badgeLabel}
                   </span>
                 </div>
               );
