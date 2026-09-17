@@ -684,7 +684,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
         </div>
 
         {/* Results View: Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProfessionals.length === 0 ? (
             <div className="col-span-full py-10 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 space-y-4">
               <Search className="w-12 h-12 text-slate-400 mx-auto" />
@@ -1831,7 +1831,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredSavedPros.map(pro => (
               <div key={pro.id} onClick={() => onSelectProForProfile(pro)} className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-xs cursor-pointer hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md transition-all active:scale-[0.99]">
                 <div className="flex items-start justify-between">
@@ -2348,7 +2348,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
             {displayedPros.map(pro => (
               <div
                 key={pro.id}

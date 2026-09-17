@@ -96,7 +96,7 @@ export const ProfessionalGigs: React.FC<ProfessionalGigsProps> = ({ professional
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
           {gigs.map(gig => (
             <div key={gig.id} className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col h-full hover:border-navy-500/30 transition-colors group">
               <div className="flex items-start justify-between mb-4">

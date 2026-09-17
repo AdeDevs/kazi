@@ -129,7 +129,7 @@ export const GigCreationForm: React.FC<GigCreationFormProps> = ({ professionalId
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>
               <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Category</label>
               <CustomDropdown
@@ -156,7 +156,7 @@ export const GigCreationForm: React.FC<GigCreationFormProps> = ({ professionalId
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>
               <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Delivery Time (Days)</label>
               <input
