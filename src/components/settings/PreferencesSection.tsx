@@ -5,13 +5,13 @@ import { useAuth } from '../../context/AuthContext';
 import { Card, CardHeader } from '../ui/Card';
 import { SheetDragHandle } from '../ui/SheetDragHandle';
 import { useSlideUpSheet } from '../../hooks/useSlideUpSheet';
+import { toast } from 'sonner';
 
 interface PreferencesSectionProps {
   darkMode?: boolean;
   onToggleDarkMode?: () => void;
   currentLanguage?: Language;
   onLanguageChange?: (lang: Language) => void;
-  triggerToast: (msg: string) => void;
 }
 
 export const PreferencesSection: React.FC<PreferencesSectionProps> = ({
@@ -19,7 +19,6 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({
   onToggleDarkMode,
   currentLanguage = 'English (Nigeria)',
   onLanguageChange,
-  triggerToast,
 }) => {
   const { updateUser } = useAuth();
 
@@ -44,7 +43,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({
   const handleSelectLanguage = async (lang: Language) => {
     onLanguageChange?.(lang);
     setShowLanguageModal(false);
-    triggerToast(`Language changed to ${lang}`);
+    toast.success(`Language changed to ${lang}`);
     try {
       await updateUser({ preferred_language: lang });
     } catch {

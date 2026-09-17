@@ -7,6 +7,7 @@ import { ProfessionalProfileModal } from './components/ProfessionalProfileModal'
 import { BookingModal } from './components/BookingModal';
 import { AuthPage } from './components/AuthPage';
 import { useAuth } from './context/AuthContext';
+import { Toaster } from 'sonner';
 
 // Code-split the per-role dashboards, profile/settings, and notifications screens: an
 // anonymous visitor on the sign-in screen, or a customer, shouldn't have to download the
@@ -679,33 +680,41 @@ export default function App() {
   // 1. Strict Authentication Check: If user is signed out, render AuthPage directly
   if (!user) {
     return (
-      <AuthPage
-        initialView="signin"
-        onAuthSuccess={(role) => {
-          const mappedRole: Role = role === 'artisan' ? 'professional' : 'customer';
-          handleSwitchRole(mappedRole);
-          setActiveTab('explore');
-        }}
-      />
+      <>
+        <Toaster richColors theme={darkMode ? 'dark' : 'light'} />
+        <AuthPage
+          initialView="signin"
+          onAuthSuccess={(role) => {
+            const mappedRole: Role = role === 'artisan' ? 'professional' : 'customer';
+            handleSwitchRole(mappedRole);
+            setActiveTab('explore');
+          }}
+        />
+      </>
     );
   }
 
   // 2. Explicit Full Auth Page view (if opened manually)
   if (showFullAuthPage) {
     return (
-      <AuthPage
-        initialView={authPageInitialView}
-        onAuthSuccess={(role) => {
-          const mappedRole: Role = role === 'artisan' ? 'professional' : 'customer';
-          handleSwitchRole(mappedRole);
-          setShowFullAuthPage(false);
-          setActiveTab('explore');
-        }}
-      />
+      <>
+        <Toaster richColors theme={darkMode ? 'dark' : 'light'} />
+        <AuthPage
+          initialView={authPageInitialView}
+          onAuthSuccess={(role) => {
+            const mappedRole: Role = role === 'artisan' ? 'professional' : 'customer';
+            handleSwitchRole(mappedRole);
+            setShowFullAuthPage(false);
+            setActiveTab('explore');
+          }}
+        />
+      </>
     );
   }
 
   return (
+    <>
+    <Toaster richColors theme={darkMode ? 'dark' : 'light'} />
     <AppShell
       currentRole={currentRole}
       currentLanguage={currentLanguage}
@@ -882,5 +891,6 @@ export default function App() {
         }}
       />
     </AppShell>
+    </>
   );
 }

@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Role, Professional, Booking } from '../types';
 import { Language } from '../translations';
 import {
-  MapPin, CheckCircle2, Edit3,
+  MapPin, Edit3,
   ChevronRight, Star
 } from 'lucide-react';
 import { ConfirmationModal } from './ui/ConfirmationModal';
@@ -11,6 +11,7 @@ import { VerifiedBadge } from './ui/VerifiedBadge';
 import { Card, CardHeader } from './ui/Card';
 import { ProProfileManagement } from './ProProfileManagement';
 import { useAuth } from '../context/AuthContext';
+import { toast } from 'sonner';
 
 interface ProfileViewProps {
   currentRole: Role;
@@ -91,7 +92,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [actionToast, setActionToast] = useState<string | null>(null);
 
   const isDraftDirty =
     draftFirstName !== customerFirstName ||
@@ -116,11 +116,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     } else {
       setIsEditing(false);
     }
-  };
-
-  const triggerToast = (msg: string) => {
-    setActionToast(msg);
-    setTimeout(() => setActionToast(null), 3000);
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -155,9 +150,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           onUpdateProfile({ profile_picture: updated.profile_picture });
         }
       }
-      triggerToast('Profile photo uploaded and saved successfully!');
+      toast.success('Profile photo uploaded and saved successfully!');
     } catch (err: any) {
-      triggerToast(err.message || 'Photo updated locally.');
+      toast.error(err.message || 'Photo updated locally.');
     } finally {
       setIsUploadingAvatar(false);
       // Reset input value so re-selecting same file triggers onChange
@@ -178,9 +173,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         });
       }
       setIsEditing(false);
-      triggerToast('Profile details updated and saved successfully!');
+      toast.success('Profile details updated and saved successfully!');
     } catch (err: any) {
-      triggerToast(err.message || 'Failed to update profile.');
+      toast.error(err.message || 'Failed to update profile.');
     } finally {
       setIsSavingProfile(false);
     }
@@ -529,14 +524,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           <span>Sign Out of KaziHub</span>
         </button>
       </Card>
-
-      {/* Toast notification */}
-      {actionToast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl border border-slate-700 flex items-center gap-2 text-xs font-bold animate-in fade-in slide-in-from-bottom-3">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-          <span>{actionToast}</span>
-        </div>
-      )}
 
       {/* ================= MODALS ================= */}
 

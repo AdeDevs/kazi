@@ -6,10 +6,7 @@ import { ConfirmationModal } from '../ui/ConfirmationModal';
 import { useSlideUpSheet } from '../../hooks/useSlideUpSheet';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 import { CustomDropdown } from '../CustomDropdown';
-
-interface HelpSupportSectionProps {
-  triggerToast: (msg: string) => void;
-}
+import { toast } from 'sonner';
 
 const FAQS = [
   {
@@ -30,7 +27,7 @@ const FAQS = [
   }
 ];
 
-export const HelpSupportSection: React.FC<HelpSupportSectionProps> = ({ triggerToast }) => {
+export const HelpSupportSection: React.FC = () => {
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
   const [showContactSupport, setShowContactSupport] = useState(false);
   const [supportSubject, setSupportSubject] = useState('General Inquiry');
@@ -47,7 +44,7 @@ export const HelpSupportSection: React.FC<HelpSupportSectionProps> = ({ triggerT
   const handleContactSupportSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!supportMessage.trim()) return;
-    triggerToast('Support request submitted! Ticket #KZ-' + Math.floor(1000 + Math.random() * 9000) + ' created.');
+    toast.success('Support request submitted! Ticket #KZ-' + Math.floor(1000 + Math.random() * 9000) + ' created.');
     setShowContactSupport(false);
     setSupportMessage('');
   };

@@ -11,6 +11,7 @@ import { Card, CardHeader } from './ui/Card';
 import { SheetDragHandle } from './ui/SheetDragHandle';
 import { CustomDropdown } from './CustomDropdown';
 import { useAuth } from '../context/AuthContext';
+import { toast } from 'sonner';
 import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import {
@@ -179,14 +180,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
 
   const isVerified = kycSubmitted;
 
-  // Notifications
-  const [saveToast, setSaveToast] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const triggerToast = (msg: string) => {
-    setSaveToast(msg);
-    setTimeout(() => setSaveToast(null), 2500);
-  };
 
   // Sync state with activeProfessional prop
   React.useEffect(() => {
@@ -236,9 +230,9 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
       if (updatedUser.profile_picture && onUpdateProfile) {
         onUpdateProfile({ profile_picture: updatedUser.profile_picture });
       }
-      triggerToast('Profile photo updated and saved!');
+      toast.success('Profile photo updated and saved!');
     } catch (err: any) {
-      triggerToast(err.message || 'Profile photo updated.');
+      toast.error(err.message || 'Profile photo updated.');
     } finally {
       setIsUploadingAvatar(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -260,7 +254,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
     }
     setEditInfoBaseline({ name, tagline, bio, phone, email, category, primaryLocation });
     setShowEditInfoModal(false);
-    triggerToast('Profile updated successfully!');
+    toast.success('Profile updated successfully!');
   };
 
   // Service CRUD
@@ -313,7 +307,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
     setServices(updatedServices);
     if (onUpdateProfile) onUpdateProfile({ services: updatedServices });
     setShowServiceModal(false);
-    triggerToast(editingServiceId ? 'Service updated!' : 'New service added!');
+    toast.success(editingServiceId ? 'Service updated!' : 'New service added!');
   };
 
   const confirmDeleteService = () => {
@@ -321,7 +315,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
     const updated = services.filter(s => s.id !== serviceToDelete.id);
     setServices(updated);
     if (onUpdateProfile) onUpdateProfile({ services: updated });
-    triggerToast('Service removed.');
+    toast.success('Service removed.');
     setServiceToDelete(null);
   };
 
@@ -376,7 +370,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
     setPortfolio(updatedPortfolio);
     if (onUpdateProfile) onUpdateProfile({ portfolio: updatedPortfolio });
     setShowPortfolioModal(false);
-    triggerToast(editingPortfolioId ? 'Portfolio item updated!' : 'Project added to portfolio!');
+    toast.success(editingPortfolioId ? 'Portfolio item updated!' : 'Project added to portfolio!');
   };
 
   const confirmDeletePortfolio = () => {
@@ -384,7 +378,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
     const updated = portfolio.filter(p => p.id !== portfolioToDelete.id);
     setPortfolio(updated);
     if (onUpdateProfile) onUpdateProfile({ portfolio: updated });
-    triggerToast('Portfolio item removed.');
+    toast.success('Portfolio item removed.');
     setPortfolioToDelete(null);
   };
 
@@ -394,7 +388,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
     if (onUpdateProfile) {
       onUpdateProfile({ is_verified: true, verificationStatus: 'verified' });
     }
-    triggerToast('Account identity and liveness check verified!');
+    toast.success('Account identity and liveness check verified!');
   };
 
   useEffect(() => {
@@ -407,14 +401,6 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
 
   return (
     <div className="w-full max-w-none space-y-4 animate-in fade-in">
-      {/* Toast Notification */}
-      {saveToast && (
-        <div className="fixed top-5 right-5 z-50 px-4 py-3 rounded-2xl bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 font-bold text-xs shadow-2xl flex items-center gap-2 border border-slate-700 animate-in slide-in-from-top-2">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400 dark:text-emerald-600" />
-          <span>{saveToast}</span>
-        </div>
-      )}
-
       {/* Hidden File Input for Avatar */}
       <input
         type="file"

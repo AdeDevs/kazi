@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Role, Professional, Booking } from '../types';
 import { Language } from '../translations';
 import {
-  Key, Download, Snowflake, Trash2, CheckCircle2, X, Laptop
+  Key, Download, Snowflake, Trash2, X, Laptop
 } from 'lucide-react';
 import { ConfirmationModal } from './ui/ConfirmationModal';
 import { UnsavedChangesModal } from './ui/UnsavedChangesModal';
@@ -15,6 +15,7 @@ import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import { PreferencesSection } from './settings/PreferencesSection';
 import { HelpSupportSection } from './settings/HelpSupportSection';
 import { LegalSection } from './settings/LegalSection';
+import { toast } from 'sonner';
 
 interface SettingsViewProps {
   currentRole: Role;
@@ -82,25 +83,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const passwordGuard = useUnsavedChangesGuard(isPasswordFormDirty, closePasswordModal);
   const passwordSheet = useSlideUpSheet(showPasswordModal, passwordGuard.requestClose);
 
-  // Toast State
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  const triggerToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
-  };
-
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentPassword || !newPassword || !confirmPassword) {
-      triggerToast('Please fill out all password fields.');
+      toast.error('Please fill out all password fields.');
       return;
     }
     if (newPassword !== confirmPassword) {
-      triggerToast('New passwords do not match.');
+      toast.error('New passwords do not match.');
       return;
     }
-    triggerToast('Password updated successfully!');
+    toast.success('Password updated successfully!');
     setShowPasswordModal(false);
     setCurrentPassword('');
     setNewPassword('');
@@ -109,20 +102,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   const handleFreezeToggle = () => {
     setIsFrozen(prev => !prev);
-    triggerToast(isFrozen ? 'Account successfully unfrozen!' : 'Account frozen. Activity has been paused.');
+    toast.success(isFrozen ? 'Account successfully unfrozen!' : 'Account frozen. Activity has been paused.');
   };
 
   const handlePermanentDelete = async () => {
     try {
       await deleteAccount();
-      triggerToast('Account data deleted successfully.');
+      toast.success('Account data deleted successfully.');
       if (onDeleteAccount) {
         onDeleteAccount();
       } else if (onLogout) {
         onLogout();
       }
     } catch (err: any) {
-      triggerToast(err.message || 'Failed to delete account.');
+      toast.error(err.message || 'Failed to delete account.');
     }
   };
 
@@ -146,7 +139,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     a.download = `kazihub_account_data_${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    triggerToast('Data archive generated and downloaded!');
+    toast.success('Data archive generated and downloaded!');
   };
 
   return (
@@ -169,7 +162,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         onToggleDarkMode={onToggleDarkMode}
         currentLanguage={currentLanguage}
         onLanguageChange={onLanguageChange}
-        triggerToast={triggerToast}
       />
 
       {/* 1. SECURITY & AUTHENTICATION */}
@@ -285,7 +277,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               value={phoneVisibility}
               onChange={(val) => {
                 setPhoneVisibility(val);
-                triggerToast('Privacy rule updated.');
+                toast.success('Privacy rule updated.');
               }}
               options={[
                 { value: 'after_escrow', label: 'Only After Escrow Payment (Recommended)' },
@@ -334,7 +326,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       </Card>
 
       {/* HELP & SUPPORT (shared across both customer and artisan roles) */}
-      <HelpSupportSection triggerToast={triggerToast} />
+      <HelpSupportSection />
 
       {/* LEGAL & TERMS (shared across both customer and artisan roles) */}
       <LegalSection />
@@ -401,14 +393,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         </div>
       </Card>
-
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl border border-slate-700 flex items-center gap-2 text-xs font-bold animate-in fade-in slide-in-from-bottom-3">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
 
       {/* ================= CONFIRMATION MODALS (BOTTOM SLIDE-UP ON MOBILE) ================= */}
 
