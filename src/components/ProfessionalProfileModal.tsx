@@ -24,7 +24,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
   onOpenChat,
   onAddReview
 }) => {
-  const [activeTab, setActiveTab] = useState<'about' | 'gigs' | 'portfolio' | 'reviews'>('about');
+  const [activeTab, setActiveTab] = useState<'about' | 'gigs' | 'reviews'>('about');
   const [gigs, setGigs] = useState<Gig[]>([]);
   const [showAvatarLightbox, setShowAvatarLightbox] = useState(false);
   const [showWriteReview, setShowWriteReview] = useState(false);
@@ -173,7 +173,10 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
           )}
         </div>
 
-        <div className="hidden sm:block px-6 pb-1 flow-root">
+        {/* relative: the banner above is `relative` (positioned), so without this the avatar --
+            a non-positioned sibling -- would paint *behind* it despite coming later in the DOM,
+            cutting off the top of the photo where it overlaps the banner. */}
+        <div className="hidden sm:block px-6 pb-1 flow-root relative">
           <div className="flex items-end justify-start -mt-14 mb-3">
             <button
               type="button"
@@ -235,16 +238,6 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
               Gigs ({gigs.length})
             </button>
           )}
-          <button
-            onClick={() => setActiveTab('portfolio')}
-            className={`py-3.5 sm:py-4 px-4 sm:px-6 text-xs sm:text-sm font-semibold border-b-2 transition-colors cursor-pointer flex-shrink-0 ${
-              activeTab === 'portfolio'
-                ? 'border-navy-800 text-navy-800 dark:border-navy-400 dark:text-navy-400'
-                : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
-            }`}
-          >
-            Portfolio ({professional.portfolio.length})
-          </button>
           <button
             onClick={() => setActiveTab('reviews')}
             className={`py-3.5 sm:py-4 px-4 sm:px-6 text-xs sm:text-sm font-semibold border-b-2 transition-colors cursor-pointer flex-shrink-0 ${
@@ -367,7 +360,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
               <div className="space-y-3 pt-6 border-t border-slate-200 dark:border-slate-800">
                 <div className="flex items-center justify-between">
                   <h4 className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                    Artisan Portfolio & Past Projects ({professional.portfolio.length})
+                    Portfolio & Past Projects ({professional.portfolio.length})
                   </h4>
                 </div>
                 {professional.portfolio.length === 0 ? (
@@ -380,7 +373,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                         <div className="p-3.5 flex-1 flex flex-col justify-between">
                           <div>
                             <h5 className="font-bold text-slate-900 dark:text-slate-100 text-xs sm:text-sm mb-1">{item.title}</h5>
-                            <p className="text-xs text-slate-600 dark:text-slate-400 mb-2 leading-relaxed line-clamp-2">{item.description}</p>
+                            <p className="text-xs text-slate-600 dark:text-slate-400 mb-2 leading-relaxed">{item.description}</p>
                           </div>
                           <p className="text-[10px] text-slate-400 dark:text-slate-500 pt-2 border-t border-slate-100 dark:border-slate-800/40">Completed: {item.date_completed}</p>
                         </div>
@@ -424,27 +417,6 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
             </div>
           )}
 
-          {activeTab === 'portfolio' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 animate-in fade-in duration-200">
-              {professional.portfolio.length === 0 ? (
-                <p className="col-span-full text-center text-slate-400 dark:text-slate-500 py-12">No portfolio items uploaded yet.</p>
-              ) : (
-                professional.portfolio.map((item) => (
-                  <div key={item.id} className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden bg-white dark:bg-slate-900 shadow-xs hover:shadow-md transition-shadow flex flex-col">
-                    <img src={item.image_url} alt={item.title} className="w-full aspect-video object-cover" />
-                    <div className="p-4 flex-1 flex flex-col justify-between">
-                      <div>
-                        <h5 className="font-bold text-slate-900 dark:text-slate-100 text-sm mb-1">{item.title}</h5>
-                        <p className="text-xs text-slate-600 dark:text-slate-400 mb-3 leading-relaxed">{item.description}</p>
-                      </div>
-                      <p className="text-[10px] text-slate-400 dark:text-slate-500 pt-2 border-t border-slate-100 dark:border-slate-800/40">Completed on {item.date_completed}</p>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
-
           {activeTab === 'reviews' && (
             <div className="space-y-4">
               {reviewSuccessMsg && (
@@ -468,7 +440,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                     className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition-all self-stretch sm:self-auto"
                   >
                     <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 flex-shrink-0" />
-                    <span>Rate / Write Review</span>
+                    <span>Leave Review</span>
                   </button>
                 )}
               </div>
