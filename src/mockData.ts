@@ -539,7 +539,6 @@ export const INITIAL_PROFESSIONALS: Professional[] = [
     bio: 'Licensed Class-A electrician with over 10 years experience in residential and commercial electrical installations, prepaid meter bypass fixes, inverter wiring, and smart home automation across Oyo State.',
     state: 'Oyo State',
     neighborhood: 'Bodija GRA',
-    hourly_rate: 8500,
     pricing_type: 'starting',
     base_price: 5000,
     services: [
@@ -637,7 +636,6 @@ export const INITIAL_PROFESSIONALS: Professional[] = [
     bio: 'Expert in bathroom remodeling, high-pressure leak detection, solar water heater plumbing, and clogged sewer pipe clearing.',
     state: 'Oyo State',
     neighborhood: 'Ring Road',
-    hourly_rate: 7500,
     pricing_type: 'fixed',
     base_price: 15000,
     services: [
@@ -718,7 +716,6 @@ export const INITIAL_PROFESSIONALS: Professional[] = [
     bio: 'Experienced plumbing contractor handling complex commercial pipe networks, underground mains inspection, quote-based building piping, and pressure pump setups.',
     state: 'Oyo State',
     neighborhood: 'UI / Agbowo',
-    hourly_rate: 8000,
     pricing_type: 'quote_required',
     base_price: 12000,
     services: [
@@ -799,7 +796,6 @@ export const INITIAL_PROFESSIONALS: Professional[] = [
     bio: 'Handcrafting bespoke wooden furniture, wardrobes, fitted kitchen cabinets, and executive office desks with premium African teak and mahogany in Ibadan.',
     state: 'Oyo State',
     neighborhood: 'Iyaganku GRA',
-    hourly_rate: 12000,
     pricing_type: 'quote_required',
     base_price: 7500,
     services: [
@@ -871,7 +867,6 @@ export const INITIAL_PROFESSIONALS: Professional[] = [
     bio: 'Specialized in split AC installations, VRF inverter systems, gas refilling, chemical washing, and compressor diagnostics for homes and corporate offices.',
     state: 'Oyo State',
     neighborhood: 'UI / Agbowo',
-    hourly_rate: 8000,
     pricing_type: 'fixed',
     base_price: 12000,
     services: [
@@ -952,7 +947,6 @@ export const INITIAL_PROFESSIONALS: Professional[] = [
     bio: 'Professional deep cleaning team equipped with industrial steam extractors, eco-friendly detergents, and post-construction debris clearing in Ibadan city.',
     state: 'Oyo State',
     neighborhood: 'Oluyole Estate',
-    hourly_rate: 5000,
     pricing_type: 'fixed',
     base_price: 20000,
     services: [
@@ -1023,7 +1017,6 @@ export const INITIAL_PROFESSIONALS: Professional[] = [
     bio: 'COREN certified solar power designer in Ibadan. We install high-capacity pure sine wave inverter setups, Lithium LiFePO4 battery banks, and rooftop solar arrays.',
     state: 'Oyo State',
     neighborhood: 'Samonda',
-    hourly_rate: 15000,
     pricing_type: 'quote_required',
     base_price: 15000,
     services: [
@@ -1095,7 +1088,6 @@ export const INITIAL_PROFESSIONALS: Professional[] = [
     bio: 'Securing residential homes and corporate estates across Ibadan and Oyo State with Hikvision 4K PTZ cameras, solar-powered CCTV setups, and remote monitoring.',
     state: 'Oyo State',
     neighborhood: 'Challenge',
-    hourly_rate: 7000,
     pricing_type: 'starting',
     base_price: 8500,
     services: [
@@ -1167,7 +1159,6 @@ export const INITIAL_PROFESSIONALS: Professional[] = [
     bio: 'Capturing luxury architectural interiors, corporate portraits, traditional weddings, and brand campaigns with high-end mirrorless gear across Ibadan & Oyo State.',
     state: 'Oyo State',
     neighborhood: 'Akobo',
-    hourly_rate: 18000,
     pricing_type: 'fixed',
     base_price: 25000,
     services: [
@@ -1240,7 +1231,6 @@ export const INITIAL_PROFESSIONALS: Professional[] = [
     bio: 'Master mechanic specializing in Japanese and European auto engine overhaul, computer diagnostics, brake pad replacements, and diesel/petrol soundproof generator servicing across Ibadan.',
     state: 'Oyo State',
     neighborhood: 'Dugbe',
-    hourly_rate: 9000,
     pricing_type: 'fixed',
     base_price: 7000,
     services: [
@@ -1321,7 +1311,6 @@ export const INITIAL_PROFESSIONALS: Professional[] = [
     bio: 'High-end wall painter with expertise in wall screeding, POP finish, wallpaper installation, washable silk painting, and moisture-proof exterior coatings in Bodija GRA and Oluyole.',
     state: 'Oyo State',
     neighborhood: 'Bodija GRA',
-    hourly_rate: 6500,
     pricing_type: 'starting',
     base_price: 15000,
     services: [
@@ -1392,7 +1381,6 @@ export const INITIAL_PROFESSIONALS: Professional[] = [
     bio: 'Master fashion designer crafting exquisite bespoke Aso-Ebi, fitted Senator suits, female kaftans, and corporate alterations with fast delivery in Dugbe & Bodija.',
     state: 'Oyo State',
     neighborhood: 'Dugbe',
-    hourly_rate: 8000,
     pricing_type: 'starting',
     base_price: 4000,
     services: [
@@ -1464,7 +1452,6 @@ export const INITIAL_PROFESSIONALS: Professional[] = [
     bio: 'Professional mobile hair stylist specializing in flawless knotless braids, lace front wig revamps, dreadlocks, and glam bridal hair styling at your home doorstep.',
     state: 'Oyo State',
     neighborhood: 'Oluyole Estate',
-    hourly_rate: 7000,
     pricing_type: 'fixed',
     base_price: 12000,
     services: [
@@ -1536,7 +1523,6 @@ export const INITIAL_PROFESSIONALS: Professional[] = [
     bio: 'Expert repair of front/top loading washing machines, double-door refrigerators, gas cookers, and microwave ovens. Genuine spare parts guaranteed.',
     state: 'Oyo State',
     neighborhood: 'Ring Road',
-    hourly_rate: 7500,
     pricing_type: 'fixed',
     base_price: 9500,
     services: [
@@ -1617,7 +1603,6 @@ export const INITIAL_PROFESSIONALS: Professional[] = [
     bio: 'PhD graduate tutor providing personalized home lessons for WAEC, JAMB, IGCSE, and Python/Web development for kids and teens in UI/Agbowo and Bodija.',
     state: 'Oyo State',
     neighborhood: 'UI / Agbowo',
-    hourly_rate: 10000,
     pricing_type: 'fixed',
     base_price: 10000,
     services: [
@@ -1688,7 +1673,6 @@ export const INITIAL_PROFESSIONALS: Professional[] = [
     bio: 'Transforming weddings, corporate galas, and birthday celebrations into breathtaking memories with bespoke floral decor, lighting, sound systems, and gourmet catering.',
     state: 'Oyo State',
     neighborhood: 'Bodija GRA',
-    hourly_rate: 20000,
     pricing_type: 'quote_required',
     base_price: 35000,
     services: [
@@ -1759,7 +1743,6 @@ export const INITIAL_PROFESSIONALS: Professional[] = [
     bio: 'Precision electric arc and MIG welding craftsman for automated steel gates, security anti-burglary window grilles, and heavy industrial structural steel framing.',
     state: 'Oyo State',
     neighborhood: 'Iseyin',
-    hourly_rate: 8500,
     pricing_type: 'starting',
     base_price: 8500,
     services: [

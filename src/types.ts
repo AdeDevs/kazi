@@ -59,7 +59,6 @@ export interface Professional {
   bio: string;
   state: string;
   neighborhood: string;
-  hourly_rate: number;
   pricing_type?: ServicePricingType; // default pricing model for this pro's primary offerings
   base_price?: number; // Starting or fixed base price if applicable
   services?: ServiceItem[];

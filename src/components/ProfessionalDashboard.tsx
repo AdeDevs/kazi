@@ -90,7 +90,6 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
 
   // Profile edit state
   const [bio, setBio] = useState(professional.bio);
-  const [hourlyRate, setHourlyRate] = useState(professional.hourly_rate);
   const [tagline, setTagline] = useState(professional.tagline);
   const [availabilityState, setAvailabilityState] = useState<'Available' | 'Busy' | 'Offline'>(
     professional.is_available_now ? 'Available' : 'Offline'
@@ -220,7 +219,6 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
     e.preventDefault();
     onUpdateProfile({
       bio,
-      hourly_rate: Number(hourlyRate),
       tagline,
       is_available_now: availabilityState === 'Available'
     });
@@ -1212,7 +1210,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
           {homeSubTab === 'profile' && (
             <span className="w-1.5 h-1.5 rounded-full bg-brand-orange-500 shrink-0" />
           )}
-          <span>Profile & Rates</span>
+          <span>Profile</span>
         </button>
       </div>
 
@@ -1379,7 +1377,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
       {/* Tab 3: Profile Settings */}
       {homeSubTab === 'profile' && (
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-xs max-w-2xl">
-          <h3 className="font-bold text-slate-900 dark:text-slate-100 text-lg mb-4">Edit Professional Profile & Pricing</h3>
+          <h3 className="font-bold text-slate-900 dark:text-slate-100 text-lg mb-4">Edit Professional Profile</h3>
           <form onSubmit={handleSaveProfile} className="space-y-5">
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Tagline / Professional Title</label>
@@ -1387,17 +1385,6 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                 type="text"
                 value={tagline}
                 onChange={(e) => setTagline(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-sm text-slate-900 dark:text-slate-100"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Hourly Rate (₦)</label>
-              <input
-                type="number"
-                value={hourlyRate}
-                onChange={(e) => setHourlyRate(Number(e.target.value))}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-sm text-slate-900 dark:text-slate-100"
                 required
               />

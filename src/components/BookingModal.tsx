@@ -52,7 +52,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           category: professionalProp.category,
           description: professionalProp.tagline || professionalProp.bio,
           pricing_type: professionalProp.pricing_type || 'starting',
-          price: professionalProp.base_price || professionalProp.hourly_rate,
+          price: professionalProp.base_price,
           duration_estimate: '1-2 hrs'
         }]
       : [];
@@ -87,7 +87,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             category: professionalProp.category,
             description: professionalProp.tagline || professionalProp.bio,
             pricing_type: professionalProp.pricing_type || 'starting',
-            price: professionalProp.base_price || professionalProp.hourly_rate,
+            price: professionalProp.base_price,
             duration_estimate: '1-2 hrs'
           }];
 
@@ -228,7 +228,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   // Final submission of the request or booking
   const handleFinalSubmit = () => {
     const svcPricingType: ServicePricingType = selectedServiceItem?.pricing_type || professional.pricing_type || 'starting';
-    const svcBasePrice = selectedServiceItem?.price ?? professional.base_price ?? (professional.hourly_rate * 2);
+    const svcBasePrice = selectedServiceItem?.price ?? professional.base_price ?? 0;
     const calculatedPrice = svcPricingType === 'fixed' 
       ? svcBasePrice 
       : svcPricingType === 'quote_required' 
@@ -651,8 +651,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
             {/* Pricing Summary Callout */}
             {(() => {
-              const svcPrice = selectedServiceItem?.price ?? professional.base_price ?? (professional.hourly_rate * 2);
-              const priceInfo = formatServicePrice(currentPricingType, svcPrice, professional.hourly_rate);
+              const svcPrice = selectedServiceItem?.price ?? professional.base_price ?? 0;
+              const priceInfo = formatServicePrice(currentPricingType, svcPrice, professional.base_price);
 
               return (
                 <div className="p-4 rounded-2xl bg-navy-800/10 border border-navy-800/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -846,7 +846,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                     </span>
                   ) : (
                     <span className="text-base font-black text-slate-900 dark:text-white">
-                      ₦{(selectedServiceItem?.price || professional.base_price || (professional.hourly_rate * 2)).toLocaleString()}
+                      ₦{(selectedServiceItem?.price || professional.base_price || 0).toLocaleString()}
                     </span>
                   )}
                 </div>

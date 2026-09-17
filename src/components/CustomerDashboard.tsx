@@ -2425,7 +2425,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                   <div>
                     <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-bold">Starts From</span>
                     <span className="text-xs sm:text-sm font-black text-navy-900 dark:text-white">
-                      ₦{(pro.hourly_rate || 4000).toLocaleString()}
+                      {formatCurrency(pro.base_price || 4000)}
                     </span>
                   </div>
 
