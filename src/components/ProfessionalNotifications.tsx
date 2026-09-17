@@ -240,10 +240,10 @@ export const ProfessionalNotifications: React.FC<ProfessionalNotificationsProps>
               <div
                 key={notification.id}
                 onClick={() => onNotificationClick(notification)}
-                className={`group flex items-start gap-4 p-[10px] sm:p-[15px] rounded-2xl border transition-all duration-200 cursor-pointer ${
+                className={`group flex items-start gap-4 p-[10px] sm:p-[15px] rounded-2xl border transition-all duration-200 cursor-pointer hover:border-slate-300 dark:hover:border-slate-700 ${
                   notification.isRead
-                    ? 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60'
-                    : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 border-l-4 border-l-brand-orange-500 dark:border-l-brand-orange-500 shadow-xs hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                    ? 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 opacity-90'
+                    : 'bg-navy-800/5 dark:bg-navy-950/20 border-navy-800/30 dark:border-navy-400/30 shadow-xs'
                 }`}
               >
                 {/* Icon Column */}
@@ -254,33 +254,34 @@ export const ProfessionalNotifications: React.FC<ProfessionalNotificationsProps>
                 {/* Content Column */}
                 <div className="flex-1 min-w-0 space-y-1">
                   <div className="flex items-center justify-between gap-2">
-                    <h3 className={`text-sm tracking-tight truncate ${
-                      notification.isRead 
-                        ? 'font-bold text-slate-800 dark:text-slate-200' 
-                        : 'font-black text-slate-900 dark:text-white'
-                    }`}>
-                      {notification.title}
-                    </h3>
-                    
-                    {/* Unread Indicator & Mark as Read Action */}
-                    {!notification.isRead && (
-                      <div className="flex items-center gap-2 shrink-0">
-                        {onMarkAsRead && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onMarkAsRead(notification.id);
-                            }}
-                            className="px-2.5 py-1 text-[11px] font-bold text-navy-800 dark:text-navy-300 hover:text-white bg-navy-100/80 hover:bg-navy-800 dark:bg-navy-950 dark:hover:bg-navy-800 border border-navy-200 dark:border-navy-800 rounded-lg transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
-                            title="Mark as read" aria-label="Mark as read"
-                          >
-                            <Check className="w-3 h-3" />
-                            <span>Mark as read</span>
-                          </button>
-                        )}
-                        <span className="w-2.5 h-2.5 rounded-full bg-navy-800 dark:bg-navy-400 shrink-0" title="Unread" aria-label="Unread" />
-                      </div>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <h3 className={`text-sm tracking-tight truncate ${
+                        notification.isRead
+                          ? 'font-bold text-slate-800 dark:text-slate-200'
+                          : 'font-black text-slate-900 dark:text-white'
+                      }`}>
+                        {notification.title}
+                      </h3>
+                      {!notification.isRead && (
+                        <span className="shrink-0 px-2 py-0.2 rounded-md bg-navy-800 text-white dark:bg-navy-400 dark:text-navy-950 text-[9px] font-black uppercase tracking-wider">
+                          New
+                        </span>
+                      )}
+                    </div>
+
+                    {!notification.isRead && onMarkAsRead && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onMarkAsRead(notification.id);
+                        }}
+                        className="shrink-0 px-2.5 py-1 text-[11px] font-bold text-navy-800 dark:text-navy-300 hover:text-white bg-navy-100/80 hover:bg-navy-800 dark:bg-navy-950 dark:hover:bg-navy-800 border border-navy-200 dark:border-navy-800 rounded-lg transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+                        title="Mark as read" aria-label="Mark as read"
+                      >
+                        <Check className="w-3 h-3" />
+                        <span>Mark as read</span>
+                      </button>
                     )}
                   </div>
 

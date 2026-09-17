@@ -55,7 +55,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
   onPageSubtitleChange
 }) => {
   // Sub-tabs for home view or jobs page
-  const [homeSubTab, setHomeSubTab] = useState<'overview' | 'portfolio' | 'profile'>('overview');
+  const [homeSubTab, setHomeSubTab] = useState<'overview' | 'portfolio'>('overview');
   const [jobsSubTab, setJobsSubTab] = useState<'requests' | 'active' | 'completed'>('requests');
   const [activeJobFilter, setActiveJobFilter] = useState<'all' | 'in_progress' | 'completion_submitted' | 'issue_reported'>('all');
   
@@ -92,14 +92,6 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
   const completionSheet = useSlideUpSheet(Boolean(completingJob), completionGuard.requestClose);
 
   const [showAllPortfolio, setShowAllPortfolio] = useState(false);
-
-  // Profile edit state
-  const [bio, setBio] = useState(professional.bio);
-  const [tagline, setTagline] = useState(professional.tagline);
-  const [availabilityState, setAvailabilityState] = useState<'Available' | 'Busy' | 'Offline'>(
-    professional.is_available_now ? 'Available' : 'Offline'
-  );
-  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
 
   const [localBookings, setLocalBookings] = useState<Booking[]>(bookings);
 
@@ -193,21 +185,6 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
     if (activeJobFilter === 'issue_reported') return b.status === 'disputed';
     return true;
   });
-
-  // Synchronize availability with professional prop
-  useEffect(() => {
-    setAvailabilityState(professional.is_available_now ? 'Available' : 'Offline');
-  }, [professional.is_available_now]);
-
-  const handleSaveProfile = (e: React.FormEvent) => {
-    e.preventDefault();
-    onUpdateProfile({
-      bio,
-      tagline,
-      is_available_now: availabilityState === 'Available'
-    });
-    alert('Profile updated successfully!');
-  };
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -1051,7 +1028,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
           Today's Overview
         </h2>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 min-[350px]:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Card 1 — Today's Jobs */}
           <div
             onClick={() => setHomeSubTab('overview')}
@@ -1060,8 +1037,8 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
             <div>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Today's Jobs</span>
-                <div className="w-8 h-8 rounded-xl bg-navy-800/10 dark:bg-navy-800/30 text-navy-800 dark:text-navy-300 flex items-center justify-center transition-transform group-hover:scale-110">
-                  <Calendar className="w-4 h-4" />
+                <div className="w-7 h-7 min-[350px]:w-8 min-[350px]:h-8 rounded-xl bg-navy-800/10 dark:bg-navy-800/30 text-navy-800 dark:text-navy-300 flex items-center justify-center transition-transform group-hover:scale-110">
+                  <Calendar className="w-3.5 h-3.5 min-[350px]:w-4 min-[350px]:h-4" />
                 </div>
               </div>
               <div className="flex items-baseline gap-2">
@@ -1092,8 +1069,8 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
             <div>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Pending Requests</span>
-                <div className="w-8 h-8 rounded-xl bg-brand-orange-500/10 text-brand-orange-600 dark:text-brand-orange-400 flex items-center justify-center transition-transform group-hover:scale-110">
-                  <ClipboardList className="w-4 h-4" />
+                <div className="w-7 h-7 min-[350px]:w-8 min-[350px]:h-8 rounded-xl bg-brand-orange-500/10 text-brand-orange-600 dark:text-brand-orange-400 flex items-center justify-center transition-transform group-hover:scale-110">
+                  <ClipboardList className="w-3.5 h-3.5 min-[350px]:w-4 min-[350px]:h-4" />
                 </div>
               </div>
               <div className="flex items-baseline gap-2">
@@ -1121,8 +1098,8 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
             <div>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Unread Messages</span>
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center transition-transform group-hover:scale-110">
-                  <MessageSquare className="w-4 h-4" />
+                <div className="w-7 h-7 min-[350px]:w-8 min-[350px]:h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center transition-transform group-hover:scale-110">
+                  <MessageSquare className="w-3.5 h-3.5 min-[350px]:w-4 min-[350px]:h-4" />
                 </div>
               </div>
               <div className="flex items-baseline gap-2">
@@ -1142,14 +1119,14 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
 
           {/* Card 4 — Average Rating */}
           <div
-            onClick={() => setHomeSubTab('profile')}
+            onClick={() => onTabChange && onTabChange('profile')}
             className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition-all cursor-pointer group flex flex-col justify-between hover:-translate-y-0.5"
           >
             <div>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Average Rating</span>
-                <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center transition-transform group-hover:scale-110">
-                  <Star className="w-4 h-4 fill-amber-500" />
+                <div className="w-7 h-7 min-[350px]:w-8 min-[350px]:h-8 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center transition-transform group-hover:scale-110">
+                  <Star className="w-3.5 h-3.5 min-[350px]:w-4 min-[350px]:h-4 fill-amber-500" />
                 </div>
               </div>
               <div className="flex items-baseline gap-2">
@@ -1193,19 +1170,6 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
           )}
           <span>Portfolio Showcase ({professional.portfolio.length})</span>
         </button>
-        <button
-          onClick={() => setHomeSubTab('profile')}
-          className={`pb-3 pt-2.5 px-5 font-bold text-sm border-b-2 transition-colors cursor-pointer whitespace-nowrap select-none active:scale-95 shrink-0 flex items-center gap-2 ${
-            homeSubTab === 'profile'
-              ? 'border-navy-800 text-navy-800 dark:border-navy-400 dark:text-navy-400 font-extrabold'
-              : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-100'
-          }`}
-        >
-          {homeSubTab === 'profile' && (
-            <span className="w-1.5 h-1.5 rounded-full bg-brand-orange-500 shrink-0" />
-          )}
-          <span>Profile</span>
-        </button>
       </div>
 
       {/* Tab 1: Overview / Bookings */}
@@ -1229,8 +1193,8 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
               {activeJobs.map((job) => (
                 <div key={job.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase ${
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                      <span className={`self-start px-2.5 py-0.5 rounded-full text-xs font-bold uppercase ${
                         job.status === 'accepted' ? 'bg-emerald-500/10 text-emerald-600' :
                         job.status === 'in_progress' ? 'bg-navy-800/10 text-navy-800 dark:text-navy-400' :
                         job.status === 'pending' ? 'bg-brand-orange-500/10 text-brand-orange-600 border border-brand-orange-500/20 dark:text-brand-orange-400 dark:border-brand-orange-500/30' :
@@ -1238,7 +1202,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                       }`}>
                         {job.status}
                       </span>
-                      <span className="text-xs text-slate-400 font-semibold truncate">Customer: {job.customerName} ({job.customerPhone})</span>
+                      <span className="text-xs text-slate-400 font-semibold sm:truncate">Customer: {job.customerName} ({job.customerPhone})</span>
                     </div>
 
                     <h4 className="text-base font-bold text-slate-900 dark:text-slate-100">Issue: {job.description}</h4>
@@ -1366,43 +1330,6 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
               </div>
             </div>
           )}
-        </div>
-      )}
-
-      {/* Tab 3: Profile Settings */}
-      {homeSubTab === 'profile' && (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-xs max-w-2xl">
-          <h3 className="font-bold text-slate-900 dark:text-slate-100 text-lg mb-4">Edit Professional Profile</h3>
-          <form onSubmit={handleSaveProfile} className="space-y-5">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Tagline / Professional Title</label>
-              <input
-                type="text"
-                value={tagline}
-                onChange={(e) => setTagline(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-sm text-slate-900 dark:text-slate-100"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Professional Bio</label>
-              <textarea
-                rows={4}
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-sm text-slate-900 dark:text-slate-100"
-                required
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="px-6 py-3 bg-navy-800 hover:bg-navy-900 text-white font-semibold rounded-xl text-sm transition-colors cursor-pointer shadow-xs"
-            >
-              Save Profile Changes
-            </button>
-          </form>
         </div>
       )}
 

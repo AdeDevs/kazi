@@ -39,6 +39,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
 
   // Basic Pro Info State
   const [name, setName] = useState(activeProfessional.name);
+  const [tagline, setTagline] = useState(activeProfessional.tagline);
   const [bio, setBio] = useState(activeProfessional.bio);
   const [phone, setPhone] = useState(activeProfessional.phone_number);
   const [email, setEmail] = useState(activeProfessional.email);
@@ -88,13 +89,14 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
   // Snapshot of the editable fields taken when the modal opens, so we can tell whether anything
   // changed (the fields below are live-bound to the same state the page displays outside the
   // modal, with no separate draft copy) and revert to it if the user discards.
-  const [editInfoBaseline, setEditInfoBaseline] = useState({ name, bio, phone, email, category, primaryLocation });
+  const [editInfoBaseline, setEditInfoBaseline] = useState({ name, tagline, bio, phone, email, category, primaryLocation });
   const openEditInfoModal = () => {
-    setEditInfoBaseline({ name, bio, phone, email, category, primaryLocation });
+    setEditInfoBaseline({ name, tagline, bio, phone, email, category, primaryLocation });
     setShowEditInfoModal(true);
   };
   const isEditInfoDirty =
     name !== editInfoBaseline.name ||
+    tagline !== editInfoBaseline.tagline ||
     bio !== editInfoBaseline.bio ||
     phone !== editInfoBaseline.phone ||
     email !== editInfoBaseline.email ||
@@ -102,6 +104,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
     primaryLocation !== editInfoBaseline.primaryLocation;
   const closeEditInfoModal = () => {
     setName(editInfoBaseline.name);
+    setTagline(editInfoBaseline.tagline);
     setBio(editInfoBaseline.bio);
     setPhone(editInfoBaseline.phone);
     setEmail(editInfoBaseline.email);
@@ -240,6 +243,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
     if (onUpdateProfile) {
       onUpdateProfile({
         name,
+        tagline,
         bio,
         phone_number: phone,
         email,
@@ -247,7 +251,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
         state: primaryLocation
       });
     }
-    setEditInfoBaseline({ name, bio, phone, email, category, primaryLocation });
+    setEditInfoBaseline({ name, tagline, bio, phone, email, category, primaryLocation });
     setShowEditInfoModal(false);
     triggerToast('Profile updated successfully!');
   };
@@ -985,6 +989,18 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  className="w-full px-3.5 sm:px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-slate-100"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Tagline / Professional Title</label>
+                <input
+                  type="text"
+                  value={tagline}
+                  onChange={(e) => setTagline(e.target.value)}
+                  placeholder="e.g. Master Electrician & Smart Home Wiring Expert"
                   className="w-full px-3.5 sm:px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-slate-100"
                   required
                 />
