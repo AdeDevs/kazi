@@ -103,10 +103,12 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
   const conversations = Array.from(conversationsMap.values())
     .sort((a, b) => new Date(b.lastMessage.timestamp).getTime() - new Date(a.lastMessage.timestamp).getTime());
 
-  const filteredConversations = conversations.filter(c => 
-    c.customerName.toLowerCase().includes(searchQuery.toLowerCase()) || 
+  const filteredConversations = conversations.filter(c =>
+    c.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (c.relatedBooking?.title || c.relatedBooking?.category || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const totalUnreadCount = conversations.reduce((sum, c) => sum + c.unreadCount, 0);
 
   const activeConversation = conversations.find(c => c.customerId === selectedCustomerId);
   const activeMessages = messages
@@ -338,10 +340,24 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
     <div className="w-full max-w-none h-[calc(100vh-85px)] md:h-[calc(100vh-100px)] min-h-[450px] flex gap-4 lg:gap-6 animate-in fade-in duration-300">
       
       {/* Left Panel: Conversation List */}
-      <div className={`w-full lg:w-80 xl:w-96 flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden ${selectedCustomerId ? 'hidden lg:flex' : 'flex'}`}>
+      <div className={`w-full lg:w-80 xl:w-96 min-h-0 flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden ${selectedCustomerId ? 'hidden lg:flex' : 'flex'}`}>
         <div className="p-3.5 sm:p-4 border-b border-slate-200 dark:border-slate-800 space-y-3">
-          <div className="flex md:hidden items-center justify-between">
-            <h2 className="text-xl font-black text-slate-900 dark:text-white">Messages</h2>
+          <div className="flex md:hidden flex-col gap-0.5">
+            <p className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2.5">
+              <span>Messages</span>
+              {totalUnreadCount > 0 ? (
+                <span className="px-2.5 py-0.5 rounded-full bg-brand-orange-700 text-white text-xs font-bold shadow-xs">
+                  {totalUnreadCount} New
+                </span>
+              ) : (
+                <span className="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-bold">
+                  {conversations.length} {conversations.length === 1 ? 'Conversation' : 'Conversations'}
+                </span>
+              )}
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Direct communications, quotes, and updates with your customers.
+            </p>
           </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -415,18 +431,23 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
       </div>
 
       {/* Right Panel: Active Conversation */}
-      <div className={`w-full lg:flex-1 flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden ${selectedCustomerId ? 'flex' : 'hidden lg:flex'}`}>
+      <div className={`w-full lg:flex-1 min-h-0 flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden ${selectedCustomerId ? 'flex' : 'hidden lg:flex'}`}>
         {selectedCustomerId && activeConversation ? (
           <>
+            {/* Back to All Messages -- mobile/tablet only; on desktop the list is already visible alongside */}
+            <div className="lg:hidden px-4 pt-3.5 pb-1 shrink-0">
+              <button
+                onClick={() => setSelectedCustomerId(null)}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+              >
+                <ArrowLeft className="w-4 h-4 text-brand-orange-500" />
+                <span>Back to All Messages</span>
+              </button>
+            </div>
+
             {/* Chat Header */}
             <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900">
               <div className="flex items-center gap-3">
-                <button 
-                  onClick={() => setSelectedCustomerId(null)}
-                  className="lg:hidden p-2 -ml-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors"
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                </button>
                 <div className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300 font-bold text-sm border border-slate-200/80 dark:border-slate-700/80 shrink-0">
                   {activeConversation.customerName.charAt(0)}
                 </div>
@@ -444,7 +465,7 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
             </div>
 
             {/* Chat Messages Feed */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar bg-slate-50/50 dark:bg-slate-950/50">
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 no-scrollbar bg-slate-50/50 dark:bg-slate-950/50">
               {activeMessages.map((msg, index) => {
                 const isMe = msg.senderId === professional.id;
                 const showDate = index === 0 || formatDateLabel(msg.timestamp) !== formatDateLabel(activeMessages[index - 1].timestamp);
@@ -734,7 +755,7 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
           </>
         ) : (
           /* Empty State */
-          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-slate-50/50 dark:bg-slate-950/50">
+          <div className="flex-1 min-h-0 flex flex-col items-center justify-center p-8 text-center bg-slate-50/50 dark:bg-slate-950/50">
             <div className="w-16 h-16 bg-white dark:bg-slate-900 rounded-2xl flex items-center justify-center shadow-sm border border-slate-200 dark:border-slate-800 mb-4">
               <MessageSquare className="w-8 h-8 text-slate-400" />
             </div>
@@ -748,19 +769,18 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
 
       {/* LIGHTBOX FOR ZOOMING IMAGES */}
       {selectedLightboxImage && (
-        <div className="fixed inset-0 z-60 bg-black/95 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center justify-center">
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4"
+          onClick={() => setSelectedLightboxImage(null)}
+        >
+          <div className="relative max-w-2xl max-h-[85vh] overflow-hidden rounded-2xl" onClick={(e) => e.stopPropagation()}>
+            <img src={selectedLightboxImage} alt="Enlarged preview" className="w-full h-full object-contain" />
             <button
               onClick={() => setSelectedLightboxImage(null)}
-              className="absolute -top-12 right-0 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors cursor-pointer"
+              className="absolute top-3 right-3 p-2 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors"
             >
-              <X className="w-6 h-6" />
+              <X className="w-5 h-5" />
             </button>
-            <img 
-              src={selectedLightboxImage} 
-              alt="Expanded Attachment" 
-              className="max-w-full max-h-[80vh] rounded-2xl object-contain shadow-2xl" 
-            />
           </div>
         </div>
       )}
