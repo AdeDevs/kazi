@@ -411,7 +411,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
           desktop-only blocks below apart from any other sibling, and would add its margin-top
           onto whichever one happens to render, regardless of breakpoint. Each block below is
           self-spaced instead. */}
-      <Card>
+      <Card className="relative overflow-hidden">
 
         {/* Mobile: full-bleed hero -- the real photo if there is one, otherwise the same
             deterministic color + initials UserAvatar falls back to everywhere else, just at
@@ -496,10 +496,9 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
           <button
             type="button"
             onClick={openEditInfoModal}
-            className="w-full px-4 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 active:scale-[0.98] text-white font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
+            className="w-full px-4 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 active:scale-[0.98] text-white font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center justify-center"
           >
-            <Edit3 className="w-3.5 h-3.5" />
-            <span>Edit Profile</span>
+            Edit Profile
           </button>
         </div>
 
@@ -535,10 +534,9 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
               <button
                 type="button"
                 onClick={openEditInfoModal}
-                className="px-4 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 active:scale-[0.98] text-white font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
+                className="px-4 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 active:scale-[0.98] text-white font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center justify-center shrink-0"
               >
-                <Edit3 className="w-3.5 h-3.5" />
-                <span>Edit Profile</span>
+                Edit Profile
               </button>
             </div>
           </div>

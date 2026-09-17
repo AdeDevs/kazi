@@ -810,7 +810,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
               <CheckCircle2 className="w-5 h-5 shrink-0" />
               <span>{rateToast}</span>
             </div>
-            <button onClick={() => setRateToast(null)} className="p-1 hover:bg-emerald-700 rounded-lg" aria-label="Dismiss">
+            <button onClick={() => setRateToast(null)} className="p-1 hover:bg-white/20 rounded-lg" aria-label="Dismiss">
               <X className="w-4 h-4" />
             </button>
           </div>
