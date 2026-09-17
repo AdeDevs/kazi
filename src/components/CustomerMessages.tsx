@@ -816,7 +816,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
                   <button
                     type="button"
                     onClick={handleSendVoiceNote}
-                    className="p-2 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="p-2 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold bg-navy-800 hover:bg-navy-900 text-white shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                     title="Send audio"
                   >
                     <SendHorizontal className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
@@ -843,7 +843,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
                 <button
                   type="button"
                   onClick={startRecording}
-                  className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/40 dark:hover:text-emerald-400 transition-colors cursor-pointer shrink-0 flex items-center justify-center"
+                  className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-navy-50 hover:text-navy-700 dark:hover:bg-navy-950/40 dark:hover:text-navy-400 transition-colors cursor-pointer shrink-0 flex items-center justify-center"
                   title="Record Live Voice Note"
                 >
                   <Mic className="w-4 h-4" />

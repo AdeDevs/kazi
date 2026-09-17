@@ -550,7 +550,7 @@ export const KYCVerificationModal: React.FC<KYCVerificationModalProps> = ({
                       <button
                         type="button"
                         onClick={captureLivenessPhoto}
-                        className="px-3 py-1 rounded-full bg-white/90 hover:bg-white text-slate-950 font-bold text-[11px] shadow-md cursor-pointer transition-all focus:ring-2 focus:ring-emerald-500"
+                        className="px-3 py-1 rounded-full bg-white/90 hover:bg-white text-slate-950 font-bold text-[11px] shadow-md cursor-pointer transition-all focus:ring-2 focus:ring-navy-500"
                         aria-label="Snap photo manually now"
                       >
                         Snap Photo Manually
@@ -587,7 +587,7 @@ export const KYCVerificationModal: React.FC<KYCVerificationModalProps> = ({
                       <button
                         type="button"
                         onClick={startCamera}
-                        className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center gap-2 focus:ring-2 focus:ring-emerald-400"
+                        className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center gap-2 focus:ring-2 focus:ring-navy-400"
                         aria-label="Open device camera and start verification"
                       >
                         <Camera className="w-4 h-4" />
@@ -650,7 +650,7 @@ export const KYCVerificationModal: React.FC<KYCVerificationModalProps> = ({
                   }
                   handleSubmitForVerification();
                 }}
-                className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs cursor-pointer flex items-center gap-2 focus:ring-2 focus:ring-emerald-400"
+                className="px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs shadow-xs cursor-pointer flex items-center gap-2 focus:ring-2 focus:ring-navy-400"
               >
                 <span>Submit for Verification</span>
                 <ShieldCheck className="w-4 h-4" />

@@ -562,7 +562,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                         setNewComment('');
                         setSelectedTags([]);
                       }}
-                      className="px-4 py-2 rounded-xl bg-brand-orange-500 hover:bg-brand-orange-600 text-white font-extrabold text-xs shadow-xs cursor-pointer"
+                      className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-extrabold text-xs shadow-xs cursor-pointer"
                     >
                       Publish Review
                     </button>

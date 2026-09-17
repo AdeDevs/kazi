@@ -502,7 +502,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   type="button"
                   onClick={handleGetLiveLocation}
                   disabled={isLocating}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-xs font-bold transition-all cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-navy-800/10 hover:bg-navy-800/20 text-navy-800 dark:text-navy-300 border border-navy-800/30 text-xs font-bold transition-all cursor-pointer"
                 >
                   <Navigation className={`w-3.5 h-3.5 ${isLocating ? 'animate-spin' : ''}`} />
                   <span>{isLocating ? 'Locating...' : 'Use Phone GPS'}</span>
@@ -706,7 +706,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               </button>
               <button
                 type="submit"
-                className="w-full sm:w-auto px-7 py-3 bg-brand-orange-500 hover:bg-brand-orange-600 text-white rounded-2xl text-xs font-extrabold shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-[0.98]"
+                className="w-full sm:w-auto px-7 py-3 bg-navy-800 hover:bg-navy-900 text-white rounded-2xl text-xs font-extrabold shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-[0.98]"
               >
                 <span>{isQuoteService ? 'Review Quote Request' : 'Review Booking Summary'}</span>
                 <ArrowRight className="w-4 h-4" />
@@ -868,7 +868,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               <button
                 type="button"
                 onClick={handleFinalSubmit}
-                className="px-7 py-3 bg-brand-orange-500 hover:bg-brand-orange-600 text-white rounded-2xl text-xs font-extrabold shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-[0.98]"
+                className="px-7 py-3 bg-navy-800 hover:bg-navy-900 text-white rounded-2xl text-xs font-extrabold shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-[0.98]"
               >
                 <CheckCircle2 className="w-4 h-4" />
                 <span>{isQuoteService ? 'Submit Quote Request' : 'Confirm & Book Service'}</span>

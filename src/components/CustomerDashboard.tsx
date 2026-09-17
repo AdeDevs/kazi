@@ -734,7 +734,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <button onClick={(e) => { e.stopPropagation(); onOpenChat(pro); }} className="py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">Chat</button>
-                    <button onClick={(e) => { e.stopPropagation(); onOpenBooking(pro); }} className="py-2.5 rounded-xl bg-brand-orange-500 hover:bg-brand-orange-600 text-xs font-bold text-white shadow-xs cursor-pointer transition-colors">Book Now</button>
+                    <button onClick={(e) => { e.stopPropagation(); onOpenBooking(pro); }} className="py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-xs font-bold text-white shadow-xs cursor-pointer transition-colors">Book Now</button>
                   </div>
                 </div>
               </div>
@@ -1319,7 +1319,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                                 onUpdateBookingStatus(b.id, 'paid_out', { completedAt: new Date().toISOString() });
                               }
                             }}
-                            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer transition-all"
+                            className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer transition-all"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             <span>Confirm & Release Escrow</span>
@@ -1860,7 +1860,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <button onClick={(e) => { e.stopPropagation(); onOpenChat(pro); }} className="py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">Chat</button>
-                  <button onClick={(e) => { e.stopPropagation(); onOpenBooking(pro); }} className="py-2.5 rounded-xl bg-brand-orange-500 hover:bg-brand-orange-600 text-xs font-bold text-white shadow-xs cursor-pointer transition-colors">Book Now</button>
+                  <button onClick={(e) => { e.stopPropagation(); onOpenBooking(pro); }} className="py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-xs font-bold text-white shadow-xs cursor-pointer transition-colors">Book Now</button>
                 </div>
               </div>
             ))}
@@ -2444,7 +2444,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                         e.stopPropagation();
                         onOpenBooking(pro);
                       }}
-                      className="px-3.5 py-2 rounded-xl bg-brand-orange-500 hover:bg-brand-orange-600 text-xs font-extrabold text-white shadow-xs transition-colors cursor-pointer flex items-center gap-1"
+                      className="px-3.5 py-2 rounded-xl bg-navy-800 hover:bg-navy-900 text-xs font-extrabold text-white shadow-xs transition-colors cursor-pointer flex items-center gap-1"
                     >
                       Book Now
                     </button>
@@ -2552,7 +2552,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                   type="button"
                   onClick={() => handleRunAIDiagnosis()}
                   disabled={!aiSymptomInput.trim() || isAiDiagnosing}
-                  className="px-4 py-2.5 rounded-xl bg-brand-orange-500 hover:bg-brand-orange-600 disabled:opacity-50 text-white font-extrabold text-xs shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+                  className="px-4 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 disabled:opacity-50 text-white font-extrabold text-xs shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
                 >
                   {isAiDiagnosing ? (
                     <>
@@ -2662,7 +2662,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                                 setIsAIDiagnosisOpen(false);
                                 onOpenBooking(pro);
                               }}
-                              className="px-2.5 py-1.5 rounded-lg bg-brand-orange-500 hover:bg-brand-orange-600 text-white font-extrabold text-[11px] shadow-xs cursor-pointer"
+                              className="px-2.5 py-1.5 rounded-lg bg-navy-800 hover:bg-navy-900 text-white font-extrabold text-[11px] shadow-xs cursor-pointer"
                             >
                               Book Now
                             </button>

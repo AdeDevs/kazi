@@ -363,8 +363,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               onClick={() => setShowFreezeModal(true)}
               className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
                 isFrozen
-                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
-                  : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 border border-amber-500/30'
+                  ? 'bg-navy-800 hover:bg-navy-900 text-white shadow-xs'
+                  : 'bg-navy-800/10 text-navy-800 dark:text-navy-300 hover:bg-navy-800/20 border border-navy-800/30'
               }`}
             >
               <Snowflake className="w-3.5 h-3.5" />

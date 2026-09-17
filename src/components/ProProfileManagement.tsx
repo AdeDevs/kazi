@@ -577,7 +577,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
           <button
             type="button"
             onClick={handleOpenAddPortfolio}
-            className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs cursor-pointer shrink-0 self-start sm:self-auto"
+            className="px-3 py-1.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs cursor-pointer shrink-0 self-start sm:self-auto"
           >
             Add Portfolio
           </button>
@@ -598,7 +598,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
             <button
               type="button"
               onClick={handleOpenAddService}
-              className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+              className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-navy-800 hover:bg-navy-900 active:scale-95 text-white font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
               title="Add Service"
               aria-label="Add Service"
             >
@@ -870,7 +870,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
             <button
               type="button"
               onClick={() => setShowKYCModal(true)}
-              className="w-full sm:w-auto px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+              className="w-full sm:w-auto px-4 py-2 rounded-xl bg-navy-800 hover:bg-navy-900 active:scale-95 text-white font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
             >
               <UserCheck className="w-3.5 h-3.5" />
               <span>Complete Verification</span>

@@ -303,7 +303,7 @@ export const DecibelAudioPlayer: React.FC<DecibelAudioPlayerProps> = ({
         className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center cursor-pointer shadow-xs transition-transform active:scale-95 shrink-0 ${
           isCustomer
             ? 'bg-white text-navy-900 hover:bg-slate-100 shadow-black/10'
-            : 'bg-navy-900 text-white dark:bg-brand-orange-500 dark:text-white hover:bg-navy-950 shadow-black/10'
+            : 'bg-navy-900 text-white dark:bg-navy-700 dark:text-white hover:bg-navy-950 dark:hover:bg-navy-800 shadow-black/10'
         }`}
         title={isPlaying ? 'Pause voice note' : 'Play voice note'}
       >

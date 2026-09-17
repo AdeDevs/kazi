@@ -71,14 +71,14 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       case 'danger':
         return 'bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white shadow-xs';
       case 'freeze':
-        return 'bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white shadow-xs';
+        return 'bg-navy-800 hover:bg-navy-900 active:bg-navy-950 text-white shadow-xs';
       case 'logout':
         return 'bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white shadow-xs';
       case 'info':
         return 'bg-navy-900 hover:bg-navy-950 text-white shadow-xs';
       case 'warning':
       default:
-        return 'bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white shadow-xs';
+        return 'bg-navy-800 hover:bg-navy-900 active:bg-navy-950 text-white shadow-xs';
     }
   };
 

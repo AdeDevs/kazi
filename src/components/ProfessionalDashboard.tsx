@@ -682,7 +682,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                                 setCompletionPhoto2('');
                                 setCompletionVideoUrl('');
                               }}
-                              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex-1 sm:flex-none shadow-xs flex items-center justify-center gap-1.5"
+                              className="px-4 py-2 bg-navy-800 hover:bg-navy-900 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex-1 sm:flex-none shadow-xs flex items-center justify-center gap-1.5"
                             >
                               <CheckCircle2 className="w-3.5 h-3.5" />
                               <span>Complete Job</span>
@@ -1018,7 +1018,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                   </button>
                   <button
                     type="submit"
-                    className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                    className="px-6 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
                   >
                     <CheckCircle2 className="w-4 h-4" />
                     <span>Submit Completion Proof</span>
@@ -1281,7 +1281,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                           setCompletionPhoto2('');
                           setCompletionVideoUrl('');
                         }}
-                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer w-full sm:w-auto shadow-xs flex items-center justify-center gap-1.5"
+                        className="px-4 py-2 bg-navy-800 hover:bg-navy-900 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer w-full sm:w-auto shadow-xs flex items-center justify-center gap-1.5"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         <span>Complete Job</span>
