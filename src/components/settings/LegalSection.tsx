@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { ExternalLink, X } from 'lucide-react';
 import { Card, CardHeader } from '../ui/Card';
+import { SheetDragHandle } from '../ui/SheetDragHandle';
+import { useSlideUpSheet } from '../../hooks/useSlideUpSheet';
 
 export const LegalSection: React.FC = () => {
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const termsSheet = useSlideUpSheet(showTermsModal, () => setShowTermsModal(false));
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const privacySheet = useSlideUpSheet(showPrivacyModal, () => setShowPrivacyModal(false));
 
   return (
     <Card className="space-y-4">
@@ -46,15 +50,17 @@ export const LegalSection: React.FC = () => {
       </div>
 
       {/* TERMS OF SERVICE MODAL */}
-      {showTermsModal && (
+      {termsSheet.shouldRender && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in"
+          className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md ${termsSheet.backdropAnimationClasses}`}
           onClick={() => setShowTermsModal(false)}
         >
           <div
-            className="bg-white dark:bg-slate-900 w-full max-w-xl rounded-2xl p-5 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[85vh] overflow-y-auto"
+            className={`bg-white dark:bg-slate-900 w-full sm:max-w-xl rounded-t-3xl sm:rounded-2xl p-5 space-y-4 border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[92vh] sm:max-h-[85vh] overflow-y-auto ${termsSheet.sheetAnimationClasses}`}
+            style={termsSheet.dragStyle}
             onClick={(e) => e.stopPropagation()}
           >
+            <SheetDragHandle dragHandleProps={termsSheet.dragHandleProps} />
             <button
               onClick={() => setShowTermsModal(false)}
               className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
@@ -73,15 +79,17 @@ export const LegalSection: React.FC = () => {
       )}
 
       {/* PRIVACY POLICY MODAL */}
-      {showPrivacyModal && (
+      {privacySheet.shouldRender && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in"
+          className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md ${privacySheet.backdropAnimationClasses}`}
           onClick={() => setShowPrivacyModal(false)}
         >
           <div
-            className="bg-white dark:bg-slate-900 w-full max-w-xl rounded-2xl p-5 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[85vh] overflow-y-auto"
+            className={`bg-white dark:bg-slate-900 w-full sm:max-w-xl rounded-t-3xl sm:rounded-2xl p-5 space-y-4 border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[92vh] sm:max-h-[85vh] overflow-y-auto ${privacySheet.sheetAnimationClasses}`}
+            style={privacySheet.dragStyle}
             onClick={(e) => e.stopPropagation()}
           >
+            <SheetDragHandle dragHandleProps={privacySheet.dragHandleProps} />
             <button
               onClick={() => setShowPrivacyModal(false)}
               className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"

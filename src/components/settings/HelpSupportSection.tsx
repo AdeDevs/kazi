@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, MessageSquare, PhoneCall, X, Send } from 'lucide-react';
 import { Card, CardHeader } from '../ui/Card';
+import { SheetDragHandle } from '../ui/SheetDragHandle';
+import { useSlideUpSheet } from '../../hooks/useSlideUpSheet';
 
 interface HelpSupportSectionProps {
   triggerToast: (msg: string) => void;
@@ -28,6 +30,7 @@ const FAQS = [
 export const HelpSupportSection: React.FC<HelpSupportSectionProps> = ({ triggerToast }) => {
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
   const [showContactSupport, setShowContactSupport] = useState(false);
+  const contactSheet = useSlideUpSheet(showContactSupport, () => setShowContactSupport(false));
   const [supportSubject, setSupportSubject] = useState('General Inquiry');
   const [supportMessage, setSupportMessage] = useState('');
 
@@ -89,15 +92,17 @@ export const HelpSupportSection: React.FC<HelpSupportSectionProps> = ({ triggerT
       </div>
 
       {/* CONTACT SUPPORT MODAL */}
-      {showContactSupport && (
+      {contactSheet.shouldRender && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in"
+          className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md ${contactSheet.backdropAnimationClasses}`}
           onClick={() => setShowContactSupport(false)}
         >
           <div
-            className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl p-5 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl relative"
+            className={`bg-white dark:bg-slate-900 w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl p-5 space-y-4 border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[92vh] overflow-y-auto ${contactSheet.sheetAnimationClasses}`}
+            style={contactSheet.dragStyle}
             onClick={(e) => e.stopPropagation()}
           >
+            <SheetDragHandle dragHandleProps={contactSheet.dragHandleProps} />
             <button
               onClick={() => setShowContactSupport(false)}
               className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"

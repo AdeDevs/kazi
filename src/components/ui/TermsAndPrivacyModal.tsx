@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { 
-  ShieldCheck, FileText, ArrowLeft, Lock, Scale, 
-  HelpCircle, CheckCircle2, ChevronRight, AlertTriangle, 
+import {
+  ShieldCheck, FileText, ArrowLeft, Lock, Scale,
+  HelpCircle, CheckCircle2, ChevronRight, AlertTriangle,
   Building2, ExternalLink
 } from 'lucide-react';
+import { SheetDragHandle } from './SheetDragHandle';
+import { useSlideUpSheet } from '../../hooks/useSlideUpSheet';
 
 interface TermsAndPrivacyModalProps {
   isOpen: boolean;
@@ -15,14 +17,19 @@ export const TermsAndPrivacyModal: React.FC<TermsAndPrivacyModalProps> = ({
   isOpen,
   onClose
 }) => {
-  if (!isOpen) return null;
+  const sheet = useSlideUpSheet(isOpen, onClose);
+
+  if (!sheet.shouldRender) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-navy-950/70 backdrop-blur-xs animate-in fade-in duration-200">
-      <div 
-        className="w-full max-w-3xl max-h-[90vh] bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+    <div className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6 bg-navy-950/70 backdrop-blur-xs ${sheet.backdropAnimationClasses}`}>
+      <div
+        className={`w-full sm:max-w-3xl max-h-[92vh] sm:max-h-[90vh] bg-white dark:bg-zinc-900 rounded-t-3xl sm:rounded-2xl shadow-2xl border-t sm:border border-zinc-200 dark:border-zinc-800 flex flex-col overflow-hidden ${sheet.sheetAnimationClasses}`}
+        style={sheet.dragStyle}
         onClick={(e) => e.stopPropagation()}
       >
+        <SheetDragHandle dragHandleProps={sheet.dragHandleProps} className="sm:hidden pt-3 pb-1.5 cursor-grab active:cursor-grabbing touch-none" />
+
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50 dark:bg-zinc-900/80 shrink-0">
           <div className="flex items-center gap-3">

@@ -3,6 +3,8 @@ import { Moon, Sun, Globe, CheckCircle2, X } from 'lucide-react';
 import { Language, SUPPORTED_LANGUAGES } from '../../translations';
 import { useAuth } from '../../context/AuthContext';
 import { Card, CardHeader } from '../ui/Card';
+import { SheetDragHandle } from '../ui/SheetDragHandle';
+import { useSlideUpSheet } from '../../hooks/useSlideUpSheet';
 
 interface PreferencesSectionProps {
   darkMode?: boolean;
@@ -27,6 +29,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({
   const [emailAlerts, setEmailAlerts] = useState(true);
 
   const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const languageSheet = useSlideUpSheet(showLanguageModal, () => setShowLanguageModal(false));
 
   const handleToggleTheme = async () => {
     const willBeDark = !darkMode;
@@ -127,15 +130,17 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({
       </div>
 
       {/* LANGUAGE SELECTION MODAL */}
-      {showLanguageModal && (
+      {languageSheet.shouldRender && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in"
+          className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md ${languageSheet.backdropAnimationClasses}`}
           onClick={() => setShowLanguageModal(false)}
         >
           <div
-            className="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl p-5 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl relative"
+            className={`bg-white dark:bg-slate-900 w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl p-5 space-y-4 border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[92vh] overflow-y-auto ${languageSheet.sheetAnimationClasses}`}
+            style={languageSheet.dragStyle}
             onClick={(e) => e.stopPropagation()}
           >
+            <SheetDragHandle dragHandleProps={languageSheet.dragHandleProps} />
             <button
               onClick={() => setShowLanguageModal(false)}
               className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
