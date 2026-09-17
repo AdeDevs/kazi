@@ -2042,14 +2042,14 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                       onTabChange('bookings');
                     }
                   }}
-                  className={`p-[10px] sm:p-[15px] rounded-2xl bg-white dark:bg-slate-900 border transition-all cursor-pointer flex items-start justify-between gap-4 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 ${
+                  className={`group p-[10px] sm:p-[15px] rounded-2xl border transition-all duration-200 cursor-pointer flex items-start justify-between gap-4 hover:border-slate-300 dark:hover:border-slate-700 ${
                     isUnread
-                      ? 'border-navy-800/30 dark:border-navy-400/30 bg-navy-800/5 dark:bg-navy-950/20'
-                      : 'border-slate-200 dark:border-slate-800 opacity-90'
+                      ? 'bg-navy-800/5 dark:bg-navy-950/20 border-navy-800/30 dark:border-navy-400/30 shadow-xs'
+                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 opacity-90'
                   }`}
                 >
-                  <div className="flex items-start gap-4">
-                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border ${
+                  <div className="flex items-start gap-4 min-w-0">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
                       n.type === 'completion' || n.type === 'completion_submitted' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' :
                       n.type === 'warranty' || n.type === 'warranty_active' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
                       n.type === 'payment' || n.type === 'escrow_secured' ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20' :
@@ -2062,22 +2062,34 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                        n.type === 'issue_reported' ? <ShieldAlert className="w-5 h-5" /> :
                        <Bell className="w-5 h-5" />}
                     </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100">{n.title}</h4>
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <h4 className={`text-sm tracking-tight truncate ${
+                          isUnread
+                            ? 'font-black text-slate-900 dark:text-white'
+                            : 'font-bold text-slate-400 dark:text-slate-500'
+                        }`}>
+                          {n.title}
+                        </h4>
                         {isUnread && (
-                          <span className="px-2 py-0.2 rounded-md bg-navy-800 text-white dark:bg-navy-400 dark:text-navy-950 text-[9px] font-black uppercase tracking-wider">
+                          <span className="shrink-0 px-2 py-0.2 rounded-md bg-navy-800 text-white dark:bg-navy-400 dark:text-navy-950 text-[9px] font-black uppercase tracking-wider">
                             New
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{n.desc || n.description}</p>
-                      <p className="text-[10px] text-slate-400 font-medium">{n.time || n.timestamp}</p>
+                      <p className={`text-xs leading-relaxed font-medium ${
+                        isUnread
+                          ? 'text-slate-600 dark:text-slate-300'
+                          : 'text-slate-400 dark:text-slate-600'
+                      }`}>
+                        {n.desc || n.description}
+                      </p>
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">{n.time || n.timestamp}</p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0 self-center">
-                    <span className="text-xs font-bold text-navy-800 dark:text-navy-400 flex items-center gap-1">
+                    <span className="text-xs font-bold text-navy-800 dark:text-navy-400 opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
                       <span>View</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </span>
