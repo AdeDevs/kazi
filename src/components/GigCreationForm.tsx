@@ -6,11 +6,12 @@ import { CATEGORIES } from '../mockData';
 import { CustomDropdown } from './CustomDropdown';
 
 interface GigCreationFormProps {
+  professionalId: string;
   onCancel: () => void;
   onSuccess: () => void;
 }
 
-export const GigCreationForm: React.FC<GigCreationFormProps> = ({ onCancel, onSuccess }) => {
+export const GigCreationForm: React.FC<GigCreationFormProps> = ({ professionalId, onCancel, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -67,7 +68,7 @@ export const GigCreationForm: React.FC<GigCreationFormProps> = ({ onCancel, onSu
     setLoading(true);
     setError(null);
     try {
-      createGig(formData);
+      createGig(formData, professionalId);
       onSuccess();
     } catch (err: any) {
       setError(err.message || 'Failed to create gig');

@@ -191,6 +191,7 @@ export interface AIDiagnosisResult {
 
 export interface Gig {
   id: string;
+  professional_id: string;
   title: string;
   description: string;
   category: string;

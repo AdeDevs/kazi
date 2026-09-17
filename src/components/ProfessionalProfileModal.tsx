@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { X, Star, ShieldCheck, MapPin, Briefcase, Award, Phone, Mail, CheckCircle2, MessageSquare, Calendar, AlertCircle, ShieldAlert, Check, Tag, Clock } from 'lucide-react';
-import { Professional, ServiceItem, ServicePricingType } from '../types';
+import { Professional, ServiceItem, ServicePricingType, Gig } from '../types';
 import { VerifiedBadge } from './ui/VerifiedBadge';
 import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
+import { getGigsByProfessional } from '../lib/mockGigsStore';
+import { formatCurrency } from '../utils';
 
 
 interface ProfessionalProfileModalProps {
@@ -22,7 +24,8 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
   onOpenChat,
   onAddReview
 }) => {
-  const [activeTab, setActiveTab] = useState<'about' | 'portfolio' | 'reviews'>('about');
+  const [activeTab, setActiveTab] = useState<'about' | 'gigs' | 'portfolio' | 'reviews'>('about');
+  const [gigs, setGigs] = useState<Gig[]>([]);
   const [showWriteReview, setShowWriteReview] = useState(false);
   const [newRating, setNewRating] = useState(5);
   const [newHoverRating, setNewHoverRating] = useState(0);
@@ -43,6 +46,10 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
   const [cachedProfessional, setCachedProfessional] = useState(professionalProp);
   useEffect(() => {
     if (professionalProp) setCachedProfessional(professionalProp);
+  }, [professionalProp]);
+
+  useEffect(() => {
+    if (professionalProp) setGigs(getGigsByProfessional(professionalProp.id));
   }, [professionalProp]);
 
   const sheet = useSlideUpSheet(isOpen, onClose);
@@ -199,6 +206,18 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
           >
             About
           </button>
+          {gigs.length > 0 && (
+            <button
+              onClick={() => setActiveTab('gigs')}
+              className={`py-3.5 sm:py-4 px-4 sm:px-6 text-xs sm:text-sm font-semibold border-b-2 transition-colors cursor-pointer flex-shrink-0 ${
+                activeTab === 'gigs'
+                  ? 'border-navy-800 text-navy-800 dark:border-navy-400 dark:text-navy-400'
+                  : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+              }`}
+            >
+              Gigs ({gigs.length})
+            </button>
+          )}
           <button
             onClick={() => setActiveTab('portfolio')}
             className={`py-3.5 sm:py-4 px-4 sm:px-6 text-xs sm:text-sm font-semibold border-b-2 transition-colors cursor-pointer flex-shrink-0 ${
@@ -361,6 +380,38 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {activeTab === 'gigs' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in fade-in duration-200">
+              {gigs.map((gig) => (
+                <div key={gig.id} className="border border-slate-200 dark:border-slate-800 rounded-2xl bg-white dark:bg-slate-900 shadow-xs p-4 flex flex-col">
+                  <span className="self-start px-2.5 py-1 bg-navy-50 dark:bg-navy-900/30 text-navy-700 dark:text-navy-300 rounded-lg text-[10px] font-bold border border-navy-100/50 dark:border-navy-800/50 mb-2">
+                    {gig.category}
+                  </span>
+                  <h5 className="font-bold text-slate-900 dark:text-slate-100 text-sm mb-1 line-clamp-2">{gig.title}</h5>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mb-3 line-clamp-2 flex-1">{gig.description}</p>
+                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-end justify-between">
+                    <div>
+                      <p className="text-[10px] text-slate-400 font-medium mb-0.5">Starting at</p>
+                      <p className="text-sm font-black text-slate-900 dark:text-white">{formatCurrency(gig.price)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] text-slate-400 font-medium mb-0.5">Delivery</p>
+                      <p className="text-xs font-bold text-slate-900 dark:text-white">{gig.delivery_time_days} Days</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onOpenChat(professional)}
+                    className="mt-3 w-full py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span>Enquire About This Gig</span>
+                  </button>
+                </div>
+              ))}
             </div>
           )}
 

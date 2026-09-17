@@ -286,7 +286,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
 
   // ================= RENDER DEDICATED GIGS PAGE =================
   if (activeTab === 'gigs') {
-    return <ProfessionalGigs />;
+    return <ProfessionalGigs professionalId={professional.id} />;
   }
 
   // ================= RENDER DEDICATED JOBS PAGE =================

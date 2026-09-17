@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit3, Trash2, Layers, Loader2 } from 'lucide-react';
-import { getMyGigs, deleteGig } from '../lib/mockGigsStore';
+import { getGigsByProfessional, deleteGig } from '../lib/mockGigsStore';
 import { Gig } from '../types';
 import { GigCreationForm } from './GigCreationForm';
 import { ConfirmationModal } from './ui/ConfirmationModal';
 import { formatCurrency } from '../utils';
 
-export const ProfessionalGigs: React.FC = () => {
+interface ProfessionalGigsProps {
+  professionalId: string;
+}
+
+export const ProfessionalGigs: React.FC<ProfessionalGigsProps> = ({ professionalId }) => {
   const [gigs, setGigs] = useState<Gig[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
@@ -16,7 +20,7 @@ export const ProfessionalGigs: React.FC = () => {
   const fetchGigs = () => {
     setLoading(true);
     try {
-      setGigs(getMyGigs());
+      setGigs(getGigsByProfessional(professionalId));
     } finally {
       setLoading(false);
     }
@@ -24,7 +28,8 @@ export const ProfessionalGigs: React.FC = () => {
 
   useEffect(() => {
     fetchGigs();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [professionalId]);
 
   const confirmDelete = () => {
     if (!gigToDelete) return;
@@ -40,12 +45,13 @@ export const ProfessionalGigs: React.FC = () => {
 
   if (isCreating) {
     return (
-      <GigCreationForm 
-        onCancel={() => setIsCreating(false)} 
+      <GigCreationForm
+        professionalId={professionalId}
+        onCancel={() => setIsCreating(false)}
         onSuccess={() => {
           setIsCreating(false);
           fetchGigs();
-        }} 
+        }}
       />
     );
   }

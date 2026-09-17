@@ -19,13 +19,16 @@ function writeGigs(gigs: Gig[]): void {
   }
 }
 
-export function getMyGigs(): Gig[] {
-  return readGigs();
+/** Gigs belonging to a specific artisan -- used both for the artisan's own management view and
+ * for the customer-facing "Gigs" tab on that artisan's profile. */
+export function getGigsByProfessional(professionalId: string): Gig[] {
+  return readGigs().filter((g) => g.professional_id === professionalId && g.is_active);
 }
 
-export function createGig(input: GigInput): Gig {
+export function createGig(input: GigInput, professionalId: string): Gig {
   const newGig: Gig = {
     id: `gig-${Date.now()}`,
+    professional_id: professionalId,
     title: input.title,
     description: input.description,
     category: input.category,
