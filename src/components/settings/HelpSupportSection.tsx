@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, MessageSquare, PhoneCall, X, Send } from 'lucide-react';
 import { Card, CardHeader } from '../ui/Card';
 import { SheetDragHandle } from '../ui/SheetDragHandle';
+import { ConfirmationModal } from '../ui/ConfirmationModal';
 import { useSlideUpSheet } from '../../hooks/useSlideUpSheet';
+import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 import { CustomDropdown } from '../CustomDropdown';
 
 interface HelpSupportSectionProps {
@@ -31,9 +33,16 @@ const FAQS = [
 export const HelpSupportSection: React.FC<HelpSupportSectionProps> = ({ triggerToast }) => {
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
   const [showContactSupport, setShowContactSupport] = useState(false);
-  const contactSheet = useSlideUpSheet(showContactSupport, () => setShowContactSupport(false));
   const [supportSubject, setSupportSubject] = useState('General Inquiry');
   const [supportMessage, setSupportMessage] = useState('');
+  const closeContactSupport = () => {
+    setShowContactSupport(false);
+    setSupportSubject('General Inquiry');
+    setSupportMessage('');
+  };
+  const isContactFormDirty = Boolean(supportMessage.trim()) || supportSubject !== 'General Inquiry';
+  const contactGuard = useUnsavedChangesGuard(isContactFormDirty, closeContactSupport);
+  const contactSheet = useSlideUpSheet(showContactSupport, contactGuard.requestClose);
 
   const handleContactSupportSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,7 +105,7 @@ export const HelpSupportSection: React.FC<HelpSupportSectionProps> = ({ triggerT
       {contactSheet.shouldRender && (
         <div
           className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md ${contactSheet.backdropAnimationClasses}`}
-          onClick={() => setShowContactSupport(false)}
+          onClick={contactGuard.requestClose}
         >
           <div
             className={`bg-white dark:bg-slate-900 w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl p-5 space-y-4 border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[92vh] overflow-y-auto ${contactSheet.sheetAnimationClasses}`}
@@ -105,7 +114,7 @@ export const HelpSupportSection: React.FC<HelpSupportSectionProps> = ({ triggerT
           >
             <SheetDragHandle dragHandleProps={contactSheet.dragHandleProps} />
             <button
-              onClick={() => setShowContactSupport(false)}
+              onClick={contactGuard.requestClose}
               className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
             >
               <X className="w-5 h-5" />
@@ -148,7 +157,7 @@ export const HelpSupportSection: React.FC<HelpSupportSectionProps> = ({ triggerT
               <div className="flex justify-end gap-2.5 pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowContactSupport(false)}
+                  onClick={contactGuard.requestClose}
                   className="px-4 py-2.5 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40"
                 >
                   Cancel
@@ -165,6 +174,17 @@ export const HelpSupportSection: React.FC<HelpSupportSectionProps> = ({ triggerT
           </div>
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={contactGuard.showDiscardConfirm}
+        onClose={() => contactGuard.setShowDiscardConfirm(false)}
+        onConfirm={contactGuard.confirmDiscard}
+        title="Discard Unsaved Changes?"
+        description="Your support request hasn't been submitted yet. Closing now will discard it."
+        confirmText="Discard Changes"
+        cancelText="Keep Editing"
+        type="warning"
+      />
     </Card>
   );
 };

@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { CustomDropdown } from './CustomDropdown';
 import { VerifiedBadge } from './ui/VerifiedBadge';
 import { SheetDragHandle } from './ui/SheetDragHandle';
+import { ConfirmationModal } from './ui/ConfirmationModal';
 import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
+import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import { formatCurrency, formatServicePrice } from '../utils';
 import { 
   X, Calendar, Clock, MapPin, FileText, CheckCircle2, 
@@ -131,7 +133,14 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     onClose();
   };
 
-  const sheet = useSlideUpSheet(isOpen, handleResetModal);
+  // Nothing typed/uploaded yet is worth warning about, and once the booking is actually
+  // submitted (step 'confirmed') there's nothing left to lose either way.
+  const isBookingFormDirty =
+    step !== 'confirmed' &&
+    Boolean(issueDescription.trim() || problemImages.length > 0 || landmarkImages.length > 0 || landmark.trim());
+  const closeGuard = useUnsavedChangesGuard(isBookingFormDirty, handleResetModal);
+
+  const sheet = useSlideUpSheet(isOpen, closeGuard.requestClose);
 
   if (!sheet.shouldRender || !cachedProfessional) return null;
   const professional = cachedProfessional;
@@ -275,7 +284,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   return (
     <div
       className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-md ${sheet.backdropAnimationClasses}`}
-      onClick={handleResetModal}
+      onClick={closeGuard.requestClose}
     >
       <div
         className={`bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-2xl max-w-2xl w-full max-h-[92vh] overflow-y-auto shadow-2xl border-t sm:border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 flex flex-col ${sheet.sheetAnimationClasses}`}
@@ -312,7 +321,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           </div>
 
           <button
-            onClick={handleResetModal}
+            onClick={closeGuard.requestClose}
             className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
@@ -698,7 +707,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
               <button
                 type="button"
-                onClick={handleResetModal}
+                onClick={closeGuard.requestClose}
                 className="w-full sm:w-auto px-5 py-3 border border-rose-200 dark:border-rose-900 rounded-2xl text-rose-600 dark:text-rose-400 text-xs font-bold hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
               >
                 Cancel
@@ -1062,6 +1071,17 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         )}
 
       </div>
+
+      <ConfirmationModal
+        isOpen={closeGuard.showDiscardConfirm}
+        onClose={() => closeGuard.setShowDiscardConfirm(false)}
+        onConfirm={closeGuard.confirmDiscard}
+        title="Discard Unsaved Changes?"
+        description="You haven't submitted this booking request yet. Closing now will discard what you've entered."
+        confirmText="Discard Changes"
+        cancelText="Keep Editing"
+        type="warning"
+      />
     </div>
   );
 };

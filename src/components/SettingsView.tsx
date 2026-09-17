@@ -10,6 +10,7 @@ import { Card, CardHeader } from './ui/Card';
 import { CustomDropdown } from './CustomDropdown';
 import { useAuth } from '../context/AuthContext';
 import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
+import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import { PreferencesSection } from './settings/PreferencesSection';
 import { HelpSupportSection } from './settings/HelpSupportSection';
 import { LegalSection } from './settings/LegalSection';
@@ -61,7 +62,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   // Modals & Confirmation States
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const passwordSheet = useSlideUpSheet(showPasswordModal, () => setShowPasswordModal(false));
   const [show2FAModal, setShow2FAModal] = useState(false);
   const [showFreezeModal, setShowFreezeModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -71,6 +71,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const closePasswordModal = () => {
+    setShowPasswordModal(false);
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+  };
+  const isPasswordFormDirty = Boolean(currentPassword || newPassword || confirmPassword);
+  const passwordGuard = useUnsavedChangesGuard(isPasswordFormDirty, closePasswordModal);
+  const passwordSheet = useSlideUpSheet(showPasswordModal, passwordGuard.requestClose);
 
   // Toast State
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -443,7 +452,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       {passwordSheet.shouldRender && (
         <div
           className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md ${passwordSheet.backdropAnimationClasses}`}
-          onClick={() => setShowPasswordModal(false)}
+          onClick={passwordGuard.requestClose}
         >
           <div
             className={`bg-white dark:bg-slate-900 w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl p-5 sm:p-6 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl relative ${passwordSheet.sheetAnimationClasses}`}
@@ -452,7 +461,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           >
             <SheetDragHandle dragHandleProps={passwordSheet.dragHandleProps} />
             <button
-              onClick={() => setShowPasswordModal(false)}
+              onClick={passwordGuard.requestClose}
               className="absolute top-4 right-4 sm:top-5 sm:right-5 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
             >
               <X className="w-5 h-5" />
@@ -500,7 +509,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <div className="flex justify-end gap-2.5 pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowPasswordModal(false)}
+                  onClick={passwordGuard.requestClose}
                   className="px-4 py-2 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40"
                 >
                   Cancel
@@ -516,6 +525,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={passwordGuard.showDiscardConfirm}
+        onClose={() => passwordGuard.setShowDiscardConfirm(false)}
+        onConfirm={passwordGuard.confirmDiscard}
+        title="Discard Unsaved Changes?"
+        description="You haven't updated your password yet. Closing now will discard what you've entered."
+        confirmText="Discard Changes"
+        cancelText="Keep Editing"
+        type="warning"
+      />
 
     </div>
   );

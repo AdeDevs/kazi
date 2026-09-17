@@ -11,6 +11,7 @@ import { SheetDragHandle } from './ui/SheetDragHandle';
 import { CustomDropdown } from './CustomDropdown';
 import { useAuth } from '../context/AuthContext';
 import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
+import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import {
   Phone, MapPin,
   CheckCircle2, Edit3, Trash2, X,
@@ -84,13 +85,37 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
 
   // Modals & UI States
   const [showEditInfoModal, setShowEditInfoModal] = useState(false);
-  const editInfoSheet = useSlideUpSheet(showEditInfoModal, () => setShowEditInfoModal(false));
+  // Snapshot of the editable fields taken when the modal opens, so we can tell whether anything
+  // changed (the fields below are live-bound to the same state the page displays outside the
+  // modal, with no separate draft copy) and revert to it if the user discards.
+  const [editInfoBaseline, setEditInfoBaseline] = useState({ name, bio, phone, email, category, primaryLocation });
+  const openEditInfoModal = () => {
+    setEditInfoBaseline({ name, bio, phone, email, category, primaryLocation });
+    setShowEditInfoModal(true);
+  };
+  const isEditInfoDirty =
+    name !== editInfoBaseline.name ||
+    bio !== editInfoBaseline.bio ||
+    phone !== editInfoBaseline.phone ||
+    email !== editInfoBaseline.email ||
+    category !== editInfoBaseline.category ||
+    primaryLocation !== editInfoBaseline.primaryLocation;
+  const closeEditInfoModal = () => {
+    setName(editInfoBaseline.name);
+    setBio(editInfoBaseline.bio);
+    setPhone(editInfoBaseline.phone);
+    setEmail(editInfoBaseline.email);
+    setCategory(editInfoBaseline.category);
+    setPrimaryLocation(editInfoBaseline.primaryLocation);
+    setShowEditInfoModal(false);
+  };
+  const editInfoGuard = useUnsavedChangesGuard(isEditInfoDirty, closeEditInfoModal);
+  const editInfoSheet = useSlideUpSheet(showEditInfoModal, editInfoGuard.requestClose);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showKYCModal, setShowKYCModal] = useState(false);
 
   // Service Modal & Deletion State
   const [showServiceModal, setShowServiceModal] = useState(false);
-  const serviceSheet = useSlideUpSheet(showServiceModal, () => setShowServiceModal(false));
   const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
   const [serviceName, setServiceName] = useState('');
   const [servicePricingType, setServicePricingType] = useState<ServicePricingType>('fixed');
@@ -98,10 +123,21 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
   const [serviceDuration, setServiceDuration] = useState('1-2 hrs');
   const [serviceDesc, setServiceDesc] = useState('');
   const [serviceToDelete, setServiceToDelete] = useState<ServiceItem | null>(null);
+  const [serviceBaseline, setServiceBaseline] = useState({
+    name: serviceName, pricingType: servicePricingType, price: servicePrice, duration: serviceDuration, desc: serviceDesc
+  });
+  const isServiceDirty =
+    serviceName !== serviceBaseline.name ||
+    servicePricingType !== serviceBaseline.pricingType ||
+    servicePrice !== serviceBaseline.price ||
+    serviceDuration !== serviceBaseline.duration ||
+    serviceDesc !== serviceBaseline.desc;
+  const closeServiceModal = () => setShowServiceModal(false);
+  const serviceGuard = useUnsavedChangesGuard(isServiceDirty, closeServiceModal);
+  const serviceSheet = useSlideUpSheet(showServiceModal, serviceGuard.requestClose);
 
   // Portfolio Modal & Deletion State
   const [showPortfolioModal, setShowPortfolioModal] = useState(false);
-  const portfolioSheet = useSlideUpSheet(showPortfolioModal, () => setShowPortfolioModal(false));
   const [editingPortfolioId, setEditingPortfolioId] = useState<string | null>(null);
   const [portTitle, setPortTitle] = useState('');
   const [portCategory, setPortCategory] = useState<Category>(activeProfessional.category);
@@ -109,6 +145,18 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
   const [portDesc, setPortDesc] = useState('');
   const [portDate, setPortDate] = useState(new Date().toISOString().split('T')[0]);
   const [portfolioToDelete, setPortfolioToDelete] = useState<PortfolioItem | null>(null);
+  const [portfolioBaseline, setPortfolioBaseline] = useState({
+    title: portTitle, category: portCategory, image: portImage, desc: portDesc, date: portDate
+  });
+  const isPortfolioDirty =
+    portTitle !== portfolioBaseline.title ||
+    portCategory !== portfolioBaseline.category ||
+    portImage !== portfolioBaseline.image ||
+    portDesc !== portfolioBaseline.desc ||
+    portDate !== portfolioBaseline.date;
+  const closePortfolioModal = () => setShowPortfolioModal(false);
+  const portfolioGuard = useUnsavedChangesGuard(isPortfolioDirty, closePortfolioModal);
+  const portfolioSheet = useSlideUpSheet(showPortfolioModal, portfolioGuard.requestClose);
 
   // Real KYC Submission status
   const [kycSubmitted, setKycSubmitted] = useState<boolean>(() => {
@@ -199,6 +247,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
         state: primaryLocation
       });
     }
+    setEditInfoBaseline({ name, bio, phone, email, category, primaryLocation });
     setShowEditInfoModal(false);
     triggerToast('Profile updated successfully!');
   };
@@ -211,6 +260,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
     setServicePrice(10000);
     setServiceDuration('1-2 hrs');
     setServiceDesc('');
+    setServiceBaseline({ name: '', pricingType: 'fixed', price: 10000, duration: '1-2 hrs', desc: '' });
     setShowServiceModal(true);
   };
 
@@ -221,6 +271,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
     setServicePrice(s.price || 10000);
     setServiceDuration(s.duration_estimate || '1-2 hrs');
     setServiceDesc(s.description);
+    setServiceBaseline({ name: s.name, pricingType: s.pricing_type, price: s.price || 10000, duration: s.duration_estimate || '1-2 hrs', desc: s.description });
     setShowServiceModal(true);
   };
 
@@ -266,11 +317,14 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
   // Portfolio CRUD
   const handleOpenAddPortfolio = () => {
     setEditingPortfolioId(null);
+    const defaultImage = 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800';
+    const defaultDate = new Date().toISOString().split('T')[0];
     setPortTitle('');
     setPortCategory(category);
-    setPortImage('https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800');
+    setPortImage(defaultImage);
     setPortDesc('');
-    setPortDate(new Date().toISOString().split('T')[0]);
+    setPortDate(defaultDate);
+    setPortfolioBaseline({ title: '', category, image: defaultImage, desc: '', date: defaultDate });
     setShowPortfolioModal(true);
   };
 
@@ -281,6 +335,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
     setPortImage(p.image_url);
     setPortDesc(p.description);
     setPortDate(p.date_completed);
+    setPortfolioBaseline({ title: p.title, category: p.category, image: p.image_url, desc: p.description, date: p.date_completed });
     setShowPortfolioModal(true);
   };
 
@@ -440,7 +495,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
 
           <button
             type="button"
-            onClick={() => setShowEditInfoModal(true)}
+            onClick={openEditInfoModal}
             className="w-full px-4 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 active:scale-[0.98] text-white font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
           >
             <Edit3 className="w-3.5 h-3.5" />
@@ -479,7 +534,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
 
               <button
                 type="button"
-                onClick={() => setShowEditInfoModal(true)}
+                onClick={openEditInfoModal}
                 className="px-4 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 active:scale-[0.98] text-white font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
               >
                 <Edit3 className="w-3.5 h-3.5" />
@@ -898,7 +953,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
       {editInfoSheet.shouldRender && (
         <div
           className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-sm p-0 sm:p-4 ${editInfoSheet.backdropAnimationClasses}`}
-          onClick={() => setShowEditInfoModal(false)}
+          onClick={editInfoGuard.requestClose}
         >
           <div
             className={`w-full sm:max-w-lg bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-2xl p-5 sm:p-6 space-y-4 border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[92vh] overflow-y-auto ${editInfoSheet.sheetAnimationClasses}`}
@@ -908,7 +963,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
             <SheetDragHandle dragHandleProps={editInfoSheet.dragHandleProps} />
 
             <button
-              onClick={() => setShowEditInfoModal(false)}
+              onClick={editInfoGuard.requestClose}
               className="absolute top-4 right-4 sm:top-5 sm:right-5 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
@@ -993,7 +1048,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
               <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setShowEditInfoModal(false)}
+                  onClick={editInfoGuard.requestClose}
                   className="px-4 py-2.5 rounded-xl text-rose-600 dark:text-rose-400 font-bold text-xs hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer text-center"
                 >
                   Cancel
@@ -1010,11 +1065,22 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
         </div>
       )}
 
+      <ConfirmationModal
+        isOpen={editInfoGuard.showDiscardConfirm}
+        onClose={() => editInfoGuard.setShowDiscardConfirm(false)}
+        onConfirm={editInfoGuard.confirmDiscard}
+        title="Discard Unsaved Changes?"
+        description="Your edits to this profile info haven't been saved. Closing now will discard them."
+        confirmText="Discard Changes"
+        cancelText="Keep Editing"
+        type="warning"
+      />
+
       {/* SERVICE MODAL (ADD / EDIT) */}
       {serviceSheet.shouldRender && (
         <div
           className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-sm p-0 sm:p-4 ${serviceSheet.backdropAnimationClasses}`}
-          onClick={() => setShowServiceModal(false)}
+          onClick={serviceGuard.requestClose}
         >
           <div
             className={`w-full sm:max-w-md bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-2xl p-5 sm:p-6 space-y-4 border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[92vh] overflow-y-auto ${serviceSheet.sheetAnimationClasses}`}
@@ -1024,7 +1090,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
             <SheetDragHandle dragHandleProps={serviceSheet.dragHandleProps} />
 
             <button
-              onClick={() => setShowServiceModal(false)}
+              onClick={serviceGuard.requestClose}
               className="absolute top-4 right-4 sm:top-5 sm:right-5 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
             >
               <X className="w-4 h-4" />
@@ -1108,7 +1174,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
               <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setShowServiceModal(false)}
+                  onClick={serviceGuard.requestClose}
                   className="px-3.5 py-2 rounded-xl text-rose-600 dark:text-rose-400 font-bold text-xs hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer text-center"
                 >
                   Cancel
@@ -1125,11 +1191,22 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
         </div>
       )}
 
+      <ConfirmationModal
+        isOpen={serviceGuard.showDiscardConfirm}
+        onClose={() => serviceGuard.setShowDiscardConfirm(false)}
+        onConfirm={serviceGuard.confirmDiscard}
+        title="Discard Unsaved Changes?"
+        description="This service hasn't been saved. Closing now will discard your changes."
+        confirmText="Discard Changes"
+        cancelText="Keep Editing"
+        type="warning"
+      />
+
       {/* PORTFOLIO MODAL (ADD / EDIT) */}
       {portfolioSheet.shouldRender && (
         <div
           className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-sm p-0 sm:p-4 ${portfolioSheet.backdropAnimationClasses}`}
-          onClick={() => setShowPortfolioModal(false)}
+          onClick={portfolioGuard.requestClose}
         >
           <div
             className={`w-full sm:max-w-md bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-2xl p-5 sm:p-6 space-y-4 border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[92vh] overflow-y-auto ${portfolioSheet.sheetAnimationClasses}`}
@@ -1139,7 +1216,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
             <SheetDragHandle dragHandleProps={portfolioSheet.dragHandleProps} />
 
             <button
-              onClick={() => setShowPortfolioModal(false)}
+              onClick={portfolioGuard.requestClose}
               className="absolute top-4 right-4 sm:top-5 sm:right-5 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
             >
               <X className="w-4 h-4" />
@@ -1215,7 +1292,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
               <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setShowPortfolioModal(false)}
+                  onClick={portfolioGuard.requestClose}
                   className="px-3.5 py-2 rounded-xl text-rose-600 dark:text-rose-400 font-bold text-xs hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer text-center"
                 >
                   Cancel
@@ -1231,6 +1308,17 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
           </div>
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={portfolioGuard.showDiscardConfirm}
+        onClose={() => portfolioGuard.setShowDiscardConfirm(false)}
+        onConfirm={portfolioGuard.confirmDiscard}
+        title="Discard Unsaved Changes?"
+        description="This portfolio project hasn't been saved. Closing now will discard your changes."
+        confirmText="Discard Changes"
+        cancelText="Keep Editing"
+        type="warning"
+      />
 
       {/* SERVICE DELETION CONFIRMATION MODAL */}
       <ConfirmationModal

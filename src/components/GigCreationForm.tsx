@@ -4,6 +4,8 @@ import { createGig } from '../lib/mockGigsStore';
 import { GigInput } from '../types';
 import { CATEGORIES } from '../mockData';
 import { CustomDropdown } from './CustomDropdown';
+import { ConfirmationModal } from './ui/ConfirmationModal';
+import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 
 interface GigCreationFormProps {
   professionalId: string;
@@ -26,6 +28,12 @@ export const GigCreationForm: React.FC<GigCreationFormProps> = ({ professionalId
   });
 
   const [tagInput, setTagInput] = useState('');
+
+  const isFormDirty = Boolean(
+    formData.title || formData.description || formData.price !== 0 ||
+    formData.delivery_time_days !== 1 || (formData.tags && formData.tags.length > 0)
+  );
+  const cancelGuard = useUnsavedChangesGuard(isFormDirty, onCancel);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -192,7 +200,7 @@ export const GigCreationForm: React.FC<GigCreationFormProps> = ({ professionalId
         <div className="pt-5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3">
           <button
             type="button"
-            onClick={onCancel}
+            onClick={cancelGuard.requestClose}
             disabled={loading}
             className="px-6 py-3 rounded-xl font-bold text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -208,6 +216,17 @@ export const GigCreationForm: React.FC<GigCreationFormProps> = ({ professionalId
           </button>
         </div>
       </form>
+
+      <ConfirmationModal
+        isOpen={cancelGuard.showDiscardConfirm}
+        onClose={() => cancelGuard.setShowDiscardConfirm(false)}
+        onConfirm={cancelGuard.confirmDiscard}
+        title="Discard Unsaved Changes?"
+        description="This gig hasn't been created yet. Leaving now will discard what you've entered."
+        confirmText="Discard Changes"
+        cancelText="Keep Editing"
+        type="warning"
+      />
     </div>
   );
 };
