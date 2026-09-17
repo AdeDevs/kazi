@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Professional, Booking, PortfolioItem, Category, ChatMessage, Notification } from '../types';
-import { CATEGORIES } from '../mockData';
-import { CustomDropdown } from './CustomDropdown';
+import { Professional, Booking, ChatMessage, Notification } from '../types';
 import { formatCurrency } from '../utils';
 import { ProfessionalMessages } from './ProfessionalMessages';
 import { ProfessionalNotifications } from './ProfessionalNotifications';
@@ -13,7 +11,7 @@ import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import {
   Briefcase, DollarSign, Star, CheckCircle2, Clock, Plus, Trash2,
-  MapPin, User, Settings, Image as ImageIcon, Calendar,
+  MapPin, User, Settings, Image as ImageIcon, Calendar, Edit3,
   MessageSquare, ClipboardList, ArrowRight, ArrowLeft, Eye, X, Check, AlertCircle
 } from 'lucide-react';
 
@@ -21,7 +19,6 @@ interface ProfessionalDashboardProps {
   professional: Professional;
   bookings: Booking[];
   onUpdateBookingStatus: (bookingId: string, status: Booking['status'], extra?: Partial<Booking>) => void;
-  onAddPortfolioItem: (item: Omit<PortfolioItem, 'id'>) => void;
   onUpdateProfile: (updated: Partial<Professional>) => void;
   activeTab?: string;
   onTabChange?: (tab: string, customerId?: string) => void;
@@ -42,7 +39,6 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
   professional,
   bookings,
   onUpdateBookingStatus,
-  onAddPortfolioItem,
   onUpdateProfile,
   activeTab = 'explore',
   onTabChange,
@@ -95,21 +91,6 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
   const completionGuard = useUnsavedChangesGuard(isCompletionFormDirty, closeCompletionModal);
   const completionSheet = useSlideUpSheet(Boolean(completingJob), completionGuard.requestClose);
 
-  // New portfolio form state
-  const [newTitle, setNewTitle] = useState('');
-  const [newCategory, setNewCategory] = useState<Category>(professional.category);
-  const [newImageUrl, setNewImageUrl] = useState('');
-  const [newDesc, setNewDesc] = useState('');
-  const [showAddPortfolioForm, setShowAddPortfolioForm] = useState(false);
-  const closeAddPortfolioForm = () => {
-    setShowAddPortfolioForm(false);
-    setNewTitle('');
-    setNewCategory(professional.category);
-    setNewImageUrl('');
-    setNewDesc('');
-  };
-  const isAddPortfolioDirty = Boolean(newTitle || newImageUrl || newDesc || newCategory !== professional.category);
-  const addPortfolioGuard = useUnsavedChangesGuard(isAddPortfolioDirty, closeAddPortfolioForm);
   const [showAllPortfolio, setShowAllPortfolio] = useState(false);
 
   // Profile edit state
@@ -212,28 +193,6 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
     if (activeJobFilter === 'issue_reported') return b.status === 'disputed';
     return true;
   });
-
-  const handleAddPortfolio = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTitle || !newImageUrl) {
-      alert('Please provide a title and image URL for your portfolio item.');
-      return;
-    }
-
-    onAddPortfolioItem({
-      title: newTitle,
-      category: newCategory,
-      image_url: newImageUrl,
-      description: newDesc,
-      date_completed: new Date().toISOString().split('T')[0]
-    });
-
-    setNewTitle('');
-    setNewImageUrl('');
-    setNewDesc('');
-    setShowAddPortfolioForm(false);
-    alert('Portfolio item added successfully!');
-  };
 
   // Synchronize availability with professional prop
   useEffect(() => {
@@ -1331,7 +1290,8 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
       {/* Tab 2: Portfolio */}
       {homeSubTab === 'portfolio' && (
         <div className="space-y-6">
-          {/* Header + Add Showcase toggle */}
+          {/* Header -- read-only preview here; editing happens on the Profile page, the single
+              source of truth, so this and Profile don't drift into two separately-editable copies. */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Portfolio Showcase</h3>
@@ -1339,77 +1299,13 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
             </div>
             <button
               type="button"
-              onClick={() => showAddPortfolioForm ? addPortfolioGuard.requestClose() : setShowAddPortfolioForm(true)}
+              onClick={() => onTabChange && onTabChange('profile')}
               className="px-5 py-2.5 bg-navy-800 hover:bg-navy-900 text-white font-bold text-sm rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-2 justify-center shrink-0"
             >
-              {showAddPortfolioForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-              <span>{showAddPortfolioForm ? 'Cancel' : 'Add Showcase'}</span>
+              <Edit3 className="w-4 h-4" />
+              <span>Manage Portfolio</span>
             </button>
           </div>
-
-          {/* Add Portfolio Form -- collapsed until "Add Showcase" is toggled */}
-          {showAddPortfolioForm && (
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3.5 sm:p-4 shadow-xs space-y-4">
-              <h4 className="font-bold text-slate-900 dark:text-slate-100 text-sm">New Portfolio Project</h4>
-              <form onSubmit={handleAddPortfolio} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Project Title</label>
-                  <input
-                    type="text"
-                    value={newTitle}
-                    onChange={(e) => setNewTitle(e.target.value)}
-                    placeholder="e.g. Commercial 3-Phase Rewiring"
-                    required
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-sm text-slate-900 dark:text-slate-100"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Category</label>
-                  <CustomDropdown
-                    value={newCategory}
-                    onChange={(val) => setNewCategory(val as Category)}
-                    options={CATEGORIES.map(cat => ({ value: cat, label: cat }))}
-                    className="w-full"
-                    buttonClassName="py-2.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100"
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Project Photo Image URL</label>
-                  <input
-                    type="url"
-                    value={newImageUrl}
-                    onChange={(e) => setNewImageUrl(e.target.value)}
-                    placeholder="https://images.unsplash.com/photo-..."
-                    required
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-sm text-slate-900 dark:text-slate-100"
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Description</label>
-                  <textarea
-                    rows={2}
-                    value={newDesc}
-                    onChange={(e) => setNewDesc(e.target.value)}
-                    placeholder="Describe the scope of work and materials used..."
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-sm text-slate-900 dark:text-slate-100"
-                  />
-                </div>
-
-                <div className="sm:col-span-2 flex justify-end">
-                  <button
-                    type="submit"
-                    className="px-6 py-2.5 bg-navy-800 hover:bg-navy-900 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-2"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Publish Portfolio Item</span>
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
 
           {/* Portfolio items */}
           {professional.portfolio.length === 0 ? (
@@ -1472,17 +1368,6 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
           )}
         </div>
       )}
-
-      <ConfirmationModal
-        isOpen={addPortfolioGuard.showDiscardConfirm}
-        onClose={() => addPortfolioGuard.setShowDiscardConfirm(false)}
-        onConfirm={addPortfolioGuard.confirmDiscard}
-        title="Discard Unsaved Changes?"
-        description="This portfolio item hasn't been published yet. Closing now will discard what you've entered."
-        confirmText="Discard Changes"
-        cancelText="Keep Editing"
-        type="warning"
-      />
 
       {/* Tab 3: Profile Settings */}
       {homeSubTab === 'profile' && (

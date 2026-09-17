@@ -669,11 +669,11 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="flex sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-3 overflow-x-auto sm:overflow-visible no-scrollbar snap-x snap-mandatory scroll-pl-[15px] sm:scroll-pl-0 -mx-[15px] px-[15px] sm:mx-0 sm:px-0 pb-1 sm:pb-0">
             {services.map((srv) => (
               <div
                 key={srv.id}
-                className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 flex flex-col justify-between space-y-2 group hover:border-slate-300 dark:hover:border-slate-600 transition-all"
+                className="shrink-0 w-64 snap-start sm:w-auto sm:shrink p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 flex flex-col justify-between space-y-2 group hover:border-slate-300 dark:hover:border-slate-600 transition-all"
               >
                 <div className="space-y-1.5">
                   <div className="flex items-start justify-between gap-2">
@@ -766,11 +766,11 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="flex sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-3 overflow-x-auto sm:overflow-visible no-scrollbar snap-x snap-mandatory scroll-pl-[15px] sm:scroll-pl-0 -mx-[15px] px-[15px] sm:mx-0 sm:px-0 pb-1 sm:pb-0">
             {portfolio.map((item) => (
               <div
                 key={item.id}
-                className="group rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col justify-between hover:shadow-xs transition-all"
+                className="shrink-0 w-64 snap-start sm:w-auto sm:shrink group rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col justify-between hover:shadow-xs transition-all"
               >
                 <div className="relative aspect-video overflow-hidden bg-slate-900">
                   <img

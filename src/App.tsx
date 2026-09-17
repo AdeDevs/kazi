@@ -611,22 +611,6 @@ export default function App() {
     }));
   };
 
-  const handleAddPortfolioItem = (item: Omit<PortfolioItem, 'id'>) => {
-    const newItem: PortfolioItem = {
-      ...item,
-      id: `port-${Date.now()}`
-    };
-    setProfessionals(prev => prev.map(p => {
-      if (p.id === activeProfessional.id) {
-        return {
-          ...p,
-          portfolio: [newItem, ...p.portfolio]
-        };
-      }
-      return p;
-    }));
-  };
-
   const handleUpdateProfile = (updated: Partial<Professional>) => {
     if (updated.profile_picture && user?.id) {
       localStorage.setItem(`kazihub_avatar_${user.id}`, updated.profile_picture);
@@ -845,7 +829,6 @@ export default function App() {
           professional={activeProfessional}
           bookings={bookings.filter(b => b.artisan_id === activeProfessional.id)}
           onUpdateBookingStatus={handleUpdateBookingStatus}
-          onAddPortfolioItem={handleAddPortfolioItem}
           onUpdateProfile={handleUpdateProfile}
           activeTab={activeTab}
           onTabChange={handleTabChange}
