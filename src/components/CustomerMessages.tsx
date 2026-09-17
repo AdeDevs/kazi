@@ -44,6 +44,10 @@ const SAMPLE_JOB_PHOTOS = [
   { name: 'AC Compressor', url: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=600&auto=format&fit=crop&q=80' }
 ];
 
+// Shared by the desktop sidebar's search header and the chat pane's header so their bottom edges
+// align in one continuous line across both panes, instead of each sizing to its own content.
+const MESSAGES_HEADER_HEIGHT = 'h-[72px]';
+
 export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
   professionals,
   bookings,
@@ -493,7 +497,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
   const renderChatHeader = (showBackButton: boolean) => {
     if (!activeConversation) return null;
     return (
-      <div className="p-3 sm:p-3.5 border-b border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between gap-2 sm:gap-3 shrink-0">
+      <div className={`${MESSAGES_HEADER_HEIGHT} px-3 sm:px-3.5 border-b border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between gap-2 sm:gap-3 shrink-0`}>
         <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
           {showBackButton && (
             <button
@@ -1211,8 +1215,10 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
           ============================================================ */}
       <div className="hidden lg:flex -m-3.5 sm:-m-4 -mb-4 h-[calc(100vh-73px)] overflow-hidden">
         <div className="w-80 xl:w-96 min-h-0 flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
-          <div className="p-4 border-b border-slate-200 dark:border-slate-800 space-y-3 shrink-0">
-            <div className="relative">
+          {/* Search row -- shares MESSAGES_HEADER_HEIGHT with the chat pane's header so both
+              panes' header bottoms align in one continuous line. */}
+          <div className={`${MESSAGES_HEADER_HEIGHT} px-4 border-b border-slate-200 dark:border-slate-800 flex items-center shrink-0`}>
+            <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
@@ -1223,10 +1229,52 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
               />
             </div>
           </div>
+
+          {/* Filter tabs + conversation-count label -- restored below the search row, same
+              position and style as the mobile inbox's toolbar (this was dropped when the desktop
+              split-screen was rebuilt, not an intentional removal). */}
+          <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+            <button
+              onClick={() => setFilterTab('all')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                filterTab === 'all'
+                  ? 'bg-navy-900 text-white shadow-xs'
+                  : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
+              }`}
+            >
+              All ({conversations.length})
+            </button>
+            <button
+              onClick={() => setFilterTab('unread')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+                filterTab === 'unread'
+                  ? 'bg-navy-900 text-white shadow-xs'
+                  : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
+              }`}
+            >
+              <span>Unread</span>
+              {totalUnreadCount > 0 && (
+                <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-brand-orange-700 text-white text-[10px] flex items-center justify-center font-black">
+                  {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setFilterTab('active_jobs')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                filterTab === 'active_jobs'
+                  ? 'bg-navy-900 text-white shadow-xs'
+                  : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
+              }`}
+            >
+              Active Bookings
+            </button>
+          </div>
+
           {desktopConversationListBody}
         </div>
 
-        <div className="flex-1 min-h-0 flex flex-col bg-white dark:bg-slate-900">
+        <div className="flex-1 min-w-0 min-h-0 flex flex-col bg-white dark:bg-slate-900">
           {hasActiveChat ? (
             <>
               {renderChatHeader(false)}

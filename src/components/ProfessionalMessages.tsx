@@ -32,6 +32,10 @@ const SAMPLE_IMAGES = [
 
 const SAMPLE_VIDEO_URL = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4";
 
+// Shared by the desktop sidebar's search header and the chat pane's header so their bottom edges
+// align in one continuous line across both panes, instead of each sizing to its own content.
+const MESSAGES_HEADER_HEIGHT = 'h-[72px]';
+
 export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
   professional,
   messages,
@@ -400,8 +404,10 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
 
   // Chat header -- identical between the mobile full-screen chat and the desktop pane, except the
   // back arrow: desktop keeps the list visible alongside, so there's nothing to "go back" to there.
+  // Shares MESSAGES_HEADER_HEIGHT with the desktop sidebar's search header below it, so their
+  // bottom edges line up across both panes instead of each sizing to its own content.
   const renderChatHeader = (showBackButton: boolean) => (
-    <div className="p-3.5 sm:p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900 shrink-0">
+    <div className={`${MESSAGES_HEADER_HEIGHT} px-3.5 sm:px-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900 shrink-0`}>
       <div className="flex items-center gap-3 min-w-0">
         {showBackButton && (
           <button
@@ -807,8 +813,8 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
           ============================================================ */}
       <div className="hidden lg:flex -m-3.5 sm:-m-4 -mb-4 h-[calc(100vh-73px)] overflow-hidden">
         <div className="w-80 xl:w-96 min-h-0 flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
-          <div className="p-4 border-b border-slate-200 dark:border-slate-800 space-y-3 shrink-0">
-            <div className="relative">
+          <div className={`${MESSAGES_HEADER_HEIGHT} px-4 border-b border-slate-200 dark:border-slate-800 flex items-center shrink-0`}>
+            <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
@@ -822,7 +828,7 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
           {conversationListBody}
         </div>
 
-        <div className="flex-1 min-h-0 flex flex-col bg-white dark:bg-slate-900">
+        <div className="flex-1 min-w-0 min-h-0 flex flex-col bg-white dark:bg-slate-900">
           {hasActiveChat ? (
             <>
               {renderChatHeader(false)}
