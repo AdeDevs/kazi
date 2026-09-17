@@ -347,11 +347,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-between px-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-600 dark:text-slate-400">
+              <div className="flex items-center px-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-600 dark:text-slate-400">
                 <span className="flex items-center gap-2 text-navy-800 dark:text-navy-400">
                   <Wrench className="w-4 h-4" /> Professional Job Scope & Schedule
                 </span>
-                <span className="text-[11px] text-slate-400">Escrow Protected</span>
               </div>
             )}
 
@@ -683,13 +682,13 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                       </div>
                     </div>
                     <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
-                      {currentPricingType === 'fixed' && 'Guaranteed fixed rate. Escrow protected.'}
+                      {currentPricingType === 'fixed' && 'Guaranteed fixed rate for this service.'}
                       {currentPricingType === 'quote_required' && 'Final price will be provided by the professional after reviewing your request scope.'}
                       {currentPricingType === 'starting' && 'Base inspection & starter fee. Final scope determined after review.'}
                     </p>
                   </div>
                   <span className="px-3 py-1 rounded-full bg-navy-800 text-white font-extrabold text-xs shadow-xs shrink-0">
-                    {isQuoteService ? 'Quote Flow' : 'Escrow Protected'}
+                    {isQuoteService ? 'Quote Flow' : 'Fixed Price'}
                   </span>
                 </div>
               );
@@ -851,6 +850,13 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   )}
                 </div>
               </div>
+
+              {!isQuoteService && (
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 pt-1">
+                  <ShieldCheck className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400 shrink-0" />
+                  <span>Your payment is held in escrow and only released to the artisan after you confirm the job is complete.</span>
+                </p>
+              )}
 
             </div>
 

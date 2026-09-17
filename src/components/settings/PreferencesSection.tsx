@@ -82,7 +82,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({
         <div className="py-3 flex items-center justify-between">
           <div>
             <p className="font-bold text-slate-900 dark:text-slate-100">Email Summaries</p>
-            <p className="text-[11px] text-slate-500">Escrow payment receipts and job completion reports.</p>
+            <p className="text-[11px] text-slate-500">Payment receipts and job completion reports.</p>
           </div>
           <label className="relative inline-flex items-center cursor-pointer">
             <input

@@ -190,7 +190,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   const [notifications, setNotifications] = useState([
     { id: 'cn1', title: 'Booking Accepted', desc: 'Engr. Babatunde Lawal accepted your Inverter & Solar Installation booking request.', time: '10 mins ago', read: false, isRead: false, type: 'booking', relatedTab: 'bookings' },
     { id: 'cn2', title: 'Work Completion Submitted', desc: 'Engr. Babatunde Lawal submitted completion details & photos for your inverter installation.', time: '1 hour ago', read: false, isRead: false, type: 'completion', relatedTab: 'bookings' },
-    { id: 'cn3', title: 'Escrow Payment Secured', desc: 'Your payment of ₦48,000 is safely locked in escrow until job confirmation.', time: '1 day ago', read: true, isRead: true, type: 'payment', relatedTab: 'bookings' },
+    { id: 'cn3', title: 'Payment Secured', desc: 'Your payment of ₦48,000 has been received and is safely held until job confirmation.', time: '1 day ago', read: true, isRead: true, type: 'payment', relatedTab: 'bookings' },
     { id: 'cn4', title: 'Post-Completion Warranty Active', desc: '4-day window active to inspect solar installation and report any issues before job closure.', time: '2 days ago', read: true, isRead: true, type: 'warranty', relatedTab: 'bookings' }
   ]);
 
@@ -1095,18 +1095,11 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                       </div>
                     </div>
 
-                    {/* Right Side: Price / Escrow Amount & Status Badge */}
+                    {/* Right Side: Price & Status Badge */}
                     <div className="flex flex-col items-end justify-start gap-1.5 shrink-0 ml-auto text-right">
-                      {/* Price / Escrow Info */}
                       {!isQuoteRequest && b.amount && b.amount > 0 ? (
-                        <div className="text-right flex flex-col items-end">
-                          <div className="text-base font-black text-slate-900 dark:text-slate-100">
-                            {formatCurrency(b.amount)}
-                          </div>
-                          <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase tracking-wide mt-0.5">
-                            <ShieldCheck className="w-3 h-3 text-emerald-500" />
-                            Escrow
-                          </div>
+                        <div className="text-base font-black text-slate-900 dark:text-slate-100">
+                          {formatCurrency(b.amount)}
                         </div>
                       ) : null}
 
@@ -1411,16 +1404,6 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
               </p>
             </div>
 
-            {/* Escrow Banner */}
-            <div className="p-4 rounded-2xl bg-navy-800/10 border border-navy-800/20 text-xs text-navy-800 dark:text-navy-300 space-y-1">
-              <div className="font-extrabold flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-navy-800 dark:text-navy-400" /> KaziHub Escrow Protection Guarantee
-              </div>
-              <p className="text-[11px] leading-relaxed">
-                Escrow payouts are automatically paused when an issue is reported. Our neutral KaziHub resolution team investigates fairly.
-              </p>
-            </div>
-
             {complaintStep === 'form' ? (
               <div className="space-y-4">
                 {/* Reason selection */}
@@ -1622,7 +1605,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
               <div className="font-bold text-slate-900 dark:text-slate-100">Next Steps:</div>
               <div className="space-y-1">
                 {[
-                  'Escrow payout is frozen for 48 hours.',
+                  'Payment to the artisan is paused for 48 hours.',
                   'Support officer will contact you via email/phone within 2 hours.',
                   'You can attach photos or extra details in customer support chat.'
                 ].map((item) => (
@@ -1904,7 +1887,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 </span>
               )}
             </h1>
-            <p className="text-xs text-slate-500">Real-time updates regarding your service bookings, quotes, escrow, and warranty status.</p>
+            <p className="text-xs text-slate-500">Real-time updates regarding your service bookings, quotes, payments, and warranty status.</p>
           </div>
           {unreadCount > 0 && (
             <button
@@ -2601,7 +2584,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">
                       {aiDiagnosisReport.estimatedCost}
                     </p>
-                    <p className="text-[10px] text-slate-400">Standard Ibadan artisan rate (escrow protected)</p>
+                    <p className="text-[10px] text-slate-400">Standard Ibadan artisan rate</p>
                   </div>
 
                   <div className="p-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">

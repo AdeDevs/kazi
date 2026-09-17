@@ -329,7 +329,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
           <div className="relative z-10 flex flex-col justify-between flex-1 max-w-lg pb-6">
             <div className="space-y-3">
               <p className="text-2xl sm:text-3xl xl:text-4xl font-black tracking-tight text-white leading-tight">
-                Vetted Artisans. Guaranteed Escrow.
+                Vetted Artisans. Verified Work.
               </p>
               <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
                 KaziHub connects verified electricians, plumbers, AC technicians, solar installers, and carpenters with clients across all 36 Nigerian states.
@@ -344,7 +344,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                   <h3 className="text-xs sm:text-sm font-bold text-white">Client Experience</h3>
                 </div>
                 <p className="text-[11px] sm:text-xs text-zinc-300 leading-relaxed">
-                  Browse real video & voice portfolios, compare itemized pricing, book with escrow deposits, and release funds only after job inspection.
+                  Browse real video & voice portfolios, compare itemized pricing, and book vetted artisans with confidence.
                 </p>
               </div>
 

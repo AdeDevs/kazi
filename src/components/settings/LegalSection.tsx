@@ -14,7 +14,7 @@ export const LegalSection: React.FC = () => {
     <Card className="space-y-4">
       <CardHeader
         title="Legal & Terms"
-        subtitle="Terms of service, escrow agreements, and data privacy."
+        subtitle="Terms of service, payment protections, and data privacy."
       />
 
       <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">

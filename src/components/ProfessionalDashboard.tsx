@@ -621,7 +621,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                         </span>
                         <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
                           {isSubmitted ? (
-                            "Awaiting customer review. No further action needed. If the customer does not respond within 4 days, the job will automatically transition to Completed and escrow payout will be released."
+                            "Awaiting customer review. No further action needed. If the customer does not respond within 4 days, the job will automatically transition to Completed and your payout will be released."
                           ) : isIssue ? (
                             "Contact customer via direct message below to resolve reported details, clarify work performed, or arrange a follow-up fix."
                           ) : job.status === 'accepted' ? (
@@ -744,7 +744,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                             {autoCompleted
                               ? 'Job Auto-Completed (4-Day Window Concluded)'
                               : job.status === 'paid_out'
-                              ? 'Job Confirmed & Escrow Released'
+                              ? 'Job Confirmed & Payout Released'
                               : 'Job Finalized & Closed'}
                           </span>
                         </div>
@@ -752,7 +752,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                           {autoCompleted
                             ? 'The customer did not report an issue within the 4-day response window. The job automatically transitioned to Completed.'
                             : job.status === 'paid_out'
-                            ? 'The customer confirmed work completion and escrow payout was released.'
+                            ? 'The customer confirmed work completion and your payout was released.'
                             : 'This job has been finalized.'}
                         </p>
                       </div>

@@ -328,8 +328,8 @@ export default function App() {
       },
       {
         id: 'cn3',
-        title: 'Escrow Payment Secured',
-        desc: 'Your payment of ₦48,000 is safely locked in escrow until job confirmation.',
+        title: 'Payment Secured',
+        desc: 'Your payment of ₦48,000 has been received and is safely held until job confirmation.',
         time: '1 day ago',
         read: true,
         isRead: true,

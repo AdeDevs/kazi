@@ -5,7 +5,7 @@ import {
   Search, SendHorizontal, Image as ImageIcon, ArrowLeft, 
   CheckCheck, Check, Clock, User, MessageSquare,
   X, Paperclip, Mic, Play, Pause, MapPin, Navigation, 
-  Video, ExternalLink, Square, ShieldCheck, Star, 
+  Video, ExternalLink, Square, Star,
   Calendar, Briefcase, Phone, AlertCircle, Volume2,
   Trash2
 } from 'lucide-react';
@@ -562,7 +562,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
             </div>
           </div>
 
-          {/* Job Context Strip (if linked booking exists) with Escrow Icon */}
+          {/* Job Context Strip (if linked booking exists) */}
           {activeConversation.relatedBooking && (
             <div className="px-3.5 py-2 bg-navy-50/90 dark:bg-navy-950/70 border-b border-navy-100 dark:border-navy-900/60 flex items-center justify-between gap-3 text-xs shrink-0">
               <div className="flex items-center gap-2 min-w-0">
@@ -573,20 +573,11 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
                   {activeConversation.relatedBooking.title || activeConversation.relatedBooking.category}
                 </span>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
-                {activeConversation.relatedBooking.amount && (
-                  <span className="font-black text-brand-orange-600 dark:text-brand-orange-400">
-                    {formatCurrency(activeConversation.relatedBooking.amount)}
-                  </span>
-                )}
-                <span 
-                  className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800/60"
-                  title="Escrow Protected Payment"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                  <span className="hidden sm:inline">Escrow Protected</span>
+              {activeConversation.relatedBooking.amount && (
+                <span className="font-black text-navy-800 dark:text-navy-300 shrink-0">
+                  {formatCurrency(activeConversation.relatedBooking.amount)}
                 </span>
-              </div>
+              )}
             </div>
           )}
 

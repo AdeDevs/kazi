@@ -309,7 +309,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <div className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <p className="font-bold text-slate-900 dark:text-slate-100">Download My Data</p>
-              <p className="text-[11px] text-slate-500">Get a copy of your booking history, escrow receipts, and profile info.</p>
+              <p className="text-[11px] text-slate-500">Get a copy of your booking history, payment receipts, and profile info.</p>
             </div>
             <button
               type="button"

@@ -11,7 +11,7 @@ interface HelpSupportSectionProps {
 
 const FAQS = [
   {
-    q: 'How does KaziHub secure escrow payments?',
+    q: 'How does KaziHub secure payments?',
     a: 'When you book a service, your funds are held securely by KaziHub. They\'re only released to the artisan once you confirm the job is done, or after our 4-day inspection window.'
   },
   {

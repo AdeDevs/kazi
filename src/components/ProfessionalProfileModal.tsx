@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Star, ShieldCheck, MapPin, Briefcase, Award, Phone, Mail, CheckCircle2, MessageSquare, Calendar, AlertCircle, ShieldAlert, Check, Tag, Clock } from 'lucide-react';
+import { X, Star, MapPin, Briefcase, Award, Phone, Mail, CheckCircle2, MessageSquare, Calendar, AlertCircle, ShieldAlert, Check, Tag, Clock } from 'lucide-react';
 import { Professional, ServiceItem, ServicePricingType, Gig } from '../types';
 import { VerifiedBadge } from './ui/VerifiedBadge';
 import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
@@ -289,14 +289,9 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
 
               {/* Service Offerings */}
               <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                    Service Offerings
-                  </h4>
-                  <span className="text-[10px] text-slate-400 font-semibold">
-                    Escrow Protected
-                  </span>
-                </div>
+                <h4 className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                  Service Offerings
+                </h4>
 
                 <div className="space-y-2.5">
                   {(professional.services && professional.services.length > 0
@@ -609,9 +604,6 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                 <span className="text-sm font-black text-slate-900 dark:text-slate-100">
                   Ready to Help
                 </span>
-                <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/80 px-1.5 py-0.2 rounded border border-emerald-200/60">
-                  Secure Escrow
-                </span>
               </div>
             </div>
             {professional.is_available_now && (
@@ -691,15 +683,6 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                     <h2 className="text-xl font-black text-slate-900 dark:text-slate-100">Report / File Complaint</h2>
                     <p className="text-xs text-slate-500">
                       Report an issue with <strong>{professional.name}</strong> ({professional.category})
-                    </p>
-                  </div>
-
-                  <div className="p-3.5 rounded-2xl bg-navy-800/10 border border-navy-800/20 text-xs text-navy-800 dark:text-navy-300">
-                    <p className="font-extrabold flex items-center gap-1.5 mb-1">
-                      <ShieldCheck className="w-4 h-4 text-navy-800 dark:text-navy-400" /> KaziHub Escrow Protection
-                    </p>
-                    <p className="text-[11px] leading-relaxed">
-                      Filing a complaint immediately pauses escrow payouts and flags the artisan's profile for admin review.
                     </p>
                   </div>
 
