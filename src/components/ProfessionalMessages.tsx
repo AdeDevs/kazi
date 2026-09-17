@@ -336,143 +336,102 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
     return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
-  return (
-    // -m-3.5/-m-4 breaks out of AppShell's page-content padding so this spans edge-to-edge below
-    // the sticky header, like WhatsApp/Claude -- both panes sit directly on that canvas instead of
-    // inside a card, and the height is anchored to the header alone (not header+padding), which is
-    // what was actually overflowing the viewport by that padding amount and bleeding into page
-    // scroll before. overflow-hidden here is a backstop: only the two inner lists below should
-    // ever scroll, never this row itself.
-    <div className="w-full max-w-none -m-3.5 sm:-m-4 -mb-4 h-[calc(100vh-65px)] md:h-[calc(100vh-73px)] min-h-[450px] flex overflow-hidden animate-in fade-in duration-300">
-
-      {/* Left Panel: Conversation List -- a border-r divider (not an all-around card border)
-          separates it from the chat pane on desktop; on mobile it's the only pane shown until a
-          conversation is opened, matching the client app's list-or-chat drill-down instead of a
-          permanent split. */}
-      <div className={`w-full lg:w-80 xl:w-96 min-h-0 flex flex-col bg-white dark:bg-slate-900 lg:border-r lg:border-slate-200 dark:lg:border-slate-800 ${selectedCustomerId ? 'hidden lg:flex' : 'flex'}`}>
-        <div className="p-3.5 sm:p-4 border-b border-slate-200 dark:border-slate-800 space-y-3 shrink-0">
-          <div className="flex md:hidden flex-col gap-0.5">
-            <p className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2.5">
-              <span>Messages</span>
-              {totalUnreadCount > 0 ? (
-                <span className="px-2.5 py-0.5 rounded-full bg-brand-orange-700 text-white text-xs font-bold shadow-xs">
-                  {totalUnreadCount} New
-                </span>
-              ) : (
-                <span className="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-bold">
-                  {conversations.length} {conversations.length === 1 ? 'Conversation' : 'Conversations'}
-                </span>
-              )}
-            </p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Direct communications, quotes, and updates with your customers.
-            </p>
-          </div>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search conversations..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-orange-500/50 focus:border-brand-orange-500"
-            />
-          </div>
+  // Conversation List body -- identical content used in both the mobile drill-down page and the
+  // desktop sidebar pane, so it exists exactly once.
+  const conversationListBody = (
+    <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
+      {filteredConversations.length === 0 ? (
+        <div className="p-8 text-center">
+          <p className="text-sm text-slate-500">No conversations found.</p>
         </div>
-
-        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
-          {filteredConversations.length === 0 ? (
-            <div className="p-8 text-center">
-              <p className="text-sm text-slate-500">No conversations found.</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
-              {filteredConversations.map(conv => (
-                <div 
-                  key={conv.customerId}
-                  onClick={() => setSelectedCustomerId(conv.customerId)}
-                  className={`p-3 cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 ${selectedCustomerId === conv.customerId ? 'bg-navy-50 dark:bg-navy-900/20' : ''}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-slate-800 flex items-center justify-center shrink-0 text-slate-700 dark:text-slate-300 font-bold text-sm border border-slate-200/80 dark:border-slate-700/80">
-                      {conv.customerName.charAt(0)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-0.5">
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate pr-2">
-                          {conv.customerName}
-                        </h4>
-                        <span className="text-[10px] font-medium text-slate-400 shrink-0">
-                          {formatDateLabel(conv.lastMessage.timestamp) === 'Today' 
-                            ? formatTime(conv.lastMessage.timestamp)
-                            : formatDateLabel(conv.lastMessage.timestamp)}
-                        </span>
-                      </div>
-                      
-                      {conv.relatedBooking && (
-                        <div className="text-[10px] font-semibold text-navy-600 dark:text-navy-400 mb-0.5 truncate">
-                          Job: {conv.relatedBooking.title || conv.relatedBooking.category}
-                        </div>
-                      )}
-
-                      <div className="flex items-center justify-between gap-2">
-                        <p className={`text-xs truncate ${conv.unreadCount > 0 ? 'font-bold text-slate-900 dark:text-slate-100' : 'text-slate-500 dark:text-slate-400'}`}>
-                          {conv.lastMessage.senderId === professional.id ? 'You: ' : ''}
-                          {conv.lastMessage.mediaType === 'image' ? 'Photo attached' 
-                            : conv.lastMessage.mediaType === 'audio' ? 'Voice Note'
-                            : conv.lastMessage.mediaType === 'location' ? 'GPS Location'
-                            : conv.lastMessage.mediaType === 'video' ? 'Video clip'
-                            : conv.lastMessage.message}
-                        </p>
-                        {conv.unreadCount > 0 && (
-                          <span className="shrink-0 min-w-4 h-4 px-1 rounded-full bg-brand-orange-700 flex items-center justify-center text-center text-[9px] font-bold text-white leading-none shadow-xs">
-                            <span className="flex items-center justify-center text-center">{conv.unreadCount}</span>
-                          </span>
-                        )}
-                      </div>
-                    </div>
+      ) : (
+        <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
+          {filteredConversations.map(conv => (
+            <div
+              key={conv.customerId}
+              onClick={() => setSelectedCustomerId(conv.customerId)}
+              className={`p-3 cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 ${selectedCustomerId === conv.customerId ? 'bg-navy-50 dark:bg-navy-900/20' : ''}`}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-slate-800 flex items-center justify-center shrink-0 text-slate-700 dark:text-slate-300 font-bold text-sm border border-slate-200/80 dark:border-slate-700/80">
+                  {conv.customerName.charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate pr-2">
+                      {conv.customerName}
+                    </h4>
+                    <span className="text-[10px] font-medium text-slate-400 shrink-0">
+                      {formatDateLabel(conv.lastMessage.timestamp) === 'Today'
+                        ? formatTime(conv.lastMessage.timestamp)
+                        : formatDateLabel(conv.lastMessage.timestamp)}
+                    </span>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
 
-      {/* Right Panel: Active Conversation */}
-      <div className={`w-full lg:flex-1 min-h-0 flex flex-col bg-white dark:bg-slate-900 ${selectedCustomerId ? 'flex' : 'hidden lg:flex'}`}>
-        {selectedCustomerId && activeConversation ? (
-          <>
-            {/* Chat Header -- persistent, WhatsApp-style: the back action lives here as part of
-                the header bar (mobile/tablet only, desktop keeps the list visible alongside), not
-                as a separate button floating inside the scrollable message content below. */}
-            <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900 shrink-0">
-              <div className="flex items-center gap-3 min-w-0">
-                <button
-                  onClick={() => setSelectedCustomerId(null)}
-                  className="lg:hidden -ml-1.5 p-1.5 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
-                  title="Back to all messages" aria-label="Back to all messages"
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                </button>
-                <div className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300 font-bold text-sm border border-slate-200/80 dark:border-slate-700/80 shrink-0">
-                  {activeConversation.customerName.charAt(0)}
-                </div>
-                <div className="min-w-0">
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
-                    {activeConversation.customerName}
-                  </h3>
-                  {activeConversation.relatedBooking && (
-                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate">
-                      Job Context: {activeConversation.relatedBooking.title || activeConversation.relatedBooking.category}
-                    </p>
+                  {conv.relatedBooking && (
+                    <div className="text-[10px] font-semibold text-navy-600 dark:text-navy-400 mb-0.5 truncate">
+                      Job: {conv.relatedBooking.title || conv.relatedBooking.category}
+                    </div>
                   )}
+
+                  <div className="flex items-center justify-between gap-2">
+                    <p className={`text-xs truncate ${conv.unreadCount > 0 ? 'font-bold text-slate-900 dark:text-slate-100' : 'text-slate-500 dark:text-slate-400'}`}>
+                      {conv.lastMessage.senderId === professional.id ? 'You: ' : ''}
+                      {conv.lastMessage.mediaType === 'image' ? 'Photo attached'
+                        : conv.lastMessage.mediaType === 'audio' ? 'Voice Note'
+                        : conv.lastMessage.mediaType === 'location' ? 'GPS Location'
+                        : conv.lastMessage.mediaType === 'video' ? 'Video clip'
+                        : conv.lastMessage.message}
+                    </p>
+                    {conv.unreadCount > 0 && (
+                      <span className="shrink-0 min-w-4 h-4 px-1 rounded-full bg-brand-orange-700 flex items-center justify-center text-center text-[9px] font-bold text-white leading-none shadow-xs">
+                        <span className="flex items-center justify-center text-center">{conv.unreadCount}</span>
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 
-            {/* Chat Messages Feed */}
-            <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 no-scrollbar bg-slate-50/50 dark:bg-slate-950/50">
+  // Chat header -- identical between the mobile full-screen chat and the desktop pane, except the
+  // back arrow: desktop keeps the list visible alongside, so there's nothing to "go back" to there.
+  const renderChatHeader = (showBackButton: boolean) => (
+    <div className="p-3.5 sm:p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900 shrink-0">
+      <div className="flex items-center gap-3 min-w-0">
+        {showBackButton && (
+          <button
+            onClick={() => setSelectedCustomerId(null)}
+            className="-ml-1.5 p-1.5 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
+            title="Back to all messages" aria-label="Back to all messages"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+        )}
+        <div className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300 font-bold text-sm border border-slate-200/80 dark:border-slate-700/80 shrink-0">
+          {activeConversation?.customerName.charAt(0)}
+        </div>
+        <div className="min-w-0">
+          <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
+            {activeConversation?.customerName}
+          </h3>
+          {activeConversation?.relatedBooking && (
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate">
+              Job Context: {activeConversation.relatedBooking.title || activeConversation.relatedBooking.category}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  // Message feed -- identical between mobile and desktop chat views.
+  const messagesFeedBody = (
+    <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 no-scrollbar bg-slate-50/50 dark:bg-slate-950/50">
               {activeMessages.map((msg, index) => {
                 const isMe = msg.senderId === professional.id;
                 const showDate = index === 0 || formatDateLabel(msg.timestamp) !== formatDateLabel(activeMessages[index - 1].timestamp);
@@ -612,11 +571,13 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
                   </React.Fragment>
                 );
               })}
-              <div ref={messagesEndRef} />
-            </div>
+      <div ref={messagesEndRef} />
+    </div>
+  );
 
-            {/* Attachment Menu Popup */}
-            {showAttachmentMenu && (
+  // Attachment menu -- identical between mobile and desktop chat views.
+  const attachmentMenuBody = (
+    showAttachmentMenu && (
               <div className="p-4 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 animate-in slide-in-from-bottom-2 duration-200 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Share Media Attachment</span>
@@ -670,10 +631,12 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
                   </div>
                 </div>
               </div>
-            )}
+    )
+  );
 
-            {/* Chat Composer / Voice Recorder */}
-            {isRecording ? (
+  // Composer / voice recorder -- identical between mobile and desktop chat views.
+  const composerBody = (
+    isRecording ? (
               <div className="p-3 sm:p-4 bg-red-500/5 dark:bg-rose-950/10 border-t border-red-500/20 flex items-center justify-between gap-2 sm:gap-4 animate-pulse">
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-ping shrink-0"></span>
@@ -758,20 +721,117 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
                   </button>
                 </form>
               </div>
-            )}
-          </>
+    )
+  );
+
+  const emptyStateBody = (
+    <div className="flex-1 min-h-0 flex flex-col items-center justify-center p-8 text-center bg-slate-50/50 dark:bg-slate-950/50">
+      <div className="w-16 h-16 bg-white dark:bg-slate-900 rounded-2xl flex items-center justify-center shadow-sm border border-slate-200 dark:border-slate-800 mb-4">
+        <MessageSquare className="w-8 h-8 text-slate-400" />
+      </div>
+      <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">Your Messages</h3>
+      <p className="text-sm text-slate-500 max-w-sm">
+        Select a conversation from the left to read messages and reply to your customers.
+      </p>
+    </div>
+  );
+
+  const hasActiveChat = Boolean(selectedCustomerId && activeConversation);
+
+  return (
+    <>
+      {/* ============================================================
+          MOBILE / TABLET (< lg): no split-screen -- two separate
+          full-screen states, matching the client app's existing
+          drill-down (list page, then a dedicated chat page), not the
+          desktop's simultaneous two-pane layout.
+          ============================================================ */}
+      <div className="lg:hidden">
+        {hasActiveChat ? (
+          // Full-screen chat -- breaks out of the page's padding so it's a true full page (not a
+          // card floating in the gutter), WhatsApp-mobile style: back arrow lives in its own header.
+          <div className="-m-3.5 sm:-m-4 -mb-4 h-[calc(100vh-65px)] md:h-[calc(100vh-73px)] flex flex-col bg-white dark:bg-slate-900">
+            {renderChatHeader(true)}
+            {messagesFeedBody}
+            {attachmentMenuBody}
+            {composerBody}
+          </div>
         ) : (
-          /* Empty State */
-          <div className="flex-1 min-h-0 flex flex-col items-center justify-center p-8 text-center bg-slate-50/50 dark:bg-slate-950/50">
-            <div className="w-16 h-16 bg-white dark:bg-slate-900 rounded-2xl flex items-center justify-center shadow-sm border border-slate-200 dark:border-slate-800 mb-4">
-              <MessageSquare className="w-8 h-8 text-slate-400" />
+          // Conversation list page -- normal page flow (the page itself scrolls), matching the
+          // client app's existing mobile inbox: title + count pill, then a search card, then rows.
+          <div className="space-y-5">
+            <div className="space-y-0.5">
+              <p className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2.5">
+                <span>Messages</span>
+                {totalUnreadCount > 0 ? (
+                  <span className="px-2.5 py-0.5 rounded-full bg-brand-orange-700 text-white text-xs font-bold shadow-xs">
+                    {totalUnreadCount} New
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-bold">
+                    {conversations.length} {conversations.length === 1 ? 'Conversation' : 'Conversations'}
+                  </span>
+                )}
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Direct communications, quotes, and updates with your customers.
+              </p>
             </div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">Your Messages</h3>
-            <p className="text-sm text-slate-500 max-w-sm">
-              Select a conversation from the left to read messages and reply to your customers.
-            </p>
+
+            <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs">
+              <div className="relative">
+                <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search conversations..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-orange-500/50 focus:border-brand-orange-500"
+                />
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs overflow-hidden">
+              {conversationListBody}
+            </div>
           </div>
         )}
+      </div>
+
+      {/* ============================================================
+          DESKTOP (lg+): two-pane split, edge-to-edge -- breaks out of
+          the page's padding so the pair spans the full viewport below
+          the sticky header with no outer card/rounding/margin framing
+          it as a unit, WhatsApp Web / Claude style. A single border-r
+          divider separates the panes instead of two card outlines.
+          ============================================================ */}
+      <div className="hidden lg:flex -m-3.5 sm:-m-4 -mb-4 h-[calc(100vh-73px)] overflow-hidden">
+        <div className="w-80 xl:w-96 min-h-0 flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+          <div className="p-4 border-b border-slate-200 dark:border-slate-800 space-y-3 shrink-0">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search conversations..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-orange-500/50 focus:border-brand-orange-500"
+              />
+            </div>
+          </div>
+          {conversationListBody}
+        </div>
+
+        <div className="flex-1 min-h-0 flex flex-col bg-white dark:bg-slate-900">
+          {hasActiveChat ? (
+            <>
+              {renderChatHeader(false)}
+              {messagesFeedBody}
+              {attachmentMenuBody}
+              {composerBody}
+            </>
+          ) : emptyStateBody}
+        </div>
       </div>
 
       {/* LIGHTBOX FOR ZOOMING IMAGES */}
@@ -791,7 +851,6 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
           </div>
         </div>
       )}
-
-    </div>
+    </>
   );
 };

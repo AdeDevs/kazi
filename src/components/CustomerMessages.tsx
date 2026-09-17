@@ -488,115 +488,114 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
   // Decibel waveform sample heights for WhatsApp style full-width wave
   const waveformBars = [8, 14, 22, 12, 28, 18, 10, 24, 30, 16, 26, 12, 20, 28, 14, 8, 22, 16, 24, 10, 14, 26, 18, 30, 12, 20, 28, 14, 22, 16, 24, 12, 18, 26, 10, 22, 14, 28, 16, 20];
 
-  // =========================================================================
-  // VIEW 2: DEDICATED FULL CHAT SCREEN (DRILL-DOWN LEVEL 2)
-  // =========================================================================
-  if (selectedProId && activeConversation) {
+  // Chat header -- identical between the mobile full-screen chat and the desktop pane, except the
+  // back arrow: desktop keeps the list visible alongside, so there's nothing to "go back" to there.
+  const renderChatHeader = (showBackButton: boolean) => {
+    if (!activeConversation) return null;
     return (
-      <div className="w-full flex flex-col h-[calc(100vh-85px)] md:h-[calc(100vh-100px)] space-y-2 animate-in fade-in duration-200 overflow-hidden">
-        {/* Navigation Breadcrumb / Back Action */}
-        <div className="flex items-center justify-between shrink-0">
-          <button
-            onClick={() => setSelectedProId(null)}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-2xs cursor-pointer"
-          >
-            <ArrowLeft className="w-4 h-4 text-brand-orange-500" />
-            <span>Back to All Messages</span>
-          </button>
-        </div>
-
-        {/* Dedicated Chat Container with internal scrolling only */}
-        <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col min-h-0">
-          {/* Header */}
-          <div className="p-3 sm:p-3.5 border-b border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between gap-3 shrink-0">
-            {/* Clickable Artisan Info -> Opens Profile */}
-            <div 
-              onClick={() => onSelectProForProfile && onSelectProForProfile(activeConversation.professional)}
-              className="flex items-center gap-3 min-w-0 cursor-pointer group"
-              title="Click to view artisan profile"
+      <div className="p-3 sm:p-3.5 border-b border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between gap-2 sm:gap-3 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
+          {showBackButton && (
+            <button
+              onClick={() => setSelectedProId(null)}
+              className="-ml-1 p-1.5 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
+              title="Back to all messages" aria-label="Back to all messages"
             >
-              <div className="relative shrink-0">
-                <img
-                  src={activeConversation.professional.profile_picture}
-                  alt={activeConversation.professional.name}
-                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl object-cover border border-slate-200/80 dark:border-slate-700/80 group-hover:ring-2 group-hover:ring-brand-orange-500/60 transition-all"
-                />
-                {activeConversation.professional.is_available_now && (
-                  <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full" title="Online" />
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          )}
+          {/* Clickable Artisan Info -> Opens Profile */}
+          <div
+            onClick={() => onSelectProForProfile && onSelectProForProfile(activeConversation.professional)}
+            className="flex items-center gap-3 min-w-0 cursor-pointer group"
+            title="Click to view artisan profile"
+          >
+            <div className="relative shrink-0">
+              <img
+                src={activeConversation.professional.profile_picture}
+                alt={activeConversation.professional.name}
+                className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl object-cover border border-slate-200/80 dark:border-slate-700/80 group-hover:ring-2 group-hover:ring-brand-orange-500/60 transition-all"
+              />
+              {activeConversation.professional.is_available_now && (
+                <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full" title="Online" />
+              )}
+            </div>
+
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <h2 className="font-black text-sm sm:text-base text-slate-900 dark:text-slate-100 truncate group-hover:text-brand-orange-600 dark:group-hover:text-brand-orange-400 transition-colors">
+                  {activeConversation.professional.name}
+                </h2>
+                {activeConversation.professional.is_verified && (
+                  <VerifiedBadge label="Verified" title="Verified Artisan" iconClassName="w-3 h-3" labelClassName="hidden sm:inline" />
                 )}
               </div>
-
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <h2 className="font-black text-sm sm:text-base text-slate-900 dark:text-slate-100 truncate group-hover:text-brand-orange-600 dark:group-hover:text-brand-orange-400 transition-colors">
-                    {activeConversation.professional.name}
-                  </h2>
-                  {activeConversation.professional.is_verified && (
-                    <VerifiedBadge label="Verified" title="Verified Artisan" iconClassName="w-3 h-3" labelClassName="hidden sm:inline" />
-                  )}
-                </div>
-                <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                  <span className="font-semibold text-slate-700 dark:text-slate-300">{activeConversation.professional.category}</span>
-                  <span>•</span>
-                  <span className="truncate max-w-[110px] sm:max-w-none">{activeConversation.professional.neighborhood}</span>
-                  <span>•</span>
-                  <span className="flex items-center gap-0.5 text-amber-600 dark:text-amber-400 font-bold shrink-0">
-                    <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-                    {activeConversation.professional.rating_average}
-                  </span>
-                </div>
+              <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                <span className="font-semibold text-slate-700 dark:text-slate-300">{activeConversation.professional.category}</span>
+                <span>•</span>
+                <span className="truncate max-w-[110px] sm:max-w-none">{activeConversation.professional.neighborhood}</span>
+                <span>•</span>
+                <span className="flex items-center gap-0.5 text-amber-600 dark:text-amber-400 font-bold shrink-0">
+                  <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                  {activeConversation.professional.rating_average}
+                </span>
               </div>
-            </div>
-
-            {/* Actions: Book Job */}
-            <div className="flex items-center gap-2 shrink-0">
-              {onOpenBooking && (
-                <button
-                  onClick={() => onOpenBooking(activeConversation.professional)}
-                  className="px-3.5 py-2 rounded-xl bg-navy-800 hover:bg-navy-900 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
-                >
-                  <Calendar className="w-3.5 h-3.5" />
-                  <span>Book Job</span>
-                </button>
-              )}
             </div>
           </div>
+        </div>
 
-          {/* Job Context Strip (if linked booking exists) */}
-          {activeConversation.relatedBooking && (
-            <div className="px-3.5 py-2 bg-navy-50/90 dark:bg-navy-950/70 border-b border-navy-100 dark:border-navy-900/60 flex items-center justify-between gap-3 text-xs shrink-0">
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="px-1.5 py-0.5 rounded-md bg-navy-900 text-white text-[9px] font-black shrink-0">
-                  ACTIVE JOB
-                </span>
-                <span className="font-bold text-navy-900 dark:text-navy-100 truncate">
-                  {activeConversation.relatedBooking.title || activeConversation.relatedBooking.category}
-                </span>
-              </div>
-              {activeConversation.relatedBooking.amount && (
-                <span className="font-black text-navy-800 dark:text-navy-300 shrink-0">
-                  {formatCurrency(activeConversation.relatedBooking.amount)}
-                </span>
-              )}
-            </div>
+        {/* Actions: Book Job */}
+        <div className="flex items-center gap-2 shrink-0">
+          {onOpenBooking && (
+            <button
+              onClick={() => onOpenBooking(activeConversation.professional)}
+              className="px-3.5 py-2 rounded-xl bg-navy-800 hover:bg-navy-900 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Book Job</span>
+            </button>
           )}
+        </div>
+      </div>
+    );
+  };
 
-          {/* Message Stream (Internal Scrolling Only) */}
-          <div className="flex-1 min-h-0 p-3.5 sm:p-5 overflow-y-auto space-y-3.5 bg-slate-50/40 dark:bg-slate-950/40">
-            {activeMessages.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-3">
-                <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 shadow-2xs">
-                  <MessageSquare className="w-6 h-6" />
-                </div>
-                <div className="max-w-sm space-y-1">
-                  <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">Start the conversation</h4>
-                  <p className="text-xs text-slate-500">
-                    Message {activeConversation.professional.name} to confirm diagnosis, ask for quotes, or share photos of the issue.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              activeMessages.map((msg) => {
+  // Job context strip -- identical between mobile and desktop chat views.
+  const jobContextStripBody = activeConversation?.relatedBooking ? (
+    <div className="px-3.5 py-2 bg-navy-50/90 dark:bg-navy-950/70 border-b border-navy-100 dark:border-navy-900/60 flex items-center justify-between gap-3 text-xs shrink-0">
+      <div className="flex items-center gap-2 min-w-0">
+        <span className="px-1.5 py-0.5 rounded-md bg-navy-900 text-white text-[9px] font-black shrink-0">
+          ACTIVE JOB
+        </span>
+        <span className="font-bold text-navy-900 dark:text-navy-100 truncate">
+          {activeConversation.relatedBooking.title || activeConversation.relatedBooking.category}
+        </span>
+      </div>
+      {activeConversation.relatedBooking.amount && (
+        <span className="font-black text-navy-800 dark:text-navy-300 shrink-0">
+          {formatCurrency(activeConversation.relatedBooking.amount)}
+        </span>
+      )}
+    </div>
+  ) : null;
+
+  // Message feed -- identical between mobile and desktop chat views.
+  const messagesFeedBody = (
+    <div className="flex-1 min-h-0 p-3.5 sm:p-5 overflow-y-auto space-y-3.5 bg-slate-50/40 dark:bg-slate-950/40">
+      {activeMessages.length === 0 ? (
+        <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-3">
+          <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 shadow-2xs">
+            <MessageSquare className="w-6 h-6" />
+          </div>
+          <div className="max-w-sm space-y-1">
+            <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">Start the conversation</h4>
+            <p className="text-xs text-slate-500">
+              Message {activeConversation?.professional.name} to confirm diagnosis, ask for quotes, or share photos of the issue.
+            </p>
+          </div>
+        </div>
+      ) : (
+        activeMessages.map((msg) => {
                 const isCustomer = msg.senderRole === 'customer';
 
                 return (
@@ -688,27 +687,29 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
                 );
               })
             )}
-            <div ref={messagesEndRef} />
-          </div>
+      <div ref={messagesEndRef} />
+    </div>
+  );
 
-          {/* Quick Replies (Auto-hide when user starts typing) */}
-          {!inputText.trim() && (
-            <div className="px-3.5 py-1.5 bg-white dark:bg-slate-900 border-t border-slate-200/70 dark:border-slate-800 flex items-center gap-2 overflow-x-auto no-scrollbar shrink-0 animate-in fade-in duration-150">
-              {QUICK_REPLIES.map((reply, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => handleSendQuickReply(reply)}
-                  className="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap transition-colors cursor-pointer shrink-0 border border-slate-200/60 dark:border-slate-700/60"
-                >
-                  {reply}
-                </button>
-              ))}
-            </div>
-          )}
+  // Quick replies -- identical between mobile and desktop chat views.
+  const quickRepliesBody = !inputText.trim() ? (
+    <div className="px-3.5 py-1.5 bg-white dark:bg-slate-900 border-t border-slate-200/70 dark:border-slate-800 flex items-center gap-2 overflow-x-auto no-scrollbar shrink-0 animate-in fade-in duration-150">
+      {QUICK_REPLIES.map((reply, idx) => (
+        <button
+          key={idx}
+          type="button"
+          onClick={() => handleSendQuickReply(reply)}
+          className="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap transition-colors cursor-pointer shrink-0 border border-slate-200/60 dark:border-slate-700/60"
+        >
+          {reply}
+        </button>
+      ))}
+    </div>
+  ) : null;
 
-          {/* Composer - Aligned Elements */}
-          <div className="p-3 sm:p-3.5 bg-white dark:bg-slate-900 border-t border-slate-200/90 dark:border-slate-800 shrink-0 relative">
+  // Composer / attachment menu / voice recorder -- identical between mobile and desktop chat views.
+  const composerBody = (
+    <div className="p-3 sm:p-3.5 bg-white dark:bg-slate-900 border-t border-slate-200/90 dark:border-slate-800 shrink-0 relative">
             {showAttachmentMenu && (
               <div className="absolute bottom-full left-3.5 mb-2 p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl space-y-3 z-20 w-72 animate-in fade-in zoom-in-95 duration-150">
                 <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
@@ -852,7 +853,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
                         handleSendText();
                       }
                     }}
-                    placeholder={`Message ${activeConversation.professional.name.length > 14 ? activeConversation.professional.name.slice(0, 12) + '...' : activeConversation.professional.name}...`}
+                    placeholder={activeConversation ? `Message ${activeConversation.professional.name.length > 14 ? activeConversation.professional.name.slice(0, 12) + '...' : activeConversation.professional.name}...` : 'Type your message...'}
                     className="w-full pl-3.5 pr-3.5 py-2.5 min-h-[40px] max-h-[120px] rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-800 dark:focus:ring-brand-orange-500/40 resize-none leading-snug"
                   />
                 </div>
@@ -871,38 +872,47 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
                 </button>
               </form>
             )}
-          </div>
-        </div>
+    </div>
+  );
 
-        {/* Lightbox */}
-        {selectedLightboxImage && (
-          <div
-            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4"
-            onClick={() => setSelectedLightboxImage(null)}
-          >
-            <div className="relative max-w-2xl max-h-[85vh] overflow-hidden rounded-2xl" onClick={(e) => e.stopPropagation()}>
-              <img src={selectedLightboxImage} alt="Enlarged preview" className="w-full h-full object-contain" />
-              <button
-                onClick={() => setSelectedLightboxImage(null)}
-                className="absolute top-3 right-3 p-2 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        )}
+  const emptyStateBody = (
+    <div className="flex-1 min-h-0 flex flex-col items-center justify-center p-8 text-center bg-slate-50/50 dark:bg-slate-950/50">
+      <div className="w-16 h-16 bg-white dark:bg-slate-900 rounded-2xl flex items-center justify-center shadow-sm border border-slate-200 dark:border-slate-800 mb-4">
+        <MessageSquare className="w-8 h-8 text-slate-400" />
       </div>
-    );
-  }
+      <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">Your Messages</h3>
+      <p className="text-sm text-slate-500 max-w-sm">
+        Select a conversation from the left to read messages and reply to your booked artisans.
+      </p>
+    </div>
+  );
 
-  // =========================================================================
-  // VIEW 1: DEDICATED FULL-WIDTH INBOX LIST (LEVEL 1)
-  // =========================================================================
-  return (
+  const lightboxBody = selectedLightboxImage && (
+    <div
+      className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4"
+      onClick={() => setSelectedLightboxImage(null)}
+    >
+      <div className="relative max-w-2xl max-h-[85vh] overflow-hidden rounded-2xl" onClick={(e) => e.stopPropagation()}>
+        <img src={selectedLightboxImage} alt="Enlarged preview" className="w-full h-full object-contain" />
+        <button
+          onClick={() => setSelectedLightboxImage(null)}
+          className="absolute top-3 right-3 p-2 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+    </div>
+  );
+
+  const hasActiveChat = Boolean(selectedProId && activeConversation);
+
+  // Mobile inbox list body -- the client app's existing pattern (title + count pill, description,
+  // search + filter card, then a list of card-style conversation rows). Unchanged from before,
+  // just no longer the component's only possible view -- it's now specifically the < lg state.
+  const mobileConversationListBody = (
     <div className="w-full space-y-5 animate-in fade-in duration-200">
       <h1 className="sr-only">Messages</h1>
-      {/* Header - Mobile Only */}
-      <div className="flex md:hidden flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <p className="text-2xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2.5">
             <span>Messages</span>
@@ -1088,5 +1098,148 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
         </div>
       )}
     </div>
+  );
+
+  // Desktop sidebar list -- a compact row style (the mobile list's card-per-row treatment is too
+  // heavy for a ~320-384px sidebar), following the same pattern already used for this on the
+  // artisan side's desktop pane.
+  const desktopConversationListBody = (
+    <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
+      {filteredConversations.length === 0 ? (
+        <div className="p-8 text-center">
+          <p className="text-sm text-slate-500">No conversations found.</p>
+        </div>
+      ) : (
+        <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
+          {filteredConversations.map((conv) => {
+            const hasUnread = conv.unreadCount > 0;
+            const lastMsg = conv.lastMessage;
+            const isYou = lastMsg?.senderRole === 'customer';
+            return (
+              <div
+                key={conv.proId}
+                onClick={() => setSelectedProId(conv.proId)}
+                className={`p-3 cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 ${selectedProId === conv.proId ? 'bg-navy-50 dark:bg-navy-900/20' : ''}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="relative shrink-0">
+                    <img
+                      src={conv.professional.profile_picture}
+                      alt={conv.professional.name}
+                      className="w-10 h-10 rounded-xl object-cover border border-slate-200/80 dark:border-slate-700/80"
+                    />
+                    {conv.professional.is_available_now && (
+                      <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <div className="flex items-center gap-1 min-w-0">
+                        <h4 className={`text-sm truncate ${hasUnread ? 'font-black text-slate-950 dark:text-white' : 'font-bold text-slate-900 dark:text-slate-100'}`}>
+                          {conv.professional.name}
+                        </h4>
+                        {conv.professional.is_verified && <VerifiedBadge iconClassName="w-3.5 h-3.5" labelClassName="hidden" />}
+                      </div>
+                      {lastMsg && (
+                        <span className="text-[10px] font-medium text-slate-400 shrink-0">
+                          {formatMessageTime(lastMsg.timestamp)}
+                        </span>
+                      )}
+                    </div>
+                    {conv.relatedBooking && (
+                      <div className="text-[10px] font-semibold text-navy-600 dark:text-navy-400 mb-0.5 truncate">
+                        Job: {conv.relatedBooking.title || conv.relatedBooking.category}
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between gap-2">
+                      <p className={`text-xs truncate ${hasUnread ? 'font-bold text-slate-900 dark:text-slate-100' : 'text-slate-500 dark:text-slate-400'}`}>
+                        {lastMsg ? (
+                          <>
+                            {isYou && 'You: '}
+                            {lastMsg.mediaType === 'image' ? 'Photo attached'
+                              : lastMsg.mediaType === 'audio' ? 'Voice Note'
+                              : lastMsg.mediaType === 'location' ? 'Shared location'
+                              : lastMsg.message}
+                          </>
+                        ) : (
+                          <span className="italic text-slate-400">No messages yet</span>
+                        )}
+                      </p>
+                      {hasUnread && (
+                        <span className="shrink-0 min-w-4 h-4 px-1 rounded-full bg-brand-orange-700 flex items-center justify-center text-center text-[9px] font-bold text-white leading-none shadow-xs">
+                          {conv.unreadCount}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <>
+      {/* ============================================================
+          MOBILE / TABLET (< lg): no split-screen -- two separate
+          full-screen states (list page, then a dedicated chat page),
+          not the desktop's simultaneous two-pane layout.
+          ============================================================ */}
+      <div className="lg:hidden">
+        {hasActiveChat ? (
+          // Full-screen chat -- breaks out of the page's padding so it's a true full page (not a
+          // card floating in the gutter), WhatsApp-mobile style: back arrow lives in its own header.
+          <div className="-m-3.5 sm:-m-4 -mb-4 h-[calc(100vh-65px)] md:h-[calc(100vh-73px)] flex flex-col bg-white dark:bg-slate-900">
+            {renderChatHeader(true)}
+            {jobContextStripBody}
+            {messagesFeedBody}
+            {quickRepliesBody}
+            {composerBody}
+          </div>
+        ) : mobileConversationListBody}
+      </div>
+
+      {/* ============================================================
+          DESKTOP (lg+): two-pane split, edge-to-edge -- breaks out of
+          the page's padding so the pair spans the full viewport below
+          the sticky header with no outer card/rounding/margin framing
+          it as a unit, WhatsApp Web / Claude style. A single border-r
+          divider separates the panes instead of two card outlines.
+          ============================================================ */}
+      <div className="hidden lg:flex -m-3.5 sm:-m-4 -mb-4 h-[calc(100vh-73px)] overflow-hidden">
+        <div className="w-80 xl:w-96 min-h-0 flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+          <div className="p-4 border-b border-slate-200 dark:border-slate-800 space-y-3 shrink-0">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search conversations..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-orange-500/50 focus:border-brand-orange-500"
+              />
+            </div>
+          </div>
+          {desktopConversationListBody}
+        </div>
+
+        <div className="flex-1 min-h-0 flex flex-col bg-white dark:bg-slate-900">
+          {hasActiveChat ? (
+            <>
+              {renderChatHeader(false)}
+              {jobContextStripBody}
+              {messagesFeedBody}
+              {quickRepliesBody}
+              {composerBody}
+            </>
+          ) : emptyStateBody}
+        </div>
+      </div>
+
+      {lightboxBody}
+    </>
   );
 };
