@@ -88,50 +88,6 @@ summary,
   cursor: pointer !important;
 }
 
-/* Animations for Mobile Bottom Sheets and Modals */
-@keyframes slideUpSheet {
-  from {
-    transform: translateY(100%);
-    opacity: 0.85;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-@keyframes fadeInOverlay {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes popInModal {
-  from {
-    transform: scale(0.95);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-.animate-sheet-up {
-  animation: slideUpSheet 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.animate-overlay-fade {
-  animation: fadeInOverlay 0.2s ease-out forwards;
-}
-
-.animate-pop-in {
-  animation: popInModal 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
 /* Native select padding & appearance fix */
 select {
   padding-right: 2.5rem !important;

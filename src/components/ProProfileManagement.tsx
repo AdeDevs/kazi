@@ -7,8 +7,10 @@ import { KYCVerificationModal } from './ui/KYCVerificationModal';
 import { UserAvatar, getInitials, getAvatarColor } from './ui/UserAvatar';
 import { VerifiedBadge } from './ui/VerifiedBadge';
 import { Card, CardHeader } from './ui/Card';
+import { SheetDragHandle } from './ui/SheetDragHandle';
 import { CustomDropdown } from './CustomDropdown';
 import { useAuth } from '../context/AuthContext';
+import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
 import {
   Mail, Phone, MapPin,
   CheckCircle2, Edit3, Trash2, X, LogOut,
@@ -82,11 +84,13 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
 
   // Modals & UI States
   const [showEditInfoModal, setShowEditInfoModal] = useState(false);
+  const editInfoSheet = useSlideUpSheet(showEditInfoModal, () => setShowEditInfoModal(false));
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showKYCModal, setShowKYCModal] = useState(false);
-  
+
   // Service Modal & Deletion State
   const [showServiceModal, setShowServiceModal] = useState(false);
+  const serviceSheet = useSlideUpSheet(showServiceModal, () => setShowServiceModal(false));
   const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
   const [serviceName, setServiceName] = useState('');
   const [servicePricingType, setServicePricingType] = useState<ServicePricingType>('fixed');
@@ -97,6 +101,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
 
   // Portfolio Modal & Deletion State
   const [showPortfolioModal, setShowPortfolioModal] = useState(false);
+  const portfolioSheet = useSlideUpSheet(showPortfolioModal, () => setShowPortfolioModal(false));
   const [editingPortfolioId, setEditingPortfolioId] = useState<string | null>(null);
   const [portTitle, setPortTitle] = useState('');
   const [portCategory, setPortCategory] = useState<Category>(activeProfessional.category);
@@ -915,17 +920,17 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
       {/* ================= MODALS ================= */}
 
       {/* EDIT PROFILE MODAL (Mobile Bottom Sheet Slide-Up / Desktop Centered Modal) */}
-      {showEditInfoModal && (
-        <div 
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-sm p-0 sm:p-4 animate-overlay-fade"
+      {editInfoSheet.shouldRender && (
+        <div
+          className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-sm p-0 sm:p-4 ${editInfoSheet.backdropAnimationClasses}`}
           onClick={() => setShowEditInfoModal(false)}
         >
-          <div 
-            className="w-full sm:max-w-lg bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-2xl p-5 sm:p-6 space-y-4 border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl relative animate-sheet-up sm:animate-pop-in max-h-[92vh] overflow-y-auto"
+          <div
+            className={`w-full sm:max-w-lg bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-2xl p-5 sm:p-6 space-y-4 border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[92vh] overflow-y-auto ${editInfoSheet.sheetAnimationClasses}`}
+            style={editInfoSheet.dragStyle}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Mobile Swipe Indicator */}
-            <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto sm:hidden mb-2" />
+            <SheetDragHandle dragHandleProps={editInfoSheet.dragHandleProps} />
 
             <button
               onClick={() => setShowEditInfoModal(false)}
@@ -1031,17 +1036,17 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
       )}
 
       {/* SERVICE MODAL (ADD / EDIT) */}
-      {showServiceModal && (
-        <div 
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-sm p-0 sm:p-4 animate-overlay-fade"
+      {serviceSheet.shouldRender && (
+        <div
+          className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-sm p-0 sm:p-4 ${serviceSheet.backdropAnimationClasses}`}
           onClick={() => setShowServiceModal(false)}
         >
-          <div 
-            className="w-full sm:max-w-md bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-2xl p-5 sm:p-6 space-y-4 border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl relative animate-sheet-up sm:animate-pop-in max-h-[92vh] overflow-y-auto"
+          <div
+            className={`w-full sm:max-w-md bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-2xl p-5 sm:p-6 space-y-4 border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[92vh] overflow-y-auto ${serviceSheet.sheetAnimationClasses}`}
+            style={serviceSheet.dragStyle}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Mobile Swipe Indicator */}
-            <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto sm:hidden mb-2" />
+            <SheetDragHandle dragHandleProps={serviceSheet.dragHandleProps} />
 
             <button
               onClick={() => setShowServiceModal(false)}
@@ -1146,17 +1151,17 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
       )}
 
       {/* PORTFOLIO MODAL (ADD / EDIT) */}
-      {showPortfolioModal && (
-        <div 
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-sm p-0 sm:p-4 animate-overlay-fade"
+      {portfolioSheet.shouldRender && (
+        <div
+          className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-sm p-0 sm:p-4 ${portfolioSheet.backdropAnimationClasses}`}
           onClick={() => setShowPortfolioModal(false)}
         >
-          <div 
-            className="w-full sm:max-w-md bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-2xl p-5 sm:p-6 space-y-4 border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl relative animate-sheet-up sm:animate-pop-in max-h-[92vh] overflow-y-auto"
+          <div
+            className={`w-full sm:max-w-md bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-2xl p-5 sm:p-6 space-y-4 border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[92vh] overflow-y-auto ${portfolioSheet.sheetAnimationClasses}`}
+            style={portfolioSheet.dragStyle}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Mobile Swipe Indicator */}
-            <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto sm:hidden mb-2" />
+            <SheetDragHandle dragHandleProps={portfolioSheet.dragHandleProps} />
 
             <button
               onClick={() => setShowPortfolioModal(false)}
