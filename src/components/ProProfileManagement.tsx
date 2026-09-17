@@ -634,7 +634,11 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
       )}
 
       {/* 3. SERVICES & PRICING */}
-      <Card className="space-y-3.5">
+      {/* overflow-hidden: the horizontal-scroll row below bleeds edge-to-edge via a negative
+          margin, and its own overflow-x-auto clips as a plain rectangle -- without this, that
+          clip doesn't follow the card's rounded-2xl corners, so scrolled cards visibly bleed
+          past the curve at the right edge instead of being masked by it. */}
+      <Card className="space-y-3.5 overflow-hidden">
         <CardHeader
           title="Services & Pricing"
           subtitle="Fixed rates, starting prices, and custom quotes."
@@ -731,7 +735,9 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
       </Card>
 
       {/* 4. WORK PORTFOLIO */}
-      <Card className="space-y-3.5">
+      {/* overflow-hidden: same reason as Services & Pricing above -- masks the horizontal-scroll
+          row's bleed to the card's own rounded corners instead of a plain rectangular clip. */}
+      <Card className="space-y-3.5 overflow-hidden">
         <CardHeader
           title="Work Portfolio"
           subtitle="Photos of completed installations and job sites."

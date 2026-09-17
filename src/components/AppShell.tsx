@@ -104,10 +104,14 @@ export const AppShell: React.FC<AppShellProps> = ({
             sidebar's own always-mounted + transform-toggle pattern right below -- a hard
             {condition && <div/>} mount/unmount here would pop in fine (its own animate-in covers
             that) but has no exit transition at all, since React removes it from the DOM the
-            instant isMobileSidebarOpen flips false. */}
+            instant isMobileSidebarOpen flips false. Duration/easing are split per direction (and
+            kept in sync with the sidebar's own open/close timing right below) rather than one
+            flat duration, so the backdrop fades in step with the slide instead of trailing it. */}
         <div
-          className={`fixed inset-0 bg-navy-950/60 backdrop-blur-xs z-40 md:hidden transition-opacity duration-300 ${
-            isMobileSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+          className={`fixed inset-0 bg-navy-950/60 backdrop-blur-xs z-40 md:hidden motion-reduce:duration-150 ${
+            isMobileSidebarOpen
+              ? 'opacity-100 pointer-events-auto transition-opacity duration-[250ms] ease-out'
+              : 'opacity-0 pointer-events-none transition-opacity duration-200 ease-in-out'
           }`}
           onClick={() => setIsMobileSidebarOpen(false)}
         />
@@ -115,10 +119,18 @@ export const AppShell: React.FC<AppShellProps> = ({
         {/* ================= LEFT SIDEBAR =================
             A real flex item (not fixed/overlay) on desktop: its width animates and the main
             content sits right beside it as flex-1, so they can never desync -- there's no
-            separate offset to keep in sync, the browser's flex layout does it every frame. */}
+            separate offset to keep in sync, the browser's flex layout does it every frame.
+            Slides in from the left (it's a left-docked drawer, off-screen via -translate-x-full)
+            with its own duration/easing per direction -- ease-out on open reads as responsive,
+            ease-in-out on close is a touch quicker so it doesn't linger. motion-reduce:transition-none
+            drops the animated slide entirely (position still changes, just instantly) rather than
+            trying to fake a translate-free crossfade for an element that has to physically move
+            on/off screen to do its job. */}
         <aside
-          className={`flex flex-col border-r border-zinc-200 dark:border-zinc-800 fixed inset-y-0 left-0 md:sticky top-0 h-[100dvh] max-h-[100dvh] md:h-screen overflow-hidden shrink-0 z-50 md:z-30 bg-white dark:bg-zinc-950 group w-72 max-w-[85vw] md:w-[73px] md:hover:w-64 transition-[transform,width] duration-300 ease-in-out ${
-            isMobileSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'
+          className={`flex flex-col border-r border-zinc-200 dark:border-zinc-800 fixed inset-y-0 left-0 md:sticky top-0 h-[100dvh] max-h-[100dvh] md:h-screen overflow-hidden shrink-0 z-50 md:z-30 bg-white dark:bg-zinc-950 group w-72 max-w-[85vw] md:w-[73px] md:hover:w-64 motion-reduce:transition-none ${
+            isMobileSidebarOpen
+              ? 'translate-x-0 shadow-2xl transition-[transform,width] duration-[250ms] ease-out'
+              : '-translate-x-full md:translate-x-0 transition-[transform,width] duration-200 ease-in-out'
           }`}
         >
           
