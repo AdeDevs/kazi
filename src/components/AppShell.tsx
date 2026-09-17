@@ -108,7 +108,7 @@ export const AppShell: React.FC<AppShellProps> = ({
             kept in sync with the sidebar's own open/close timing right below) rather than one
             flat duration, so the backdrop fades in step with the slide instead of trailing it. */}
         <div
-          className={`fixed inset-0 bg-navy-950/60 backdrop-blur-xs z-40 md:hidden motion-reduce:duration-150 ${
+          className={`fixed inset-0 bg-slate-950/80 backdrop-blur-md z-40 md:hidden motion-reduce:duration-150 ${
             isMobileSidebarOpen
               ? 'opacity-100 pointer-events-auto transition-opacity duration-[380ms] ease-out'
               : 'opacity-0 pointer-events-none transition-opacity duration-200 ease-in-out'
