@@ -337,11 +337,20 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
   };
 
   return (
-    <div className="w-full max-w-none h-[calc(100vh-85px)] md:h-[calc(100vh-100px)] min-h-[450px] flex gap-4 lg:gap-6 animate-in fade-in duration-300">
-      
-      {/* Left Panel: Conversation List */}
-      <div className={`w-full lg:w-80 xl:w-96 min-h-0 flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden ${selectedCustomerId ? 'hidden lg:flex' : 'flex'}`}>
-        <div className="p-3.5 sm:p-4 border-b border-slate-200 dark:border-slate-800 space-y-3">
+    // -m-3.5/-m-4 breaks out of AppShell's page-content padding so this spans edge-to-edge below
+    // the sticky header, like WhatsApp/Claude -- both panes sit directly on that canvas instead of
+    // inside a card, and the height is anchored to the header alone (not header+padding), which is
+    // what was actually overflowing the viewport by that padding amount and bleeding into page
+    // scroll before. overflow-hidden here is a backstop: only the two inner lists below should
+    // ever scroll, never this row itself.
+    <div className="w-full max-w-none -m-3.5 sm:-m-4 -mb-4 h-[calc(100vh-65px)] md:h-[calc(100vh-73px)] min-h-[450px] flex overflow-hidden animate-in fade-in duration-300">
+
+      {/* Left Panel: Conversation List -- a border-r divider (not an all-around card border)
+          separates it from the chat pane on desktop; on mobile it's the only pane shown until a
+          conversation is opened, matching the client app's list-or-chat drill-down instead of a
+          permanent split. */}
+      <div className={`w-full lg:w-80 xl:w-96 min-h-0 flex flex-col bg-white dark:bg-slate-900 lg:border-r lg:border-slate-200 dark:lg:border-slate-800 ${selectedCustomerId ? 'hidden lg:flex' : 'flex'}`}>
+        <div className="p-3.5 sm:p-4 border-b border-slate-200 dark:border-slate-800 space-y-3 shrink-0">
           <div className="flex md:hidden flex-col gap-0.5">
             <p className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2.5">
               <span>Messages</span>
@@ -371,7 +380,7 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto no-scrollbar">
+        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
           {filteredConversations.length === 0 ? (
             <div className="p-8 text-center">
               <p className="text-sm text-slate-500">No conversations found.</p>
@@ -431,23 +440,21 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
       </div>
 
       {/* Right Panel: Active Conversation */}
-      <div className={`w-full lg:flex-1 min-h-0 flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden ${selectedCustomerId ? 'flex' : 'hidden lg:flex'}`}>
+      <div className={`w-full lg:flex-1 min-h-0 flex flex-col bg-white dark:bg-slate-900 ${selectedCustomerId ? 'flex' : 'hidden lg:flex'}`}>
         {selectedCustomerId && activeConversation ? (
           <>
-            {/* Back to All Messages -- mobile/tablet only; on desktop the list is already visible alongside */}
-            <div className="lg:hidden px-4 pt-3.5 pb-1 shrink-0">
-              <button
-                onClick={() => setSelectedCustomerId(null)}
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
-              >
-                <ArrowLeft className="w-4 h-4 text-brand-orange-500" />
-                <span>Back to All Messages</span>
-              </button>
-            </div>
-
-            {/* Chat Header */}
-            <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900">
-              <div className="flex items-center gap-3">
+            {/* Chat Header -- persistent, WhatsApp-style: the back action lives here as part of
+                the header bar (mobile/tablet only, desktop keeps the list visible alongside), not
+                as a separate button floating inside the scrollable message content below. */}
+            <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900 shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <button
+                  onClick={() => setSelectedCustomerId(null)}
+                  className="lg:hidden -ml-1.5 p-1.5 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
+                  title="Back to all messages" aria-label="Back to all messages"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
                 <div className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300 font-bold text-sm border border-slate-200/80 dark:border-slate-700/80 shrink-0">
                   {activeConversation.customerName.charAt(0)}
                 </div>
