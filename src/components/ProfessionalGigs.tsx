@@ -8,14 +8,21 @@ import { formatCurrency } from '../utils';
 
 interface ProfessionalGigsProps {
   professionalId: string;
+  onPageSubtitleChange?: (title: string | null) => void;
 }
 
-export const ProfessionalGigs: React.FC<ProfessionalGigsProps> = ({ professionalId }) => {
+export const ProfessionalGigs: React.FC<ProfessionalGigsProps> = ({ professionalId, onPageSubtitleChange }) => {
   const [gigs, setGigs] = useState<Gig[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [gigToDelete, setGigToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    onPageSubtitleChange?.(isCreating ? 'Create New Gig' : null);
+    return () => onPageSubtitleChange?.(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCreating]);
 
   const fetchGigs = () => {
     setLoading(true);

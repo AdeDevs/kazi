@@ -25,6 +25,8 @@ interface AppShellProps {
   onSelectCategoryFilter: (cat: Category | 'All') => void;
   activeTab: string;
   onTabChange: (tab: string) => void;
+  /** Overrides the header's tab-derived title, e.g. "Create New Gig" while that sub-view is open. */
+  pageSubtitle?: string | null;
   professionals: Professional[];
   bookings: Booking[];
   activeProfessional: Professional;
@@ -47,6 +49,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   onSelectCategoryFilter,
   activeTab,
   onTabChange,
+  pageSubtitle,
   professionals,
   bookings,
   activeProfessional,
@@ -327,9 +330,11 @@ export const AppShell: React.FC<AppShellProps> = ({
             {/* Desktop View: Dynamic Title & Contextual Badges */}
             <div className="hidden md:flex items-center gap-3 shrink-0">
               <h2 className="text-[19px] sm:text-xl font-bold tracking-tight text-navy-900 dark:text-zinc-100 capitalize">
-                {activeTab === 'explore' ? t('nav.home', currentLanguage) : 
+                {pageSubtitle ? pageSubtitle :
+                 activeTab === 'explore' ? t('nav.home', currentLanguage) :
                  activeTab === 'bookings' ? (currentRole === 'customer' ? 'My Bookings & Jobs' : 'Service Jobs') :
                  activeTab === 'jobs' ? 'Service Jobs' :
+                 activeTab === 'gigs' ? 'My Gigs' :
                  activeTab === 'messages' ? 'Messages & Inquiries' :
                  activeTab === 'notifications' ? 'Notifications & Alerts' :
                  activeTab === 'settings' ? 'Account Settings' :

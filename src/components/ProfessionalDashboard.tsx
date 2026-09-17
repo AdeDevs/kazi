@@ -33,6 +33,7 @@ interface ProfessionalDashboardProps {
   notifications?: Notification[];
   onUpdateNotifications?: React.Dispatch<React.SetStateAction<Notification[]>>;
   initialCustomerId?: string;
+  onPageSubtitleChange?: (title: string | null) => void;
 }
 
 export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
@@ -52,7 +53,8 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
   onToggleDarkMode = () => {},
   notifications,
   onUpdateNotifications,
-  initialCustomerId
+  initialCustomerId,
+  onPageSubtitleChange
 }) => {
   // Sub-tabs for home view or jobs page
   const [homeSubTab, setHomeSubTab] = useState<'overview' | 'portfolio' | 'profile'>('overview');
@@ -286,7 +288,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
 
   // ================= RENDER DEDICATED GIGS PAGE =================
   if (activeTab === 'gigs') {
-    return <ProfessionalGigs professionalId={professional.id} />;
+    return <ProfessionalGigs professionalId={professional.id} onPageSubtitleChange={onPageSubtitleChange} />;
   }
 
   // ================= RENDER DEDICATED JOBS PAGE =================

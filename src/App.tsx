@@ -106,6 +106,13 @@ export default function App() {
     const saved = localStorage.getItem('kazihub_dark_mode_v2');
     return saved !== null ? saved === 'true' : false;
   });
+
+  // Lets a deeply-nested sub-view (e.g. the gig-creation form) override AppShell's tab-derived
+  // header title while it's open, then hand control back when it closes.
+  const [pageSubtitle, setPageSubtitle] = useState<string | null>(null);
+  useEffect(() => {
+    setPageSubtitle(null);
+  }, [activeTab]);
   
   // State with localStorage persistence or fallback to mock data
   const [professionals, setProfessionals] = useState<Professional[]>(() => {
@@ -735,6 +742,7 @@ export default function App() {
       onSelectCategoryFilter={setSelectedCategoryFilter}
       activeTab={activeTab}
       onTabChange={handleTabChange}
+      pageSubtitle={pageSubtitle}
       professionals={professionals}
       bookings={bookings.filter(b => currentRole === 'customer' ? b.client_id === 'c1' : b.artisan_id === activeProfessional.id)}
       activeProfessional={activeProfessional}
@@ -851,6 +859,7 @@ export default function App() {
           notifications={notifications}
           onUpdateNotifications={setNotifications}
           initialCustomerId={selectedMessageCustomerId}
+          onPageSubtitleChange={setPageSubtitle}
         />
       )}
       </Suspense>
