@@ -7,6 +7,7 @@ import {
 import { ConfirmationModal } from './ui/ConfirmationModal';
 import { SheetDragHandle } from './ui/SheetDragHandle';
 import { Card, CardHeader } from './ui/Card';
+import { CustomDropdown } from './CustomDropdown';
 import { useAuth } from '../context/AuthContext';
 import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
 import { PreferencesSection } from './settings/PreferencesSection';
@@ -270,18 +271,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <p className="font-bold text-slate-900 dark:text-slate-100">Telephone Number Privacy</p>
               <p className="text-[11px] text-slate-500">Determine when verified artisans can view your direct telephone number.</p>
             </div>
-            <select
+            <CustomDropdown
               value={phoneVisibility}
-              onChange={(e) => {
-                setPhoneVisibility(e.target.value as any);
+              onChange={(val) => {
+                setPhoneVisibility(val);
                 triggerToast('Privacy rule updated.');
               }}
-              className="px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200 shrink-0"
-            >
-              <option value="after_escrow">Only After Escrow Payment (Recommended)</option>
-              <option value="verified_only">Any Verified Artisan in Chat</option>
-              <option value="hidden">Keep Hidden (In-App Calling Only)</option>
-            </select>
+              options={[
+                { value: 'after_escrow', label: 'Only After Escrow Payment (Recommended)' },
+                { value: 'verified_only', label: 'Any Verified Artisan in Chat' },
+                { value: 'hidden', label: 'Keep Hidden (In-App Calling Only)' }
+              ]}
+              className="shrink-0"
+              buttonClassName="py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200"
+            />
           </div>
 
           {/* Neighborhood Sharing */}

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { UserCreate } from '../types/auth';
 import { TermsAndPrivacyModal } from './ui/TermsAndPrivacyModal';
+import { CustomDropdown } from './CustomDropdown';
 
 const NIGERIAN_STATES = [
   'Lagos', 'Abuja (FCT)', 'Oyo', 'Rivers', 'Ogun', 'Kano', 'Kaduna', 
@@ -778,16 +779,13 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                       <label htmlFor="signup-state" className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
                         State of Residence *
                       </label>
-                      <select
-                        id="signup-state"
+                      <CustomDropdown
                         value={state}
-                        onChange={(e) => setState(e.target.value)}
-                        className="w-full px-3 py-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-navy-900/60 cursor-pointer"
-                      >
-                        {NIGERIAN_STATES.map((st) => (
-                          <option key={st} value={st}>{st}</option>
-                        ))}
-                      </select>
+                        onChange={(val) => setState(val)}
+                        options={NIGERIAN_STATES.map((st) => ({ value: st, label: st }))}
+                        className="w-full"
+                        buttonClassName="py-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100"
+                      />
                     </div>
                   </div>
 

@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp, MessageSquare, PhoneCall, X, Send } from 'lucid
 import { Card, CardHeader } from '../ui/Card';
 import { SheetDragHandle } from '../ui/SheetDragHandle';
 import { useSlideUpSheet } from '../../hooks/useSlideUpSheet';
+import { CustomDropdown } from '../CustomDropdown';
 
 interface HelpSupportSectionProps {
   triggerToast: (msg: string) => void;
@@ -118,16 +119,18 @@ export const HelpSupportSection: React.FC<HelpSupportSectionProps> = ({ triggerT
             <form onSubmit={handleContactSupportSubmit} className="space-y-3">
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Subject</label>
-                <select
+                <CustomDropdown
                   value={supportSubject}
-                  onChange={(e) => setSupportSubject(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-slate-100"
-                >
-                  <option value="General Inquiry">General Inquiry</option>
-                  <option value="Booking & Artisan Issue">Booking & Artisan Issue</option>
-                  <option value="Payment & Escrow Question">Payment & Escrow Question</option>
-                  <option value="Account & Security">Account & Security</option>
-                </select>
+                  onChange={(val) => setSupportSubject(val)}
+                  options={[
+                    { value: 'General Inquiry', label: 'General Inquiry' },
+                    { value: 'Booking & Artisan Issue', label: 'Booking & Artisan Issue' },
+                    { value: 'Payment & Escrow Question', label: 'Payment & Escrow Question' },
+                    { value: 'Account & Security', label: 'Account & Security' }
+                  ]}
+                  className="w-full"
+                  buttonClassName="py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-slate-100"
+                />
               </div>
 
               <div>

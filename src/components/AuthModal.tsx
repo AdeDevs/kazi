@@ -9,6 +9,7 @@ import { UserCreate } from '../types/auth';
 import { TermsAndPrivacyModal } from './ui/TermsAndPrivacyModal';
 import { SheetDragHandle } from './ui/SheetDragHandle';
 import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
+import { CustomDropdown } from './CustomDropdown';
 
 const NIGERIAN_STATES = [
   'Lagos', 'Abuja (FCT)', 'Oyo', 'Rivers', 'Ogun', 'Kano', 'Kaduna', 
@@ -753,16 +754,13 @@ export const AuthModal: React.FC = () => {
                     <label htmlFor="modal-signup-state" className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                       State / Location *
                     </label>
-                    <select
-                      id="modal-signup-state"
+                    <CustomDropdown
                       value={regState}
-                      onChange={(e) => setRegState(e.target.value)}
-                      className="w-full px-2.5 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs text-zinc-900 dark:text-zinc-100"
-                    >
-                      {NIGERIAN_STATES.map((st) => (
-                        <option key={st} value={st}>{st}</option>
-                      ))}
-                    </select>
+                      onChange={(val) => setRegState(val)}
+                      options={NIGERIAN_STATES.map((st) => ({ value: st, label: st }))}
+                      className="w-full"
+                      buttonClassName="py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs text-zinc-900 dark:text-zinc-100"
+                    />
                   </div>
                 </div>
 
