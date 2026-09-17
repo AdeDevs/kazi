@@ -1,10 +1,12 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Professional, Category, Booking, ChatMessage } from '../types';
 import { CATEGORIES, CATEGORY_SERVICES_CATALOG } from '../mockData';
 import { CustomDropdown } from './CustomDropdown';
 import { CustomerMessages } from './CustomerMessages';
 import { ConfirmationModal } from './ui/ConfirmationModal';
 import { VerifiedBadge } from './ui/VerifiedBadge';
+import { SheetDragHandle } from './ui/SheetDragHandle';
+import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
 import { formatCurrency, formatServicePrice, isBookingArchived } from '../utils';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -108,6 +110,10 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
     safetyPrecaution: string;
     likelyCauses: string[];
   } | null>(null);
+  const aiDiagnosisSheet = useSlideUpSheet(isAIDiagnosisOpen, () => {
+    setIsAIDiagnosisOpen(false);
+    setAiDiagnosisReport(null);
+  });
 
   // Password change state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -138,12 +144,25 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   const [rateToast, setRateToast] = useState<string | null>(null);
 
   const [complaintModalBooking, setComplaintModalBooking] = useState<Booking | null>(null);
+  const [cachedComplaintBooking, setCachedComplaintBooking] = useState<Booking | null>(null);
+  useEffect(() => {
+    if (complaintModalBooking) setCachedComplaintBooking(complaintModalBooking);
+  }, [complaintModalBooking]);
+  const complaintSheet = useSlideUpSheet(Boolean(complaintModalBooking), () => {
+    setComplaintModalBooking(null);
+    setComplaintStep('form');
+  });
   const [complaintReason, setComplaintReason] = useState<string>('Poor Quality Workmanship');
   const [complaintDetails, setComplaintDetails] = useState<string>('');
   const [complaintPhoto1, setComplaintPhoto1] = useState<string>('');
   const [complaintPhoto2, setComplaintPhoto2] = useState<string>('');
   const [complaintStep, setComplaintStep] = useState<'form' | 'review'>('form');
   const [submittedTicket, setSubmittedTicket] = useState<{ ticketId: string; bookingId: string; professionalName: string } | null>(null);
+  const [cachedSubmittedTicket, setCachedSubmittedTicket] = useState<{ ticketId: string; bookingId: string; professionalName: string } | null>(null);
+  useEffect(() => {
+    if (submittedTicket) setCachedSubmittedTicket(submittedTicket);
+  }, [submittedTicket]);
+  const ticketSheet = useSlideUpSheet(Boolean(submittedTicket), () => setSubmittedTicket(null));
 
   const getCancelEligibility = (b: Booking): { eligible: boolean; reason?: string } => {
     if (b.status === 'cancelled' || b.status === 'paid_out') {
@@ -771,6 +790,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
     });
 
     return (
+      <>
       <div className="w-full max-w-none space-y-6 animate-in fade-in duration-300">
         {/* Toast Notification */}
         {rateToast && (
@@ -1351,6 +1371,304 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
           </div>
         )}
       </div>
+
+      {/* Complaint / Dispute Modal */}
+      {complaintSheet.shouldRender && cachedComplaintBooking && (() => {
+        const booking = cachedComplaintBooking;
+        return (
+        <div
+          className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md ${complaintSheet.backdropAnimationClasses}`}
+          onClick={() => {
+            setComplaintModalBooking(null);
+            setComplaintStep('form');
+          }}
+        >
+          <div
+            className={`bg-white dark:bg-slate-900 w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl p-4 sm:p-5 space-y-5 border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[92vh] sm:max-h-[90vh] overflow-y-auto ${complaintSheet.sheetAnimationClasses}`}
+            style={complaintSheet.dragStyle}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <SheetDragHandle dragHandleProps={complaintSheet.dragHandleProps} className="sm:hidden -mx-4 -mt-4 mb-1 px-4 pt-4 pb-3 cursor-grab active:cursor-grabbing touch-none" />
+            <button
+              onClick={() => {
+                setComplaintModalBooking(null);
+                setComplaintStep('form');
+              }}
+              className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="text-center space-y-2">
+              <div className="w-14 h-14 rounded-full bg-rose-500/10 text-rose-600 flex items-center justify-center mx-auto">
+                <ShieldAlert className="w-7 h-7" />
+              </div>
+              <h2 className="text-xl font-black text-slate-900 dark:text-slate-100">
+                {complaintStep === 'form' ? 'Report an Issue with Completed Work' : 'Review Your Issue Report'}
+              </h2>
+              <p className="text-xs text-slate-500">
+                Booking #{booking.id} • Pro: <strong>{booking.professionalName}</strong>
+              </p>
+            </div>
+
+            {/* Escrow Banner */}
+            <div className="p-4 rounded-2xl bg-navy-800/10 border border-navy-800/20 text-xs text-navy-800 dark:text-navy-300 space-y-1">
+              <div className="font-extrabold flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-navy-800 dark:text-navy-400" /> KaziHub Escrow Protection Guarantee
+              </div>
+              <p className="text-[11px] leading-relaxed">
+                Escrow payouts are automatically paused when an issue is reported. Our neutral KaziHub resolution team investigates fairly.
+              </p>
+            </div>
+
+            {complaintStep === 'form' ? (
+              <div className="space-y-4">
+                {/* Reason selection */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Select Issue Reason</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {[
+                      'Poor Quality Workmanship',
+                      'Incomplete Job / Left Unfinished',
+                      'Unpunctual / Delayed Arrival',
+                      'Overcharging / Unexpected Fees',
+                      'Unprofessional Conduct',
+                      'Property Damage / Theft Concern'
+                    ].map((reason) => (
+                      <button
+                        key={reason}
+                        type="button"
+                        onClick={() => setComplaintReason(reason)}
+                        className={`p-3 rounded-xl border text-left text-xs font-semibold transition-all cursor-pointer ${
+                          complaintReason === reason
+                            ? 'border-rose-500 bg-rose-500/10 text-rose-700 dark:text-rose-300'
+                            : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                        }`}
+                      >
+                        {reason}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Detailed Description */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Describe What Happened</label>
+                  <textarea
+                    rows={3}
+                    value={complaintDetails}
+                    onChange={(e) => setComplaintDetails(e.target.value)}
+                    placeholder="Provide details about the issue, defects, or unfinished tasks..."
+                    className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-xs text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-rose-500 outline-hidden"
+                  />
+                </div>
+
+                {/* Evidence Photos */}
+                <div className="space-y-3">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Evidence Photos / Video (Optional)</label>
+                  <div>
+                    <input
+                      type="url"
+                      value={complaintPhoto1}
+                      onChange={(e) => setComplaintPhoto1(e.target.value)}
+                      placeholder="Primary evidence photo URL (https://...)"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-xs text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-rose-500 outline-hidden mb-2"
+                    />
+                    <input
+                      type="url"
+                      value={complaintPhoto2}
+                      onChange={(e) => setComplaintPhoto2(e.target.value)}
+                      placeholder="Secondary evidence photo / video URL (Optional)"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-xs text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-rose-500 outline-hidden"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setComplaintModalBooking(null);
+                      setComplaintStep('form');
+                    }}
+                    className="flex-1 py-3 rounded-2xl border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 font-bold text-xs hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!complaintDetails.trim()) {
+                        alert('Please describe what happened before reviewing.');
+                        return;
+                      }
+                      setComplaintStep('review');
+                    }}
+                    className="flex-1 py-3 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <span>Review Report</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 text-xs text-slate-700 dark:text-slate-300">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Service / Job</span>
+                    <strong className="text-slate-900 dark:text-white text-sm">{booking.title || booking.category}</strong>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Professional</span>
+                    <strong className="text-slate-900 dark:text-white">{booking.professionalName}</strong>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Reason for Issue</span>
+                    <span className="inline-block mt-0.5 px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 font-bold">{complaintReason}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Description</span>
+                    <p className="mt-0.5 text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800">{complaintDetails}</p>
+                  </div>
+                  {([complaintPhoto1, complaintPhoto2].filter(Boolean).length > 0) && (
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Attached Evidence</span>
+                      <div className="flex gap-2">
+                        {[complaintPhoto1, complaintPhoto2].filter(Boolean).map((url, i) => (
+                          <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                            <img src={url} alt="Evidence" className="w-16 h-16 rounded-xl object-cover border border-slate-200 dark:border-slate-800" />
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-300">
+                  <p className="leading-relaxed">
+                    By submitting this report, the job status will change to <strong>Issue Reported</strong>. KaziHub support will review the case neutrally.
+                  </p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setComplaintStep('form')}
+                    className="flex-1 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                  >
+                    Back to Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const ticketId = `KAZI-DISPUTE-${Math.floor(1000 + Math.random() * 9000)}`;
+                      const evidencePhotos = [complaintPhoto1, complaintPhoto2].filter(Boolean);
+                      if (complaintModalBooking) {
+                        if (onUpdateBookingStatus) {
+                          onUpdateBookingStatus(complaintModalBooking.id, 'disputed', {
+                            issueDetails: {
+                              description: `[${complaintReason}] ${complaintDetails}`,
+                              evidencePhotos,
+                              reportedAt: new Date().toISOString()
+                            }
+                          });
+                        }
+                        setSubmittedTicket({
+                          ticketId,
+                          bookingId: complaintModalBooking.id,
+                          professionalName: complaintModalBooking.professionalName
+                        });
+                      }
+                      setComplaintModalBooking(null);
+                      setComplaintStep('form');
+                      setComplaintDetails('');
+                      setComplaintPhoto1('');
+                      setComplaintPhoto2('');
+                    }}
+                    className="flex-1 py-3 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <AlertCircle className="w-4 h-4" /> Submit Issue Report
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        );
+      })()}
+
+      {/* Ticket Submitted Success Modal */}
+      {ticketSheet.shouldRender && cachedSubmittedTicket && (() => {
+        const ticket = cachedSubmittedTicket;
+        return (
+        <div
+          className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md ${ticketSheet.backdropAnimationClasses}`}
+          onClick={() => setSubmittedTicket(null)}
+        >
+          <div
+            className={`bg-white dark:bg-slate-900 w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl p-4 sm:p-5 text-center space-y-4 border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[92vh] overflow-y-auto ${ticketSheet.sheetAnimationClasses}`}
+            style={ticketSheet.dragStyle}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <SheetDragHandle dragHandleProps={ticketSheet.dragHandleProps} className="sm:hidden -mx-4 -mt-4 mb-1 px-4 pt-4 pb-3 cursor-grab active:cursor-grabbing touch-none" />
+            <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center mx-auto">
+              <CheckCircle2 className="w-8 h-8" />
+            </div>
+            <h2 className="text-xl font-black text-slate-900 dark:text-slate-100">Support Ticket Filed</h2>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Ticket <strong>#{ticket.ticketId}</strong> for booking with <strong>{ticket.professionalName}</strong> has been assigned to a KaziHub Trust & Safety officer.
+            </p>
+
+            <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-xs text-slate-700 dark:text-slate-300 text-left space-y-1">
+              <div className="font-bold text-slate-900 dark:text-slate-100">Next Steps:</div>
+              <div className="space-y-1">
+                {[
+                  'Escrow payout is frozen for 48 hours.',
+                  'Support officer will contact you via email/phone within 2 hours.',
+                  'You can attach photos or extra details in customer support chat.'
+                ].map((item) => (
+                  <div key={item} className="flex items-start gap-1.5 text-[11px] text-slate-500">
+                    <CheckCircle2 className="w-3 h-3 text-navy-800 dark:text-navy-400 shrink-0 mt-0.5" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={() => setSubmittedTicket(null)}
+              className="w-full py-3 rounded-2xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-extrabold text-xs shadow-xs cursor-pointer"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+        );
+      })()}
+
+      {/* Cancellation Confirmation Modal (Bottom Slide-Up on Mobile) */}
+      <ConfirmationModal
+        isOpen={Boolean(cancelModalBooking)}
+        onClose={() => setCancelModalBooking(null)}
+        onConfirm={() => {
+          if (cancelModalBooking) {
+            onCancelBooking(cancelModalBooking.id);
+            setRateToast(`Request with ${cancelModalBooking.professionalName} was cancelled.`);
+            setTimeout(() => setRateToast(null), 4000);
+          }
+          setCancelModalBooking(null);
+        }}
+        title={`Cancel ${cancelModalBooking?.servicePricingType === 'quote_required' || cancelModalBooking?.status === 'quote_requested' ? 'Quote Request' : 'Booking'}?`}
+        description={`Are you sure you want to cancel this booking with ${cancelModalBooking?.professionalName || 'the artisan'}?`}
+        confirmText="Yes, Cancel Booking"
+        cancelText="No, Keep Booking"
+        type="danger"
+        details={cancelModalBooking ? [
+          `Service: ${cancelModalBooking.title || cancelModalBooking.category}`,
+          `Scheduled: ${cancelModalBooking.scheduled_date} (${cancelModalBooking.timeSlot})`,
+          'Zero cancellation penalty applied'
+        ] : []}
+      />
+      </>
     );
   }
 
@@ -2138,282 +2456,21 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
         )}
       </div>
 
-      {/* Complaint / Dispute Modal */}
-      {complaintModalBooking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl p-4 sm:p-5 space-y-5 border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[90vh] overflow-y-auto">
-            <button
-              onClick={() => {
-                setComplaintModalBooking(null);
-                setComplaintStep('form');
-              }}
-              className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="text-center space-y-2">
-              <div className="w-14 h-14 rounded-full bg-rose-500/10 text-rose-600 flex items-center justify-center mx-auto">
-                <ShieldAlert className="w-7 h-7" />
-              </div>
-              <h2 className="text-xl font-black text-slate-900 dark:text-slate-100">
-                {complaintStep === 'form' ? 'Report an Issue with Completed Work' : 'Review Your Issue Report'}
-              </h2>
-              <p className="text-xs text-slate-500">
-                Booking #{complaintModalBooking.id} • Pro: <strong>{complaintModalBooking.professionalName}</strong>
-              </p>
-            </div>
-
-            {/* Escrow Banner */}
-            <div className="p-4 rounded-2xl bg-navy-800/10 border border-navy-800/20 text-xs text-navy-800 dark:text-navy-300 space-y-1">
-              <div className="font-extrabold flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-navy-800 dark:text-navy-400" /> KaziHub Escrow Protection Guarantee
-              </div>
-              <p className="text-[11px] leading-relaxed">
-                Escrow payouts are automatically paused when an issue is reported. Our neutral KaziHub resolution team investigates fairly.
-              </p>
-            </div>
-
-            {complaintStep === 'form' ? (
-              <div className="space-y-4">
-                {/* Reason selection */}
-                <div className="space-y-2">
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Select Issue Reason</label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {[
-                      'Poor Quality Workmanship',
-                      'Incomplete Job / Left Unfinished',
-                      'Unpunctual / Delayed Arrival',
-                      'Overcharging / Unexpected Fees',
-                      'Unprofessional Conduct',
-                      'Property Damage / Theft Concern'
-                    ].map((reason) => (
-                      <button
-                        key={reason}
-                        type="button"
-                        onClick={() => setComplaintReason(reason)}
-                        className={`p-3 rounded-xl border text-left text-xs font-semibold transition-all cursor-pointer ${
-                          complaintReason === reason
-                            ? 'border-rose-500 bg-rose-500/10 text-rose-700 dark:text-rose-300'
-                            : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300'
-                        }`}
-                      >
-                        {reason}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Detailed Description */}
-                <div className="space-y-2">
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Describe What Happened</label>
-                  <textarea
-                    rows={3}
-                    value={complaintDetails}
-                    onChange={(e) => setComplaintDetails(e.target.value)}
-                    placeholder="Provide details about the issue, defects, or unfinished tasks..."
-                    className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-xs text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-rose-500 outline-hidden"
-                  />
-                </div>
-
-                {/* Evidence Photos */}
-                <div className="space-y-3">
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Evidence Photos / Video (Optional)</label>
-                  <div>
-                    <input
-                      type="url"
-                      value={complaintPhoto1}
-                      onChange={(e) => setComplaintPhoto1(e.target.value)}
-                      placeholder="Primary evidence photo URL (https://...)"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-xs text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-rose-500 outline-hidden mb-2"
-                    />
-                    <input
-                      type="url"
-                      value={complaintPhoto2}
-                      onChange={(e) => setComplaintPhoto2(e.target.value)}
-                      placeholder="Secondary evidence photo / video URL (Optional)"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-xs text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-rose-500 outline-hidden"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setComplaintModalBooking(null);
-                      setComplaintStep('form');
-                    }}
-                    className="flex-1 py-3 rounded-2xl border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 font-bold text-xs hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!complaintDetails.trim()) {
-                        alert('Please describe what happened before reviewing.');
-                        return;
-                      }
-                      setComplaintStep('review');
-                    }}
-                    className="flex-1 py-3 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
-                  >
-                    <span>Review Report</span>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 text-xs text-slate-700 dark:text-slate-300">
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Service / Job</span>
-                    <strong className="text-slate-900 dark:text-white text-sm">{complaintModalBooking.title || complaintModalBooking.category}</strong>
-                  </div>
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Professional</span>
-                    <strong className="text-slate-900 dark:text-white">{complaintModalBooking.professionalName}</strong>
-                  </div>
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Reason for Issue</span>
-                    <span className="inline-block mt-0.5 px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 font-bold">{complaintReason}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Description</span>
-                    <p className="mt-0.5 text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800">{complaintDetails}</p>
-                  </div>
-                  {([complaintPhoto1, complaintPhoto2].filter(Boolean).length > 0) && (
-                    <div>
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Attached Evidence</span>
-                      <div className="flex gap-2">
-                        {[complaintPhoto1, complaintPhoto2].filter(Boolean).map((url, i) => (
-                          <a key={i} href={url} target="_blank" rel="noopener noreferrer">
-                            <img src={url} alt="Evidence" className="w-16 h-16 rounded-xl object-cover border border-slate-200 dark:border-slate-800" />
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-300">
-                  <p className="leading-relaxed">
-                    By submitting this report, the job status will change to <strong>Issue Reported</strong>. KaziHub support will review the case neutrally.
-                  </p>
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setComplaintStep('form')}
-                    className="flex-1 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-                  >
-                    Back to Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const ticketId = `KAZI-DISPUTE-${Math.floor(1000 + Math.random() * 9000)}`;
-                      const evidencePhotos = [complaintPhoto1, complaintPhoto2].filter(Boolean);
-                      if (complaintModalBooking) {
-                        if (onUpdateBookingStatus) {
-                          onUpdateBookingStatus(complaintModalBooking.id, 'disputed', {
-                            issueDetails: {
-                              description: `[${complaintReason}] ${complaintDetails}`,
-                              evidencePhotos,
-                              reportedAt: new Date().toISOString()
-                            }
-                          });
-                        }
-                        setSubmittedTicket({
-                          ticketId,
-                          bookingId: complaintModalBooking.id,
-                          professionalName: complaintModalBooking.professionalName
-                        });
-                      }
-                      setComplaintModalBooking(null);
-                      setComplaintStep('form');
-                      setComplaintDetails('');
-                      setComplaintPhoto1('');
-                      setComplaintPhoto2('');
-                    }}
-                    className="flex-1 py-3 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
-                  >
-                    <AlertCircle className="w-4 h-4" /> Submit Issue Report
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Ticket Submitted Success Modal */}
-      {submittedTicket && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl p-4 sm:p-5 text-center space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl relative">
-            <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center mx-auto">
-              <CheckCircle2 className="w-8 h-8" />
-            </div>
-            <h2 className="text-xl font-black text-slate-900 dark:text-slate-100">Support Ticket Filed</h2>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Ticket <strong>#{submittedTicket.ticketId}</strong> for booking with <strong>{submittedTicket.professionalName}</strong> has been assigned to a KaziHub Trust & Safety officer.
-            </p>
-
-            <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-xs text-slate-700 dark:text-slate-300 text-left space-y-1">
-              <div className="font-bold text-slate-900 dark:text-slate-100">Next Steps:</div>
-              <div className="space-y-1">
-                {[
-                  'Escrow payout is frozen for 48 hours.',
-                  'Support officer will contact you via email/phone within 2 hours.',
-                  'You can attach photos or extra details in customer support chat.'
-                ].map((item) => (
-                  <div key={item} className="flex items-start gap-1.5 text-[11px] text-slate-500">
-                    <CheckCircle2 className="w-3 h-3 text-navy-800 dark:text-navy-400 shrink-0 mt-0.5" />
-                    <span>{item}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <button
-              onClick={() => setSubmittedTicket(null)}
-              className="w-full py-3 rounded-2xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-extrabold text-xs shadow-xs cursor-pointer"
-            >
-              Done
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Cancellation Confirmation Modal (Bottom Slide-Up on Mobile) */}
-      <ConfirmationModal
-        isOpen={Boolean(cancelModalBooking)}
-        onClose={() => setCancelModalBooking(null)}
-        onConfirm={() => {
-          if (cancelModalBooking) {
-            onCancelBooking(cancelModalBooking.id);
-            setRateToast(`Request with ${cancelModalBooking.professionalName} was cancelled.`);
-            setTimeout(() => setRateToast(null), 4000);
-          }
-          setCancelModalBooking(null);
-        }}
-        title={`Cancel ${cancelModalBooking?.servicePricingType === 'quote_required' || cancelModalBooking?.status === 'quote_requested' ? 'Quote Request' : 'Booking'}?`}
-        description={`Are you sure you want to cancel this booking with ${cancelModalBooking?.professionalName || 'the artisan'}?`}
-        confirmText="Yes, Cancel Booking"
-        cancelText="No, Keep Booking"
-        type="danger"
-        details={cancelModalBooking ? [
-          `Service: ${cancelModalBooking.title || cancelModalBooking.category}`,
-          `Scheduled: ${cancelModalBooking.scheduled_date} (${cancelModalBooking.timeSlot})`,
-          'Zero cancellation penalty applied'
-        ] : []}
-      />
-
       {/* AI Fault Diagnostic Assistant Modal */}
-      {isAIDiagnosisOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl p-4 sm:p-5 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl relative text-left">
+      {aiDiagnosisSheet.shouldRender && (
+        <div
+          className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md ${aiDiagnosisSheet.backdropAnimationClasses}`}
+          onClick={() => {
+            setIsAIDiagnosisOpen(false);
+            setAiDiagnosisReport(null);
+          }}
+        >
+          <div
+            className={`bg-white dark:bg-slate-900 w-full sm:max-w-2xl max-h-[92vh] sm:max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl p-4 sm:p-5 space-y-4 border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl relative text-left ${aiDiagnosisSheet.sheetAnimationClasses}`}
+            style={aiDiagnosisSheet.dragStyle}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <SheetDragHandle dragHandleProps={aiDiagnosisSheet.dragHandleProps} className="sm:hidden -mx-4 -mt-4 mb-1 px-4 pt-4 pb-3 cursor-grab active:cursor-grabbing touch-none" />
             <button
               onClick={() => {
                 setIsAIDiagnosisOpen(false);
