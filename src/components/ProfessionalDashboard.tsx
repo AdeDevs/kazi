@@ -7,6 +7,8 @@ import { ProfessionalMessages } from './ProfessionalMessages';
 import { ProfessionalNotifications } from './ProfessionalNotifications';
 import { ProfessionalGigs } from './ProfessionalGigs';
 import { VerifiedBadge } from './ui/VerifiedBadge';
+import { SheetDragHandle } from './ui/SheetDragHandle';
+import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
 import {
   Briefcase, DollarSign, Star, CheckCircle2, Clock, Plus, Trash2,
   MapPin, User, Settings, Image as ImageIcon, Calendar,
@@ -57,11 +59,24 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
   const [jobsSubTab, setJobsSubTab] = useState<'requests' | 'active' | 'completed'>('requests');
   const [activeJobFilter, setActiveJobFilter] = useState<'all' | 'in_progress' | 'completion_submitted' | 'issue_reported'>('all');
   
-  // Selected booking for View Details modal
+  // Selected booking for View Details modal. The sheet stays mounted ~200ms past isOpen going
+  // false to play its exit animation, so it needs a cached copy of the booking to render from --
+  // the "isOpen" signal here (a non-null booking) and the content are otherwise the same value,
+  // nulled in the same click that closes it.
   const [selectedBookingForDetails, setSelectedBookingForDetails] = useState<Booking | null>(null);
+  const [cachedBookingForDetails, setCachedBookingForDetails] = useState<Booking | null>(null);
+  useEffect(() => {
+    if (selectedBookingForDetails) setCachedBookingForDetails(selectedBookingForDetails);
+  }, [selectedBookingForDetails]);
+  const detailsSheet = useSlideUpSheet(Boolean(selectedBookingForDetails), () => setSelectedBookingForDetails(null));
 
-  // Job completion modal state
+  // Job completion modal state -- same caching reasoning as above.
   const [completingJob, setCompletingJob] = useState<Booking | null>(null);
+  const [cachedCompletingJob, setCachedCompletingJob] = useState<Booking | null>(null);
+  useEffect(() => {
+    if (completingJob) setCachedCompletingJob(completingJob);
+  }, [completingJob]);
+  const completionSheet = useSlideUpSheet(Boolean(completingJob), () => setCompletingJob(null));
   const [completionDesc, setCompletionDesc] = useState('');
   const [completionPhoto1, setCompletionPhoto1] = useState('');
   const [completionPhoto2, setCompletionPhoto2] = useState('');
@@ -766,15 +781,19 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
         )}
 
         {/* View Details Modal */}
-        {selectedBookingForDetails && (
-          <div 
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto"
+        {detailsSheet.shouldRender && cachedBookingForDetails && (() => {
+          const booking = cachedBookingForDetails;
+          return (
+          <div
+            className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4 ${detailsSheet.backdropAnimationClasses}`}
             onClick={() => setSelectedBookingForDetails(null)}
           >
-            <div 
-              className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-4 sm:p-5 space-y-4 shadow-2xl border border-slate-200 dark:border-slate-800 relative animate-in fade-in zoom-in-95 duration-200 my-8"
+            <div
+              className={`bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl max-w-lg w-full p-4 sm:p-5 space-y-4 shadow-2xl border-t sm:border border-slate-200 dark:border-slate-800 relative max-h-[92vh] sm:max-h-[85vh] overflow-y-auto sm:my-8 ${detailsSheet.sheetAnimationClasses}`}
+              style={detailsSheet.dragStyle}
               onClick={(e) => e.stopPropagation()}
             >
+              <SheetDragHandle dragHandleProps={detailsSheet.dragHandleProps} className="sm:hidden -mx-4 -mt-4 mb-1 px-4 pt-4 pb-3 cursor-grab active:cursor-grabbing touch-none" />
               <button
                 onClick={() => setSelectedBookingForDetails(null)}
                 className="absolute top-6 right-6 p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white cursor-pointer"
@@ -785,51 +804,51 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
               <div className="space-y-1">
                 <span className="text-xs font-bold text-navy-800 dark:text-navy-400 uppercase tracking-wider">Job Details & Status</span>
                 <h3 className="text-xl font-black text-slate-900 dark:text-white">
-                  {selectedBookingForDetails.title || selectedBookingForDetails.category}
+                  {booking.title || booking.category}
                 </h3>
-                <p className="text-xs text-slate-500">Booking ID: {selectedBookingForDetails.id}</p>
+                <p className="text-xs text-slate-500">Booking ID: {booking.id}</p>
               </div>
 
               <div className="space-y-3.5 text-xs sm:text-sm text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/80">
                 <div className="flex justify-between">
                   <span className="font-semibold text-slate-500">Customer Name:</span>
-                  <span className="font-bold text-slate-900 dark:text-white">{selectedBookingForDetails.customerName}</span>
+                  <span className="font-bold text-slate-900 dark:text-white">{booking.customerName}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="font-semibold text-slate-500">Phone:</span>
-                  <span className="font-bold text-slate-900 dark:text-white">{selectedBookingForDetails.customerPhone}</span>
+                  <span className="font-bold text-slate-900 dark:text-white">{booking.customerPhone}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="font-semibold text-slate-500">Scheduled Date:</span>
-                  <span className="font-bold text-slate-900 dark:text-white">{selectedBookingForDetails.scheduled_date} ({selectedBookingForDetails.timeSlot})</span>
+                  <span className="font-bold text-slate-900 dark:text-white">{booking.scheduled_date} ({booking.timeSlot})</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="font-semibold text-slate-500">Location / Address:</span>
-                  <span className="font-bold text-slate-900 dark:text-white text-right">{selectedBookingForDetails.address}</span>
+                  <span className="font-bold text-slate-900 dark:text-white text-right">{booking.address}</span>
                 </div>
                 <div className="flex justify-between items-center pt-2 border-t border-slate-200 dark:border-slate-700">
                   <span className="font-semibold text-slate-500">Job Status:</span>
                   <span className="font-extrabold uppercase px-2.5 py-1 rounded-full text-xs bg-navy-800 text-white">
-                    {selectedBookingForDetails.status === 'completed_by_artisan'
+                    {booking.status === 'completed_by_artisan'
                       ? 'Completion Submitted'
-                      : selectedBookingForDetails.status === 'disputed'
+                      : booking.status === 'disputed'
                       ? 'Issue Reported'
-                      : selectedBookingForDetails.status}
+                      : booking.status}
                   </span>
                 </div>
                 <div className="flex justify-between pt-2 border-t border-slate-200 dark:border-slate-700">
                   <span className="font-bold text-slate-800 dark:text-slate-200">Total Payout:</span>
-                  <span className="font-black text-base text-slate-900 dark:text-white">{formatCurrency(selectedBookingForDetails.amount || 0)}</span>
+                  <span className="font-black text-base text-slate-900 dark:text-white">{formatCurrency(booking.amount || 0)}</span>
                 </div>
               </div>
 
-              {selectedBookingForDetails.completionDetails && (
+              {booking.completionDetails && (
                 <div className="space-y-2 bg-emerald-50/50 dark:bg-emerald-950/20 p-3.5 rounded-2xl border border-emerald-200/60 dark:border-emerald-900/40 text-xs">
                   <span className="font-extrabold text-emerald-800 dark:text-emerald-300 block">Submitted Completion Proof:</span>
-                  <p className="text-slate-700 dark:text-slate-300 font-medium">"{selectedBookingForDetails.completionDetails.description}"</p>
-                  {selectedBookingForDetails.completionDetails.photos.length > 0 && (
+                  <p className="text-slate-700 dark:text-slate-300 font-medium">"{booking.completionDetails.description}"</p>
+                  {booking.completionDetails.photos.length > 0 && (
                     <div className="flex flex-wrap gap-2 pt-1">
-                      {selectedBookingForDetails.completionDetails.photos.map((p, i) => (
+                      {booking.completionDetails.photos.map((p, i) => (
                         <img key={i} src={p} alt={`Proof ${i+1}`} className="w-16 h-16 rounded-xl object-cover border border-slate-200" />
                       ))}
                     </div>
@@ -837,17 +856,17 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                 </div>
               )}
 
-              {selectedBookingForDetails.issueDetails && (
+              {booking.issueDetails && (
                 <div className="space-y-2 bg-rose-50 dark:bg-rose-950/30 p-3.5 rounded-2xl border border-rose-200 dark:border-rose-900/50 text-xs">
                   <span className="font-extrabold text-rose-800 dark:text-rose-300 block">Customer Reported Issue:</span>
-                  <p className="text-rose-900 dark:text-rose-200 font-bold">"{selectedBookingForDetails.issueDetails.description}"</p>
+                  <p className="text-rose-900 dark:text-rose-200 font-bold">"{booking.issueDetails.description}"</p>
                 </div>
               )}
 
               <div className="space-y-1.5">
                 <span className="text-xs font-semibold text-slate-500">Initial Issue Description</span>
                 <p className="text-xs sm:text-sm bg-white dark:bg-slate-950 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300">
-                  {selectedBookingForDetails.description}
+                  {booking.description}
                 </p>
               </div>
 
@@ -861,18 +880,23 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
               </div>
             </div>
           </div>
-        )}
+          );
+        })()}
 
         {/* Job Completion Submission Modal */}
-        {completingJob && (
-          <div 
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto"
+        {completionSheet.shouldRender && cachedCompletingJob && (() => {
+          const job = cachedCompletingJob;
+          return (
+          <div
+            className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4 ${completionSheet.backdropAnimationClasses}`}
             onClick={() => setCompletingJob(null)}
           >
             <div 
-              className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-4 sm:p-5 space-y-4 shadow-2xl border border-slate-200 dark:border-slate-800 relative animate-in fade-in zoom-in-95 duration-200 my-8"
+              className={`bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl max-w-lg w-full p-4 sm:p-5 space-y-4 shadow-2xl border-t sm:border border-slate-200 dark:border-slate-800 relative max-h-[92vh] sm:max-h-[85vh] overflow-y-auto sm:my-8 ${completionSheet.sheetAnimationClasses}`}
+              style={completionSheet.dragStyle}
               onClick={(e) => e.stopPropagation()}
             >
+              <SheetDragHandle dragHandleProps={completionSheet.dragHandleProps} className="sm:hidden -mx-4 -mt-4 mb-1 px-4 pt-4 pb-3 cursor-grab active:cursor-grabbing touch-none" />
               <button
                 onClick={() => setCompletingJob(null)}
                 className="absolute top-6 right-6 p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white cursor-pointer"
@@ -888,7 +912,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                   Submit Work Completion Proof
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Provide a description and mandatory proof photo(s) for "{completingJob.title || completingJob.category}" with {completingJob.customerName}.
+                  Provide a description and mandatory proof photo(s) for "{job.title || job.category}" with {job.customerName}.
                 </p>
               </div>
 
@@ -908,7 +932,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
 
                   // Update job status to completion-submitted
                   const updated: Booking = {
-                    ...completingJob,
+                    ...job,
                     status: 'completed_by_artisan',
                     completionDetails: {
                       description: completionDesc,
@@ -1000,7 +1024,8 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
               </form>
             </div>
           </div>
-        )}
+          );
+        })()}
       </div>
     );
   }
