@@ -1055,16 +1055,11 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
 
       {/* Today's Overview */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Today's Overview
-          </h2>
-          <span className="text-xs font-medium text-slate-400">
-            {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-          </span>
-        </div>
+        <h2 className="text-sm font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+          Today's Overview
+        </h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Card 1 — Today's Jobs */}
           <div
             onClick={() => setHomeSubTab('overview')}
@@ -1113,9 +1108,11 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                 <p className="text-2xl font-black text-slate-900 dark:text-white">
                   {pendingRequests.length}
                 </p>
-                <span className="text-xs text-brand-orange-600 dark:text-brand-orange-400 font-bold bg-brand-orange-500/10 border border-brand-orange-500/20 px-1.5 py-0.5 rounded-md">
-                  Awaiting reply
-                </span>
+                {pendingRequests.length > 0 && (
+                  <span className="text-xs text-brand-orange-600 dark:text-brand-orange-400 font-bold bg-brand-orange-500/10 border border-brand-orange-500/20 px-1.5 py-0.5 rounded-md">
+                    Awaiting reply
+                  </span>
+                )}
               </div>
             </div>
             <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between text-xs font-bold text-navy-800 dark:text-navy-400 group-hover:underline">
@@ -1163,12 +1160,14 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                   <Star className="w-4 h-4 fill-amber-500" />
                 </div>
               </div>
-              <div className="space-y-1">
-                <div className="flex items-baseline gap-2">
-                  <p className="text-2xl font-black text-slate-900 dark:text-white">{professional.rating_average.toFixed(1)}</p>
-                  <span className="text-xs text-slate-400 font-semibold">({professional.review_count} reviews)</span>
-                </div>
+              <div className="flex items-baseline gap-2">
+                <p className="text-2xl font-black text-slate-900 dark:text-white">{professional.rating_average.toFixed(1)}</p>
+                <span className="text-xs text-slate-400 font-semibold">({professional.review_count} reviews)</span>
               </div>
+            </div>
+            <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between text-xs font-bold text-navy-800 dark:text-navy-400 group-hover:underline">
+              <span>View Profile</span>
+              <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
             </div>
           </div>
         </div>
