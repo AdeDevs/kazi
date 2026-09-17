@@ -200,8 +200,18 @@ export const AppShell: React.FC<AppShellProps> = ({
                     title={item.label}
                     aria-label={item.label}
                   >
-                    <div className="w-11 h-11 flex items-center justify-center shrink-0">
+                    <div className="relative w-11 h-11 flex items-center justify-center shrink-0">
                       <Icon className="w-5 h-5 shrink-0" strokeWidth={1.5} />
+                      {/* Collapsed-only indicator: the pill badge below fades out with the label
+                          text when the sidebar collapses to icons-only, leaving no sign of unread
+                          items at all. This dot sits on the icon itself (not the row), so it stays
+                          visible exactly when the pill isn't -- it's the inverse opacity condition,
+                          not shown on mobile since the sidebar there is always fully expanded. */}
+                      {item.badge !== undefined && (
+                        <span className={`absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-brand-orange-700 ring-2 ring-white dark:ring-zinc-950 transition-opacity duration-300 ${
+                          isMobileSidebarOpen ? 'opacity-0' : 'opacity-100 md:group-hover:opacity-0'
+                        }`} />
+                      )}
                     </div>
                     <span className={`min-w-0 flex-1 whitespace-nowrap overflow-hidden text-left transition-opacity duration-300 ${
                       isMobileSidebarOpen ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
