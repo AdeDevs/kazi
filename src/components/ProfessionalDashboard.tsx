@@ -8,7 +8,9 @@ import { ProfessionalNotifications } from './ProfessionalNotifications';
 import { ProfessionalGigs } from './ProfessionalGigs';
 import { VerifiedBadge } from './ui/VerifiedBadge';
 import { SheetDragHandle } from './ui/SheetDragHandle';
+import { ConfirmationModal } from './ui/ConfirmationModal';
 import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
+import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import {
   Briefcase, DollarSign, Star, CheckCircle2, Clock, Plus, Trash2,
   MapPin, User, Settings, Image as ImageIcon, Calendar,
@@ -78,11 +80,20 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
   useEffect(() => {
     if (completingJob) setCachedCompletingJob(completingJob);
   }, [completingJob]);
-  const completionSheet = useSlideUpSheet(Boolean(completingJob), () => setCompletingJob(null));
   const [completionDesc, setCompletionDesc] = useState('');
   const [completionPhoto1, setCompletionPhoto1] = useState('');
   const [completionPhoto2, setCompletionPhoto2] = useState('');
   const [completionVideoUrl, setCompletionVideoUrl] = useState('');
+  const closeCompletionModal = () => {
+    setCompletingJob(null);
+    setCompletionDesc('');
+    setCompletionPhoto1('');
+    setCompletionPhoto2('');
+    setCompletionVideoUrl('');
+  };
+  const isCompletionFormDirty = Boolean(completionDesc.trim() || completionPhoto1.trim() || completionPhoto2.trim() || completionVideoUrl.trim());
+  const completionGuard = useUnsavedChangesGuard(isCompletionFormDirty, closeCompletionModal);
+  const completionSheet = useSlideUpSheet(Boolean(completingJob), completionGuard.requestClose);
 
   // New portfolio form state
   const [newTitle, setNewTitle] = useState('');
@@ -90,6 +101,15 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
   const [newImageUrl, setNewImageUrl] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [showAddPortfolioForm, setShowAddPortfolioForm] = useState(false);
+  const closeAddPortfolioForm = () => {
+    setShowAddPortfolioForm(false);
+    setNewTitle('');
+    setNewCategory(professional.category);
+    setNewImageUrl('');
+    setNewDesc('');
+  };
+  const isAddPortfolioDirty = Boolean(newTitle || newImageUrl || newDesc || newCategory !== professional.category);
+  const addPortfolioGuard = useUnsavedChangesGuard(isAddPortfolioDirty, closeAddPortfolioForm);
   const [showAllPortfolio, setShowAllPortfolio] = useState(false);
 
   // Profile edit state
@@ -892,16 +912,16 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
           return (
           <div
             className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4 ${completionSheet.backdropAnimationClasses}`}
-            onClick={() => setCompletingJob(null)}
+            onClick={completionGuard.requestClose}
           >
-            <div 
+            <div
               className={`bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl max-w-lg w-full p-4 sm:p-5 space-y-4 shadow-2xl border-t sm:border border-slate-200 dark:border-slate-800 relative max-h-[92vh] sm:max-h-[85vh] overflow-y-auto sm:my-8 ${completionSheet.sheetAnimationClasses}`}
               style={completionSheet.dragStyle}
               onClick={(e) => e.stopPropagation()}
             >
               <SheetDragHandle dragHandleProps={completionSheet.dragHandleProps} className="sm:hidden -mx-4 -mt-4 mb-1 px-4 pt-4 pb-3 cursor-grab active:cursor-grabbing touch-none" />
               <button
-                onClick={() => setCompletingJob(null)}
+                onClick={completionGuard.requestClose}
                 className="absolute top-6 right-6 p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -1011,7 +1031,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                 <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
                   <button
                     type="button"
-                    onClick={() => setCompletingJob(null)}
+                    onClick={completionGuard.requestClose}
                     className="px-5 py-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-bold text-xs hover:bg-rose-100 dark:hover:bg-rose-950/60 cursor-pointer"
                   >
                     Cancel
@@ -1029,6 +1049,17 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
           </div>
           );
         })()}
+
+        <ConfirmationModal
+          isOpen={completionGuard.showDiscardConfirm}
+          onClose={() => completionGuard.setShowDiscardConfirm(false)}
+          onConfirm={completionGuard.confirmDiscard}
+          title="Discard Unsaved Changes?"
+          description="This job completion proof hasn't been submitted yet. Closing now will discard what you've entered."
+          confirmText="Discard Changes"
+          cancelText="Keep Editing"
+          type="warning"
+        />
       </div>
     );
   }
@@ -1308,7 +1339,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
             </div>
             <button
               type="button"
-              onClick={() => setShowAddPortfolioForm(v => !v)}
+              onClick={() => showAddPortfolioForm ? addPortfolioGuard.requestClose() : setShowAddPortfolioForm(true)}
               className="px-5 py-2.5 bg-navy-800 hover:bg-navy-900 text-white font-bold text-sm rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-2 justify-center shrink-0"
             >
               {showAddPortfolioForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
@@ -1441,6 +1472,17 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
           )}
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={addPortfolioGuard.showDiscardConfirm}
+        onClose={() => addPortfolioGuard.setShowDiscardConfirm(false)}
+        onConfirm={addPortfolioGuard.confirmDiscard}
+        title="Discard Unsaved Changes?"
+        description="This portfolio item hasn't been published yet. Closing now will discard what you've entered."
+        confirmText="Discard Changes"
+        cancelText="Keep Editing"
+        type="warning"
+      />
 
       {/* Tab 3: Profile Settings */}
       {homeSubTab === 'profile' && (

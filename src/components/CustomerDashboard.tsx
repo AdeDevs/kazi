@@ -7,6 +7,7 @@ import { ConfirmationModal } from './ui/ConfirmationModal';
 import { VerifiedBadge } from './ui/VerifiedBadge';
 import { SheetDragHandle } from './ui/SheetDragHandle';
 import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
+import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import { formatCurrency, formatServicePrice, isBookingArchived } from '../utils';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -148,15 +149,25 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   useEffect(() => {
     if (complaintModalBooking) setCachedComplaintBooking(complaintModalBooking);
   }, [complaintModalBooking]);
-  const complaintSheet = useSlideUpSheet(Boolean(complaintModalBooking), () => {
-    setComplaintModalBooking(null);
-    setComplaintStep('form');
-  });
   const [complaintReason, setComplaintReason] = useState<string>('Poor Quality Workmanship');
   const [complaintDetails, setComplaintDetails] = useState<string>('');
   const [complaintPhoto1, setComplaintPhoto1] = useState<string>('');
   const [complaintPhoto2, setComplaintPhoto2] = useState<string>('');
   const [complaintStep, setComplaintStep] = useState<'form' | 'review'>('form');
+  const closeComplaintModal = () => {
+    setComplaintModalBooking(null);
+    setComplaintStep('form');
+    setComplaintReason('Poor Quality Workmanship');
+    setComplaintDetails('');
+    setComplaintPhoto1('');
+    setComplaintPhoto2('');
+  };
+  const isComplaintFormDirty = Boolean(
+    complaintDetails.trim() || complaintPhoto1.trim() || complaintPhoto2.trim() ||
+    complaintReason !== 'Poor Quality Workmanship'
+  );
+  const complaintGuard = useUnsavedChangesGuard(isComplaintFormDirty, closeComplaintModal);
+  const complaintSheet = useSlideUpSheet(Boolean(complaintModalBooking), complaintGuard.requestClose);
   const [submittedTicket, setSubmittedTicket] = useState<{ ticketId: string; bookingId: string; professionalName: string } | null>(null);
   const [cachedSubmittedTicket, setCachedSubmittedTicket] = useState<{ ticketId: string; bookingId: string; professionalName: string } | null>(null);
   useEffect(() => {
@@ -1371,10 +1382,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
         return (
         <div
           className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md ${complaintSheet.backdropAnimationClasses}`}
-          onClick={() => {
-            setComplaintModalBooking(null);
-            setComplaintStep('form');
-          }}
+          onClick={complaintGuard.requestClose}
         >
           <div
             className={`bg-white dark:bg-slate-900 w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl p-4 sm:p-5 space-y-5 border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[92vh] sm:max-h-[90vh] overflow-y-auto ${complaintSheet.sheetAnimationClasses}`}
@@ -1383,10 +1391,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
           >
             <SheetDragHandle dragHandleProps={complaintSheet.dragHandleProps} className="sm:hidden -mx-4 -mt-4 mb-1 px-4 pt-4 pb-3 cursor-grab active:cursor-grabbing touch-none" />
             <button
-              onClick={() => {
-                setComplaintModalBooking(null);
-                setComplaintStep('form');
-              }}
+              onClick={complaintGuard.requestClose}
               className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
             >
               <X className="w-5 h-5" />
@@ -1470,10 +1475,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 <div className="flex flex-col sm:flex-row gap-3 pt-2">
                   <button
                     type="button"
-                    onClick={() => {
-                      setComplaintModalBooking(null);
-                      setComplaintStep('form');
-                    }}
+                    onClick={complaintGuard.requestClose}
                     className="flex-1 py-3 rounded-2xl border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 font-bold text-xs hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer"
                   >
                     Cancel
@@ -1578,6 +1580,17 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
         </div>
         );
       })()}
+
+      <ConfirmationModal
+        isOpen={complaintGuard.showDiscardConfirm}
+        onClose={() => complaintGuard.setShowDiscardConfirm(false)}
+        onConfirm={complaintGuard.confirmDiscard}
+        title="Discard Unsaved Changes?"
+        description="Your issue report hasn't been submitted yet. Closing now will discard what you've entered."
+        confirmText="Discard Changes"
+        cancelText="Keep Editing"
+        type="warning"
+      />
 
       {/* Ticket Submitted Success Modal */}
       {ticketSheet.shouldRender && cachedSubmittedTicket && (() => {
