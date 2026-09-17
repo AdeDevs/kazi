@@ -3,6 +3,7 @@ import { Professional, ServiceItem, PortfolioItem, ServicePricingType, Category 
 import { formatCurrency } from '../utils';
 import { CATEGORIES } from '../mockData';
 import { ConfirmationModal } from './ui/ConfirmationModal';
+import { UnsavedChangesModal } from './ui/UnsavedChangesModal';
 import { KYCVerificationModal } from './ui/KYCVerificationModal';
 import { UserAvatar, getInitials, getAvatarColor } from './ui/UserAvatar';
 import { VerifiedBadge } from './ui/VerifiedBadge';
@@ -1099,15 +1100,9 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
         </div>
       )}
 
-      <ConfirmationModal
-        isOpen={editInfoGuard.showDiscardConfirm}
-        onClose={() => editInfoGuard.setShowDiscardConfirm(false)}
-        onConfirm={editInfoGuard.confirmDiscard}
-        title="Discard Unsaved Changes?"
+      <UnsavedChangesModal
+        guard={editInfoGuard}
         description="Your edits to this profile info haven't been saved. Closing now will discard them."
-        confirmText="Discard Changes"
-        cancelText="Keep Editing"
-        type="warning"
       />
 
       {/* SERVICE MODAL (ADD / EDIT) */}
@@ -1225,15 +1220,9 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
         </div>
       )}
 
-      <ConfirmationModal
-        isOpen={serviceGuard.showDiscardConfirm}
-        onClose={() => serviceGuard.setShowDiscardConfirm(false)}
-        onConfirm={serviceGuard.confirmDiscard}
-        title="Discard Unsaved Changes?"
+      <UnsavedChangesModal
+        guard={serviceGuard}
         description="This service hasn't been saved. Closing now will discard your changes."
-        confirmText="Discard Changes"
-        cancelText="Keep Editing"
-        type="warning"
       />
 
       {/* PORTFOLIO MODAL (ADD / EDIT) */}
@@ -1343,15 +1332,9 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
         </div>
       )}
 
-      <ConfirmationModal
-        isOpen={portfolioGuard.showDiscardConfirm}
-        onClose={() => portfolioGuard.setShowDiscardConfirm(false)}
-        onConfirm={portfolioGuard.confirmDiscard}
-        title="Discard Unsaved Changes?"
+      <UnsavedChangesModal
+        guard={portfolioGuard}
         description="This portfolio project hasn't been saved. Closing now will discard your changes."
-        confirmText="Discard Changes"
-        cancelText="Keep Editing"
-        type="warning"
       />
 
       {/* SERVICE DELETION CONFIRMATION MODAL */}

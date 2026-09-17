@@ -8,7 +8,7 @@ import {
 import { UserCreate } from '../types/auth';
 import { TermsAndPrivacyModal } from './ui/TermsAndPrivacyModal';
 import { SheetDragHandle } from './ui/SheetDragHandle';
-import { ConfirmationModal } from './ui/ConfirmationModal';
+import { UnsavedChangesModal } from './ui/UnsavedChangesModal';
 import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import { CustomDropdown } from './CustomDropdown';
@@ -1112,15 +1112,9 @@ export const AuthModal: React.FC = () => {
         initialTab={termsTab}
       />
 
-      <ConfirmationModal
-        isOpen={closeGuard.showDiscardConfirm}
-        onClose={() => closeGuard.setShowDiscardConfirm(false)}
-        onConfirm={closeGuard.confirmDiscard}
-        title="Discard Unsaved Changes?"
+      <UnsavedChangesModal
+        guard={closeGuard}
         description="You haven't finished creating your account yet. Closing now will discard what you've entered."
-        confirmText="Discard Changes"
-        cancelText="Keep Editing"
-        type="warning"
       />
     </div>
   );

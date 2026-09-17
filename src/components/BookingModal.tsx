@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { CustomDropdown } from './CustomDropdown';
 import { VerifiedBadge } from './ui/VerifiedBadge';
 import { SheetDragHandle } from './ui/SheetDragHandle';
-import { ConfirmationModal } from './ui/ConfirmationModal';
+import { UnsavedChangesModal } from './ui/UnsavedChangesModal';
 import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import { formatCurrency, formatServicePrice } from '../utils';
@@ -1053,15 +1053,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
       </div>
 
-      <ConfirmationModal
-        isOpen={closeGuard.showDiscardConfirm}
-        onClose={() => closeGuard.setShowDiscardConfirm(false)}
-        onConfirm={closeGuard.confirmDiscard}
-        title="Discard Unsaved Changes?"
+      <UnsavedChangesModal
+        guard={closeGuard}
         description="You haven't submitted this booking request yet. Closing now will discard what you've entered."
-        confirmText="Discard Changes"
-        cancelText="Keep Editing"
-        type="warning"
       />
     </div>
   );

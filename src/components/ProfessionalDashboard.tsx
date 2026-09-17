@@ -6,7 +6,7 @@ import { ProfessionalNotifications } from './ProfessionalNotifications';
 import { ProfessionalGigs } from './ProfessionalGigs';
 import { VerifiedBadge } from './ui/VerifiedBadge';
 import { SheetDragHandle } from './ui/SheetDragHandle';
-import { ConfirmationModal } from './ui/ConfirmationModal';
+import { UnsavedChangesModal } from './ui/UnsavedChangesModal';
 import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import {
@@ -989,15 +989,9 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
           );
         })()}
 
-        <ConfirmationModal
-          isOpen={completionGuard.showDiscardConfirm}
-          onClose={() => completionGuard.setShowDiscardConfirm(false)}
-          onConfirm={completionGuard.confirmDiscard}
-          title="Discard Unsaved Changes?"
+        <UnsavedChangesModal
+          guard={completionGuard}
           description="This job completion proof hasn't been submitted yet. Closing now will discard what you've entered."
-          confirmText="Discard Changes"
-          cancelText="Keep Editing"
-          type="warning"
         />
       </div>
     );

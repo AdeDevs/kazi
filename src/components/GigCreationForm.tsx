@@ -4,7 +4,7 @@ import { createGig } from '../lib/mockGigsStore';
 import { GigInput } from '../types';
 import { CATEGORIES } from '../mockData';
 import { CustomDropdown } from './CustomDropdown';
-import { ConfirmationModal } from './ui/ConfirmationModal';
+import { UnsavedChangesModal } from './ui/UnsavedChangesModal';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 
 interface GigCreationFormProps {
@@ -217,15 +217,9 @@ export const GigCreationForm: React.FC<GigCreationFormProps> = ({ professionalId
         </div>
       </form>
 
-      <ConfirmationModal
-        isOpen={cancelGuard.showDiscardConfirm}
-        onClose={() => cancelGuard.setShowDiscardConfirm(false)}
-        onConfirm={cancelGuard.confirmDiscard}
-        title="Discard Unsaved Changes?"
+      <UnsavedChangesModal
+        guard={cancelGuard}
         description="This gig hasn't been created yet. Leaving now will discard what you've entered."
-        confirmText="Discard Changes"
-        cancelText="Keep Editing"
-        type="warning"
       />
     </div>
   );

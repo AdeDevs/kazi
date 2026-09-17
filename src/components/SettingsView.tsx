@@ -5,6 +5,7 @@ import {
   Key, Download, Snowflake, Trash2, CheckCircle2, X, Laptop
 } from 'lucide-react';
 import { ConfirmationModal } from './ui/ConfirmationModal';
+import { UnsavedChangesModal } from './ui/UnsavedChangesModal';
 import { SheetDragHandle } from './ui/SheetDragHandle';
 import { Card, CardHeader } from './ui/Card';
 import { CustomDropdown } from './CustomDropdown';
@@ -526,15 +527,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       )}
 
-      <ConfirmationModal
-        isOpen={passwordGuard.showDiscardConfirm}
-        onClose={() => passwordGuard.setShowDiscardConfirm(false)}
-        onConfirm={passwordGuard.confirmDiscard}
-        title="Discard Unsaved Changes?"
+      <UnsavedChangesModal
+        guard={passwordGuard}
         description="You haven't updated your password yet. Closing now will discard what you've entered."
-        confirmText="Discard Changes"
-        cancelText="Keep Editing"
-        type="warning"
       />
 
     </div>

@@ -4,6 +4,7 @@ import { CATEGORIES, CATEGORY_SERVICES_CATALOG } from '../mockData';
 import { CustomDropdown } from './CustomDropdown';
 import { CustomerMessages } from './CustomerMessages';
 import { ConfirmationModal } from './ui/ConfirmationModal';
+import { UnsavedChangesModal } from './ui/UnsavedChangesModal';
 import { VerifiedBadge } from './ui/VerifiedBadge';
 import { SheetDragHandle } from './ui/SheetDragHandle';
 import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
@@ -1581,15 +1582,9 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
         );
       })()}
 
-      <ConfirmationModal
-        isOpen={complaintGuard.showDiscardConfirm}
-        onClose={() => complaintGuard.setShowDiscardConfirm(false)}
-        onConfirm={complaintGuard.confirmDiscard}
-        title="Discard Unsaved Changes?"
+      <UnsavedChangesModal
+        guard={complaintGuard}
         description="Your issue report hasn't been submitted yet. Closing now will discard what you've entered."
-        confirmText="Discard Changes"
-        cancelText="Keep Editing"
-        type="warning"
       />
 
       {/* Ticket Submitted Success Modal */}
