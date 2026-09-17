@@ -74,6 +74,19 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
 
   // Rich Attachments & Audio
   const [showAttachmentMenu, setShowAttachmentMenu] = useState<boolean>(false);
+  // Stays mounted ~150ms past showAttachmentMenu going false so the popover can animate its own
+  // exit instead of vanishing the instant it's dismissed.
+  const [renderAttachmentMenu, setRenderAttachmentMenu] = useState(false);
+  useEffect(() => {
+    if (showAttachmentMenu) {
+      setRenderAttachmentMenu(true);
+      return;
+    }
+    if (!renderAttachmentMenu) return;
+    const timeout = setTimeout(() => setRenderAttachmentMenu(false), 150);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAttachmentMenu]);
   const [selectedLightboxImage, setSelectedLightboxImage] = useState<string | null>(null);
   
   // Real voice recording states
@@ -726,8 +739,10 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
   // Composer / attachment menu / voice recorder -- identical between mobile and desktop chat views.
   const composerBody = (
     <div className="p-3 sm:p-3.5 bg-white dark:bg-slate-900 border-t border-slate-200/90 dark:border-slate-800 shrink-0 relative">
-            {showAttachmentMenu && (
-              <div className="absolute bottom-full left-3.5 mb-2 p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl space-y-3 z-20 w-72 animate-in fade-in zoom-in-95 duration-150">
+            {renderAttachmentMenu && (
+              <div className={`absolute bottom-full left-3.5 mb-2 p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl space-y-3 z-20 w-72 origin-bottom-left transition-all duration-150 ease-out ${
+                showAttachmentMenu ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+              }`}>
                 <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
                   <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Share Media</span>
                   <button onClick={() => setShowAttachmentMenu(false)} className="text-slate-400 hover:text-slate-600">
@@ -877,7 +892,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
                 <button
                   type="submit"
                   disabled={!inputText.trim()}
-                  className={`w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center transition-all cursor-pointer shrink-0 ${
+                  className={`w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center active:scale-[0.97] transition-all duration-[120ms] ease-out cursor-pointer shrink-0 ${
                     inputText.trim()
                       ? 'bg-navy-900 hover:bg-navy-950 text-white shadow-xs'
                       : 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'

@@ -3,6 +3,7 @@ import { X, Star, MapPin, Briefcase, Award, Phone, Mail, CheckCircle2, MessageSq
 import { Professional, ServiceItem, ServicePricingType, Gig } from '../types';
 import { VerifiedBadge } from './ui/VerifiedBadge';
 import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
+import { SheetDragHandle } from './ui/SheetDragHandle';
 import { getGigsByProfessional } from '../lib/mockGigsStore';
 import { formatCurrency } from '../utils';
 
@@ -54,6 +55,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
   }, [professionalProp]);
 
   const sheet = useSlideUpSheet(isOpen, onClose);
+  const complaintSheet = useSlideUpSheet(showComplaintModal, () => setShowComplaintModal(false));
 
   if (!sheet.shouldRender || !cachedProfessional) return null;
   const professional = cachedProfessional;
@@ -420,7 +422,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
           {activeTab === 'reviews' && (
             <div className="space-y-4">
               {reviewSuccessMsg && (
-                <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold flex items-center justify-between">
+                <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-200">
                   <span>{reviewSuccessMsg}</span>
                   <button onClick={() => setReviewSuccessMsg(null)} className="text-emerald-600 hover:text-emerald-800 text-xs font-bold">✕</button>
                 </div>
@@ -604,19 +606,24 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
           </div>
         </div>
 
-        {/* Complaint / Dispute Modal */}
-        {showComplaintModal && (
+        {/* Complaint / Dispute Modal -- backed by the same useSlideUpSheet every other modal in
+            the app uses, instead of a plain animate-in with no matching exit. It now leaves the
+            way it arrived (slide-down on mobile, zoom-out on desktop) rather than vanishing. */}
+        {complaintSheet.shouldRender && (
           <div
-            className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in"
+            className={`fixed inset-0 z-60 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md ${complaintSheet.backdropAnimationClasses}`}
             onClick={(e) => {
               e.stopPropagation();
               setShowComplaintModal(false);
             }}
           >
-            <div 
-              className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl p-4 sm:p-5 space-y-5 border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[90vh] overflow-y-auto"
+            <div
+              className={`bg-white dark:bg-slate-900 w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl p-4 sm:p-5 space-y-5 border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[90vh] overflow-y-auto ${complaintSheet.sheetAnimationClasses}`}
+              style={complaintSheet.dragStyle}
               onClick={(e) => e.stopPropagation()}
             >
+              <SheetDragHandle dragHandleProps={complaintSheet.dragHandleProps} className="sm:hidden -mx-4 -mt-4 mb-1 px-4 pt-4 pb-3 cursor-grab active:cursor-grabbing touch-none" />
+
               <button
                 onClick={() => setShowComplaintModal(false)}
                 className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"

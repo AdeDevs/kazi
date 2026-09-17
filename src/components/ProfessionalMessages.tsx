@@ -67,6 +67,20 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
 
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
   const [showAttachmentMenu, setShowAttachmentMenu] = useState<boolean>(false);
+  // Stays mounted ~150ms past showAttachmentMenu going false so the panel can animate its own
+  // exit -- it's a normal in-flow block (not an overlay), so an instant unmount would also yank
+  // its height out from under the composer instead of collapsing smoothly.
+  const [renderAttachmentMenu, setRenderAttachmentMenu] = useState(false);
+  useEffect(() => {
+    if (showAttachmentMenu) {
+      setRenderAttachmentMenu(true);
+      return;
+    }
+    if (!renderAttachmentMenu) return;
+    const timeout = setTimeout(() => setRenderAttachmentMenu(false), 150);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAttachmentMenu]);
   const [selectedLightboxImage, setSelectedLightboxImage] = useState<string | null>(null);
   const [isLocating, setIsLocating] = useState<boolean>(false);
 
@@ -593,10 +607,14 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
     </div>
   );
 
-  // Attachment menu -- identical between mobile and desktop chat views.
+  // Attachment menu -- identical between mobile and desktop chat views. Stays mounted through its
+  // own exit (see renderAttachmentMenu above); showAttachmentMenu drives the actual transition so
+  // it retargets smoothly if toggled again mid-animation, instead of restarting from a keyframe.
   const attachmentMenuBody = (
-    showAttachmentMenu && (
-              <div className="p-4 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 animate-in slide-in-from-bottom-2 duration-200 space-y-3">
+    renderAttachmentMenu && (
+              <div className={`p-4 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 space-y-3 transition-all duration-150 ease-out ${
+                showAttachmentMenu ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
+              }`}>
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Share Media Attachment</span>
                   <button onClick={() => setShowAttachmentMenu(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
@@ -733,7 +751,7 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
                   <button
                     type="submit"
                     disabled={!inputText.trim()}
-                    className="p-2.5 sm:p-3.5 bg-navy-800 text-white rounded-xl hover:bg-navy-900 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0 cursor-pointer mb-0.5"
+                    className="p-2.5 sm:p-3.5 bg-navy-800 text-white rounded-xl hover:bg-navy-900 active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed transition-[background-color,scale] duration-[120ms] ease-out shrink-0 cursor-pointer mb-0.5"
                   >
                     <Send className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
