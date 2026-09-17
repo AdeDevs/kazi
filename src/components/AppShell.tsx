@@ -110,7 +110,7 @@ export const AppShell: React.FC<AppShellProps> = ({
         <div
           className={`fixed inset-0 bg-navy-950/60 backdrop-blur-xs z-40 md:hidden motion-reduce:duration-150 ${
             isMobileSidebarOpen
-              ? 'opacity-100 pointer-events-auto transition-opacity duration-[250ms] ease-out'
+              ? 'opacity-100 pointer-events-auto transition-opacity duration-[380ms] ease-out'
               : 'opacity-0 pointer-events-none transition-opacity duration-200 ease-in-out'
           }`}
           onClick={() => setIsMobileSidebarOpen(false)}
@@ -129,7 +129,7 @@ export const AppShell: React.FC<AppShellProps> = ({
         <aside
           className={`flex flex-col border-r border-zinc-200 dark:border-zinc-800 fixed inset-y-0 left-0 md:sticky top-0 h-[100dvh] max-h-[100dvh] md:h-screen overflow-hidden shrink-0 z-50 md:z-30 bg-white dark:bg-zinc-950 group w-72 max-w-[85vw] md:w-[73px] md:hover:w-64 motion-reduce:transition-none ${
             isMobileSidebarOpen
-              ? 'translate-x-0 shadow-2xl transition-[transform,width] duration-[250ms] ease-out'
+              ? 'translate-x-0 shadow-2xl transition-[transform,width] duration-[380ms] ease-out'
               : '-translate-x-full md:translate-x-0 transition-[transform,width] duration-200 ease-in-out'
           }`}
         >
