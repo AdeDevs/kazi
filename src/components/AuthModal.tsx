@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { UserCreate } from '../types/auth';
 import { TermsAndPrivacyModal } from './ui/TermsAndPrivacyModal';
+import { SheetDragHandle } from './ui/SheetDragHandle';
+import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
 
 const NIGERIAN_STATES = [
   'Lagos', 'Abuja (FCT)', 'Oyo', 'Rivers', 'Ogun', 'Kano', 'Kaduna', 
@@ -146,7 +148,9 @@ export const AuthModal: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isAuthModalOpen, closeAuthModal]);
 
-  if (!isAuthModalOpen) return null;
+  const sheet = useSlideUpSheet(isAuthModalOpen, closeAuthModal);
+
+  if (!sheet.shouldRender) return null;
 
   // Handle Login Submit
   const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -314,11 +318,14 @@ export const AuthModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-navy-950/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div 
-        className="bg-white dark:bg-zinc-900 w-full max-w-lg rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden relative max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-200"
+    <div className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-navy-950/80 backdrop-blur-md ${sheet.backdropAnimationClasses}`}>
+      <div
+        className={`bg-white dark:bg-zinc-900 w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl border-t sm:border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden relative max-h-[92vh] flex flex-col ${sheet.sheetAnimationClasses}`}
+        style={sheet.dragStyle}
         onClick={(e) => e.stopPropagation()}
       >
+        <SheetDragHandle dragHandleProps={sheet.dragHandleProps} className="sm:hidden pt-3 pb-1.5 cursor-grab active:cursor-grabbing touch-none" />
+
         {/* Header Bar */}
         <div className="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/70 dark:bg-zinc-900/70 shrink-0">
           <div className="flex items-center gap-2.5">

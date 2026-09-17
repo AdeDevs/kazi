@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { 
-  X, ShieldCheck, Camera, Upload, CheckCircle2, 
+import {
+  X, ShieldCheck, Camera, Upload, CheckCircle2,
   AlertCircle, RefreshCw, Lock, Sparkles, ChevronRight,
   CreditCard, UserCheck, Eye, Accessibility, HelpCircle
 } from 'lucide-react';
+import { SheetDragHandle } from './SheetDragHandle';
+import { useSlideUpSheet } from '../../hooks/useSlideUpSheet';
 
 interface KYCVerificationModalProps {
   isOpen: boolean;
@@ -182,11 +184,13 @@ export const KYCVerificationModal: React.FC<KYCVerificationModalProps> = ({
     }, 2800);
   };
 
-  if (!isOpen) return null;
+  const sheet = useSlideUpSheet(isOpen, onClose);
+
+  if (!sheet.shouldRender) return null;
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-sm p-0 sm:p-4 animate-overlay-fade"
+    <div
+      className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-sm p-0 sm:p-4 ${sheet.backdropAnimationClasses}`}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -194,22 +198,22 @@ export const KYCVerificationModal: React.FC<KYCVerificationModalProps> = ({
       aria-describedby="kyc-modal-desc"
     >
       {/* Screen Reader Live Status Announcement Region */}
-      <div 
-        role="status" 
-        aria-live="polite" 
-        aria-atomic="true" 
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
         className="sr-only"
       >
         {liveAnnouncement}
       </div>
 
-      <div 
+      <div
         ref={modalRef}
-        className="w-full sm:max-w-lg bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-2xl p-5 sm:p-6 space-y-4 border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl relative animate-sheet-up sm:animate-pop-in max-h-[92vh] overflow-y-auto"
+        className={`w-full sm:max-w-lg bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-2xl p-5 sm:p-6 space-y-4 border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[92vh] overflow-y-auto ${sheet.sheetAnimationClasses}`}
+        style={sheet.dragStyle}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Mobile Swipe / Drag Indicator Bar */}
-        <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto sm:hidden mb-2" />
+        <SheetDragHandle dragHandleProps={sheet.dragHandleProps} />
 
         {/* Close Button */}
         <button

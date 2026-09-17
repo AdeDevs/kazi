@@ -5,8 +5,10 @@ import {
   Key, Download, Snowflake, Trash2, CheckCircle2, X, Laptop
 } from 'lucide-react';
 import { ConfirmationModal } from './ui/ConfirmationModal';
+import { SheetDragHandle } from './ui/SheetDragHandle';
 import { Card, CardHeader } from './ui/Card';
 import { useAuth } from '../context/AuthContext';
+import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
 import { PreferencesSection } from './settings/PreferencesSection';
 import { HelpSupportSection } from './settings/HelpSupportSection';
 import { LegalSection } from './settings/LegalSection';
@@ -58,6 +60,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   // Modals & Confirmation States
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const passwordSheet = useSlideUpSheet(showPasswordModal, () => setShowPasswordModal(false));
   const [show2FAModal, setShow2FAModal] = useState(false);
   const [showFreezeModal, setShowFreezeModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -434,16 +437,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       />
 
       {/* CHANGE PASSWORD MODAL */}
-      {showPasswordModal && (
-        <div 
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in"
+      {passwordSheet.shouldRender && (
+        <div
+          className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md ${passwordSheet.backdropAnimationClasses}`}
           onClick={() => setShowPasswordModal(false)}
         >
-          <div 
-            className="bg-white dark:bg-slate-900 w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl p-5 sm:p-6 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl relative animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:zoom-in-95"
+          <div
+            className={`bg-white dark:bg-slate-900 w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl p-5 sm:p-6 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl relative ${passwordSheet.sheetAnimationClasses}`}
+            style={passwordSheet.dragStyle}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto sm:hidden mb-2" />
+            <SheetDragHandle dragHandleProps={passwordSheet.dragHandleProps} />
             <button
               onClick={() => setShowPasswordModal(false)}
               className="absolute top-4 right-4 sm:top-5 sm:right-5 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
