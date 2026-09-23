@@ -40,7 +40,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
   scrollToSection,
   onScrollToSectionHandled
 }) => {
-  const { uploadProfilePicture } = useAuth();
+  const { updateUser, uploadProfilePicture } = useAuth();
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [heroPhotoFailed, setHeroPhotoFailed] = useState(false);
   const hasHeroPhoto = Boolean(activeProfessional.profile_picture && activeProfessional.profile_picture.trim().length > 0 && !heroPhotoFailed);
@@ -122,6 +122,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
   };
   const editInfoGuard = useUnsavedChangesGuard(isEditInfoDirty, closeEditInfoModal);
   const editInfoSheet = useSlideUpSheet(showEditInfoModal, editInfoGuard.requestClose);
+  const [isSavingBasicInfo, setIsSavingBasicInfo] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showKYCModal, setShowKYCModal] = useState(false);
 
@@ -239,22 +240,40 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
     }
   };
 
-  const handleSaveBasicInfo = (e: React.FormEvent) => {
+  const handleSaveBasicInfo = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (onUpdateProfile) {
-      onUpdateProfile({
-        name,
-        tagline,
-        bio,
+    setIsSavingBasicInfo(true);
+    try {
+      // Only phone (and name, split into first/last) map cleanly to a real backend field here --
+      // tagline/bio/category/email have no backend field at all, and `primaryLocation` is a
+      // free-text "Neighborhood, State" display string with no reliable, lossless way to pull
+      // just the state back out of it, so it stays local-only via onUpdateProfile rather than
+      // risk corrupting the real user.state with a parsed guess.
+      const [firstName, ...rest] = name.trim().split(/\s+/);
+      await updateUser({
+        first_name: firstName || name,
+        last_name: rest.join(' '),
         phone_number: phone,
-        email,
-        category,
-        state: primaryLocation
       });
+      if (onUpdateProfile) {
+        onUpdateProfile({
+          name,
+          tagline,
+          bio,
+          phone_number: phone,
+          email,
+          category,
+          state: primaryLocation
+        });
+      }
+      setEditInfoBaseline({ name, tagline, bio, phone, email, category, primaryLocation });
+      setShowEditInfoModal(false);
+      toast.success('Profile updated successfully!');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update profile.');
+    } finally {
+      setIsSavingBasicInfo(false);
     }
-    setEditInfoBaseline({ name, tagline, bio, phone, email, category, primaryLocation });
-    setShowEditInfoModal(false);
-    toast.success('Profile updated successfully!');
   };
 
   // Service CRUD
@@ -1047,10 +1066,12 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
                   <input
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-3.5 sm:px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-slate-100"
-                    required
+                    disabled
+                    readOnly
+                    title="Email addresses can't be changed"
+                    className="w-full px-3.5 sm:px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 dark:text-slate-400 cursor-not-allowed"
                   />
+                  <p className="mt-1 text-[11px] text-slate-400">Email addresses can't be changed.</p>
                 </div>
               </div>
 
@@ -1070,15 +1091,20 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
                 <button
                   type="button"
                   onClick={editInfoGuard.requestClose}
-                  className="px-4 py-2.5 rounded-xl text-rose-600 dark:text-rose-400 font-bold text-xs hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer text-center"
+                  disabled={isSavingBasicInfo}
+                  className="px-4 py-2.5 rounded-xl text-rose-600 dark:text-rose-400 font-bold text-xs hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer text-center disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs shadow-xs cursor-pointer text-center"
+                  disabled={isSavingBasicInfo}
+                  className="px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs shadow-xs cursor-pointer text-center disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  Save Changes
+                  {isSavingBasicInfo && (
+                    <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  )}
+                  <span>{isSavingBasicInfo ? 'Saving...' : 'Save Changes'}</span>
                 </button>
               </div>
             </form>

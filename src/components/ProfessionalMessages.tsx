@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Professional, Booking, ChatMessage } from '../types';
 import { 
   Search, Send, Image as ImageIcon, ArrowLeft, 
@@ -45,6 +46,23 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
   initialCustomerId
 }) => {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(initialCustomerId || null);
+  const navigate = useNavigate();
+
+  // Sync selectedCustomerId whenever initialCustomerId prop changes (e.g. navigating directly
+  // between two /messages/:contactId URLs, which is the same Route match and so
+  // doesn't remount this component on its own).
+  useEffect(() => {
+    if (initialCustomerId) {
+      setSelectedCustomerId(initialCustomerId);
+    }
+  }, [initialCustomerId]);
+
+  // Keeps /messages/:contactId in sync with which conversation is open, whichever
+  // end triggers the change -- an in-app open/close click, or the browser's own Back/Forward.
+  const selectCustomerId = (id: string | null) => {
+    setSelectedCustomerId(id);
+    navigate(id ? `/messages/${id}` : '/messages');
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [inputText, setInputText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -154,7 +172,7 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
   useEffect(() => {
     if (!selectedCustomerId) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setSelectedCustomerId(null);
+      if (e.key === 'Escape') selectCustomerId(null);
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -378,7 +396,7 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
           {filteredConversations.map(conv => (
             <div
               key={conv.customerId}
-              onClick={() => setSelectedCustomerId(conv.customerId)}
+              onClick={() => selectCustomerId(conv.customerId)}
               className={`p-3 cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 ${selectedCustomerId === conv.customerId ? 'bg-navy-50 dark:bg-navy-900/20' : ''}`}
             >
               <div className="flex items-center gap-3">
@@ -437,7 +455,7 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
     <div className={`${MESSAGES_HEADER_HEIGHT} px-3.5 sm:px-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900 shrink-0`}>
       <div className="flex items-center gap-3 min-w-0">
         <button
-          onClick={() => setSelectedCustomerId(null)}
+          onClick={() => selectCustomerId(null)}
           className="-ml-1.5 p-1.5 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
           title={isMobile ? 'Back to all messages' : 'Close chat'}
           aria-label={isMobile ? 'Back to all messages' : 'Close chat'}
@@ -670,10 +688,12 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
     )
   );
 
-  // Composer / voice recorder -- identical between mobile and desktop chat views.
+  // Composer / voice recorder -- identical between mobile and desktop chat views. Bottom padding
+  // adds the home-indicator safe-area inset on top of the normal spacing (0px on desktop/
+  // non-notched phones, so this is a no-op everywhere except a notched phone in portrait).
   const composerBody = (
     isRecording ? (
-              <div className="p-3 sm:p-4 bg-red-500/5 dark:bg-rose-950/10 border-t border-red-500/20 flex items-center justify-between gap-2 sm:gap-4 animate-pulse">
+              <div className="pt-3 sm:pt-4 px-3 sm:px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] sm:pb-[calc(1rem+env(safe-area-inset-bottom,0px))] bg-red-500/5 dark:bg-rose-950/10 border-t border-red-500/20 flex items-center justify-between gap-2 sm:gap-4 animate-pulse">
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-ping shrink-0"></span>
                   <span className="font-mono font-bold text-red-600 dark:text-red-400 text-xs sm:text-sm truncate">
@@ -700,7 +720,7 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
                 </div>
               </div>
             ) : (
-              <div className="p-2 sm:p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+              <div className="pt-2 sm:pt-4 px-2 sm:px-4 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] sm:pb-[calc(1rem+env(safe-area-inset-bottom,0px))] border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
                 <form onSubmit={handleSend} className="flex items-end gap-1.5 sm:gap-3">
                   
                   {/* Attach Paperclip button */}
@@ -733,6 +753,13 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
                       ref={textareaRef}
                       value={inputText}
                       onChange={(e) => setInputText(e.target.value)}
+                      onFocus={() => {
+                        // The chat container just shrunk to make room for the keyboard (see
+                        // useVisualViewportHeight) -- re-scroll so the latest message isn't left
+                        // above the new, shorter fold. Delayed to land after the keyboard's own
+                        // open animation, not mid-resize.
+                        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 300);
+                      }}
                       placeholder="Type your message..."
                       className="w-full bg-transparent px-3 py-2 sm:py-2.5 text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:outline-none resize-none min-h-[36px] max-h-[100px] overflow-y-auto leading-normal"
                       style={{ height: '36px' }}
@@ -786,7 +813,7 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
         {hasActiveChat ? (
           // Full-screen chat -- breaks out of the page's padding so it's a true full page (not a
           // card floating in the gutter), WhatsApp-mobile style: back arrow lives in its own header.
-          <div className="-m-3.5 sm:-m-4 -mb-4 h-[calc(100vh-65px)] md:h-[calc(100vh-73px)] flex flex-col bg-white dark:bg-slate-900">
+          <div className="-m-3.5 sm:-m-4 -mb-4 h-[calc(var(--vvh,100dvh)-65px)] md:h-[calc(var(--vvh,100dvh)-73px)] flex flex-col bg-white dark:bg-slate-900">
             {renderChatHeader(true)}
             {messagesFeedBody}
             {attachmentMenuBody}
@@ -841,7 +868,7 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
           it as a unit, WhatsApp Web / Claude style. A single border-r
           divider separates the panes instead of two card outlines.
           ============================================================ */}
-      <div className="hidden lg:flex -m-3.5 sm:-m-4 -mb-4 h-[calc(100vh-73px)] overflow-hidden">
+      <div className="hidden lg:flex -m-3.5 sm:-m-4 -mb-4 h-[calc(100dvh-73px)] overflow-hidden">
         <div className="w-80 xl:w-96 min-h-0 flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
           <div className={`${MESSAGES_HEADER_HEIGHT} px-4 border-b border-slate-200 dark:border-slate-800 flex items-center shrink-0`}>
             <div className="relative w-full">

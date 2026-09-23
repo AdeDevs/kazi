@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Professional, Booking, ChatMessage, Notification } from '../types';
 import { formatCurrency } from '../utils';
 import { ProfessionalMessages } from './ProfessionalMessages';
@@ -35,6 +36,10 @@ interface ProfessionalDashboardProps {
   onUpdateNotifications?: React.Dispatch<React.SetStateAction<Notification[]>>;
   initialCustomerId?: string;
   onPageSubtitleChange?: (title: string | null) => void;
+  /** Set from the /jobs/:bookingId route -- opens that booking's detail sheet immediately. */
+  initialBookingId?: string;
+  /** Set from the /gigs/new route -- opens the gig-creation form immediately. */
+  forceGigCreation?: boolean;
 }
 
 export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
@@ -55,8 +60,11 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
   notifications,
   onUpdateNotifications,
   initialCustomerId,
-  onPageSubtitleChange
+  onPageSubtitleChange,
+  initialBookingId,
+  forceGigCreation = false
 }) => {
+  const navigate = useNavigate();
   // Sub-tabs for home view or jobs page
   const [homeSubTab, setHomeSubTab] = useState<'overview' | 'portfolio'>('overview');
   const [jobsSubTab, setJobsSubTab] = useState<'requests' | 'active' | 'completed'>('requests');
@@ -67,11 +75,24 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
   // the "isOpen" signal here (a non-null booking) and the content are otherwise the same value,
   // nulled in the same click that closes it.
   const [selectedBookingForDetails, setSelectedBookingForDetails] = useState<Booking | null>(null);
+  // Keeps the URL (/jobs/:bookingId) in sync with the sheet's open/closed state,
+  // whichever end triggers the change -- an in-app open/close click, or a direct link/refresh.
+  const openBookingDetails = (job: Booking | null) => {
+    setSelectedBookingForDetails(job);
+    navigate(job ? `/jobs/${job.id}` : '/jobs');
+  };
+  useEffect(() => {
+    if (initialBookingId && (!selectedBookingForDetails || selectedBookingForDetails.id !== initialBookingId)) {
+      const match = bookings.find(b => b.id === initialBookingId);
+      if (match) setSelectedBookingForDetails(match);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialBookingId]);
   const [cachedBookingForDetails, setCachedBookingForDetails] = useState<Booking | null>(null);
   useEffect(() => {
     if (selectedBookingForDetails) setCachedBookingForDetails(selectedBookingForDetails);
   }, [selectedBookingForDetails]);
-  const detailsSheet = useSlideUpSheet(Boolean(selectedBookingForDetails), () => setSelectedBookingForDetails(null));
+  const detailsSheet = useSlideUpSheet(Boolean(selectedBookingForDetails), () => openBookingDetails(null));
 
   // Job completion modal state -- same caching reasoning as above.
   const [completingJob, setCompletingJob] = useState<Booking | null>(null);
@@ -247,7 +268,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
 
   // ================= RENDER DEDICATED GIGS PAGE =================
   if (activeTab === 'gigs') {
-    return <ProfessionalGigs professionalId={professional.id} onPageSubtitleChange={onPageSubtitleChange} />;
+    return <ProfessionalGigs professionalId={professional.id} onPageSubtitleChange={onPageSubtitleChange} forceCreating={forceGigCreation} />;
   }
 
   // ================= RENDER DEDICATED JOBS PAGE =================
@@ -367,7 +388,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                       </div>
 
                       <button
-                        onClick={() => setSelectedBookingForDetails(job)}
+                        onClick={() => openBookingDetails(job)}
                         className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-xl transition-colors cursor-pointer w-full sm:w-auto flex items-center justify-center gap-1.5"
                       >
                         <Eye className="w-3.5 h-3.5" />
@@ -600,7 +621,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
 
                         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
                           <button
-                            onClick={() => setSelectedBookingForDetails(job)}
+                            onClick={() => openBookingDetails(job)}
                             className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-xl transition-colors cursor-pointer flex-1 sm:flex-none flex items-center justify-center gap-1.5"
                           >
                             <Eye className="w-3.5 h-3.5" />
@@ -727,7 +748,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                         </span>
 
                         <button
-                          onClick={() => setSelectedBookingForDetails(job)}
+                          onClick={() => openBookingDetails(job)}
                           className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
                         >
                           <Eye className="w-3.5 h-3.5" />
@@ -748,7 +769,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
           return (
           <div
             className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4 ${detailsSheet.backdropAnimationClasses}`}
-            onClick={() => setSelectedBookingForDetails(null)}
+            onClick={() => openBookingDetails(null)}
           >
             <div
               className={`bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl max-w-lg w-full p-4 sm:p-5 space-y-4 shadow-2xl border-t sm:border border-slate-200 dark:border-slate-800 relative max-h-[92vh] sm:max-h-[85vh] overflow-y-auto sm:my-8 ${detailsSheet.sheetAnimationClasses}`}
@@ -757,7 +778,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
             >
               <SheetDragHandle dragHandleProps={detailsSheet.dragHandleProps} className="sm:hidden -mx-4 -mt-4 mb-1 px-4 pt-4 pb-3 cursor-grab active:cursor-grabbing touch-none" />
               <button
-                onClick={() => setSelectedBookingForDetails(null)}
+                onClick={() => openBookingDetails(null)}
                 className="absolute top-6 right-6 p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -834,7 +855,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
 
               <div className="flex justify-end pt-2">
                 <button
-                  onClick={() => setSelectedBookingForDetails(null)}
+                  onClick={() => openBookingDetails(null)}
                   className="px-6 py-2.5 rounded-xl bg-navy-800 text-white font-bold text-xs hover:bg-navy-900 cursor-pointer"
                 >
                   Close Details

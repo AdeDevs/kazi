@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
   Lock, Mail, User, Phone, MapPin, 
@@ -7,6 +8,7 @@ import {
   Check, Star, Zap, Users
 } from 'lucide-react';
 import { UserCreate } from '../types/auth';
+import { useDocumentMeta } from '../hooks/useDocumentMeta';
 import { TermsAndPrivacyModal } from './ui/TermsAndPrivacyModal';
 import { CustomDropdown } from './CustomDropdown';
 
@@ -37,7 +39,12 @@ export const AuthPage: React.FC<AuthPageProps> = ({
     resendOtp,
     forgotPassword,
     resetPassword,
-    isLoading,
+    isLoginLoading,
+    isRegisterLoading,
+    isVerifyLoading,
+    isResendOtpLoading,
+    isForgotPasswordLoading,
+    isResetPasswordLoading,
     error,
     clearError,
     pendingEmail,
@@ -45,6 +52,51 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   } = useAuth();
 
   const [currentView, setCurrentView] = useState<AuthPageView>(initialView);
+
+  // Give each internal view a real URL without touching the many existing setCurrentView(...)
+  // call sites throughout this file: whenever currentView changes, push the matching URL; whenever
+  // the URL changes independently (browser Back/Forward), sync currentView back from it. The
+  // path-vs-view guards on both sides stop this from looping or adding a redundant history entry
+  // when they already agree (e.g. right after mount).
+  const navigate = useNavigate();
+  const location = useLocation();
+  const VIEW_TO_PATH: Record<AuthPageView, string> = {
+    signin: '/',
+    signup: '/signup',
+    verify: '/verify-email',
+    forgot: '/forgot-password',
+    reset: '/reset-password',
+  };
+  const PATH_TO_VIEW: Record<string, AuthPageView> = {
+    '/': 'signin',
+    '/signup': 'signup',
+    '/verify-email': 'verify',
+    '/forgot-password': 'forgot',
+    '/reset-password': 'reset',
+  };
+  useEffect(() => {
+    const targetPath = VIEW_TO_PATH[currentView];
+    if (location.pathname !== targetPath) {
+      navigate(targetPath);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentView]);
+  useEffect(() => {
+    const viewForPath = PATH_TO_VIEW[location.pathname];
+    if (viewForPath && viewForPath !== currentView) {
+      setCurrentView(viewForPath);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
+  const VIEW_META: Record<AuthPageView, { title: string; description: string }> = {
+    signin: { title: 'Sign In', description: 'Sign in to KaziHub to book vetted electricians, plumbers, AC technicians, and more across Nigeria.' },
+    signup: { title: 'Create Account', description: 'Create a free KaziHub account as a client or a verified artisan.' },
+    verify: { title: 'Verify Your Email', description: 'Enter the 5-digit code sent to your email to verify your KaziHub account.' },
+    forgot: { title: 'Forgot Password', description: 'Request a password reset code for your KaziHub account.' },
+    reset: { title: 'Reset Password', description: 'Set a new password for your KaziHub account.' },
+  };
+  useDocumentMeta(VIEW_META[currentView].title, VIEW_META[currentView].description);
 
   // Sign In State
   const [signInIdentifier, setSignInIdentifier] = useState('');
@@ -303,7 +355,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   };
 
   return (
-    <div className="h-screen w-full bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col selection:bg-brand-orange-500 selection:text-white overflow-hidden">
+    <div className="h-dvh w-full bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col selection:bg-brand-orange-500 selection:text-white overflow-hidden">
       {/* Top Edge-to-Edge Bar */}
       <header className="w-full h-14 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 lg:px-12 flex items-center justify-between z-20 shrink-0">
         <div className="flex items-center gap-2">
@@ -475,10 +527,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({
 
                   <button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={isLoginLoading}
                     className="w-full py-3.5 rounded-lg bg-navy-900 hover:bg-navy-800 active:bg-navy-950 text-white text-sm font-bold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                   >
-                    {isLoading ? (
+                    {isLoginLoading ? (
                       <>
                         <RefreshCw className="w-4 h-4 animate-spin" />
                         <span>Signing in...</span>
@@ -842,10 +894,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({
 
                   <button
                     type="submit"
-                    disabled={isLoading || !termsAccepted}
+                    disabled={isRegisterLoading || !termsAccepted}
                     className="w-full py-3 rounded-lg bg-navy-900 hover:bg-navy-800 text-white text-sm font-bold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                   >
-                    {isLoading ? (
+                    {isRegisterLoading ? (
                       <>
                         <RefreshCw className="w-4 h-4 animate-spin" />
                         <span>Sending 5-digit OTP code...</span>
@@ -917,10 +969,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({
 
                   <button
                     type="submit"
-                    disabled={isLoading || otpDigits.some(d => !d)}
+                    disabled={isVerifyLoading || otpDigits.some(d => !d)}
                     className="w-full py-3.5 rounded-lg bg-navy-900 hover:bg-navy-800 text-white text-sm font-bold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                   >
-                    {isLoading ? (
+                    {isVerifyLoading ? (
                       <>
                         <RefreshCw className="w-4 h-4 animate-spin" />
                         <span>Verifying Token...</span>
@@ -936,7 +988,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                     Didn't receive the code?{' '}
                     <button
                       type="button"
-                      disabled={resendTimer > 0 || isLoading}
+                      disabled={resendTimer > 0 || isResendOtpLoading}
                       onClick={handleResendOtpCode}
                       className="font-bold text-brand-orange-600 hover:text-brand-orange-700 dark:text-brand-orange-400 disabled:opacity-50 cursor-pointer"
                     >
@@ -991,10 +1043,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({
 
                   <button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={isForgotPasswordLoading}
                     className="w-full py-3.5 rounded-lg bg-navy-900 hover:bg-navy-800 text-white text-sm font-bold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                   >
-                    {isLoading ? (
+                    {isForgotPasswordLoading ? (
                       <>
                         <RefreshCw className="w-4 h-4 animate-spin" />
                         <span>Sending reset code...</span>
@@ -1092,10 +1144,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({
 
                   <button
                     type="submit"
-                    disabled={isLoading || !resetOtp || !resetNewPassword || resetNewPassword !== resetConfirmPassword}
+                    disabled={isResetPasswordLoading || !resetOtp || !resetNewPassword || resetNewPassword !== resetConfirmPassword}
                     className="w-full py-3.5 rounded-lg bg-navy-900 hover:bg-navy-800 text-white text-sm font-bold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                   >
-                    {isLoading ? (
+                    {isResetPasswordLoading ? (
                       <>
                         <RefreshCw className="w-4 h-4 animate-spin" />
                         <span>Updating Password...</span>

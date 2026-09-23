@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Role, Professional, Booking, Category } from '../types';
 import { Language, t } from '../translations';
 import { 
@@ -9,12 +10,10 @@ import {
 import { ConfirmationModal } from './ui/ConfirmationModal';
 import { UserAvatar } from './ui/UserAvatar';
 import { useAuth } from '../context/AuthContext';
-import { AuthModal } from './AuthModal';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 interface AppShellProps {
   currentRole: Role;
-  onSwitchRole: (role: Role) => void;
   onOpenAuthPage?: (view?: 'signin' | 'signup') => void;
   unreadCount: number;
   notificationsUnreadCount?: number;
@@ -38,7 +37,6 @@ interface AppShellProps {
 
 export const AppShell: React.FC<AppShellProps> = ({
   currentRole,
-  onSwitchRole,
   onOpenAuthPage,
   unreadCount,
   notificationsUnreadCount = 0,
@@ -58,7 +56,8 @@ export const AppShell: React.FC<AppShellProps> = ({
   currentLanguage = 'English (Nigeria)' as Language,
   children
 }) => {
-  const { user, isAuthenticated, openAuthModal } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   useBodyScrollLock(isMobileSidebarOpen);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -132,7 +131,7 @@ export const AppShell: React.FC<AppShellProps> = ({
             trying to fake a translate-free crossfade for an element that has to physically move
             on/off screen to do its job. */}
         <aside
-          className={`flex flex-col border-r border-zinc-200 dark:border-zinc-800 fixed inset-y-0 left-0 md:sticky top-0 h-[100dvh] max-h-[100dvh] md:h-screen overflow-hidden shrink-0 z-50 md:z-30 bg-white dark:bg-zinc-950 group w-72 max-w-[85vw] md:w-[73px] md:hover:w-64 motion-reduce:transition-none ${
+          className={`flex flex-col border-r border-zinc-200 dark:border-zinc-800 fixed inset-y-0 left-0 md:sticky top-0 h-[100dvh] max-h-[100dvh] md:h-screen pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)] overflow-hidden shrink-0 z-50 md:z-30 bg-white dark:bg-zinc-950 group w-72 max-w-[85vw] md:w-[73px] md:hover:w-64 motion-reduce:transition-none ${
             isMobileSidebarOpen
               ? 'translate-x-0 shadow-2xl transition-[translate,width] duration-[380ms] ease-out'
               : '-translate-x-full md:translate-x-0 transition-[translate,width] duration-200 ease-in-out'
@@ -208,7 +207,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                           visible exactly when the pill isn't -- it's the inverse opacity condition,
                           not shown on mobile since the sidebar there is always fully expanded. */}
                       {item.badge !== undefined && (
-                        <span className={`absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-brand-orange-700 ring-2 ring-white dark:ring-zinc-950 transition-opacity duration-300 ${
+                        <span className={`absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-brand-orange-700 transition-opacity duration-300 ${
                           isMobileSidebarOpen ? 'opacity-0' : 'opacity-100 md:group-hover:opacity-0'
                         }`} />
                       )}
@@ -322,7 +321,7 @@ export const AppShell: React.FC<AppShellProps> = ({
               ) : (
                 <button
                   type="button"
-                  onClick={() => openAuthModal('login')}
+                  onClick={() => onOpenAuthPage ? onOpenAuthPage('signin') : navigate('/')}
                   className="w-full relative flex items-center h-11 rounded-xl bg-navy-900 hover:bg-navy-800 text-white font-bold text-xs transition-colors cursor-pointer shadow-xs"
                 >
                   <div className="w-11 h-11 flex items-center justify-center shrink-0">
@@ -342,8 +341,10 @@ export const AppShell: React.FC<AppShellProps> = ({
         {/* ================= SCROLLABLE CENTER MAIN FEED ================= */}
         <main className="flex-1 min-w-0 min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col">
           
-          {/* Unified Glassmorphic Top Header */}
-          <header className="h-[65px] md:h-[73px] shrink-0 sticky top-0 z-30 bg-white/70 dark:bg-zinc-950/70 backdrop-blur-md border-b border-zinc-200/80 dark:border-zinc-800/80 px-3.5 sm:px-4 flex items-center justify-between">
+          {/* Unified Glassmorphic Top Header -- min-h (not h) + safe-area top padding so the bar
+              grows to clear the notch/status bar on a notched phone instead of the logo/buttons
+              sitting under it; 0px inset everywhere else leaves the height exactly as before. */}
+          <header className="min-h-[65px] md:min-h-[73px] pt-[env(safe-area-inset-top,0px)] shrink-0 sticky top-0 z-30 bg-white/70 dark:bg-zinc-950/70 backdrop-blur-md border-b border-zinc-200/80 dark:border-zinc-800/80 px-3.5 sm:px-4 flex items-center justify-between">
             {/* Mobile View: Hamburger + Logo */}
             <div className="flex md:hidden items-center gap-2.5">
               <button 
@@ -402,7 +403,7 @@ export const AppShell: React.FC<AppShellProps> = ({
               {!user && (
                 <button
                   type="button"
-                  onClick={() => onOpenAuthPage ? onOpenAuthPage('signin') : openAuthModal('login')}
+                  onClick={() => onOpenAuthPage ? onOpenAuthPage('signin') : navigate('/')}
                   className="px-3.5 py-1.5 rounded-xl bg-navy-900 hover:bg-navy-800 text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
                 >
                   <LogIn className="w-3.5 h-3.5" />
@@ -455,9 +456,6 @@ export const AppShell: React.FC<AppShellProps> = ({
         cancelText="Stay Signed In"
         type="logout"
       />
-
-      {/* Global Auth Modal */}
-      <AuthModal />
     </div>
   );
 };

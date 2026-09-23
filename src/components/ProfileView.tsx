@@ -340,7 +340,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
         </div>
 
-        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
           {!isEditing ? (
             <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
               <div className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-0.5 sm:gap-2">
@@ -397,10 +397,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 <input
                   type="email"
                   value={draftEmail}
-                  onChange={(e) => setDraftEmail(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-navy-500/50"
-                  required
+                  disabled
+                  readOnly
+                  title="Email addresses can't be changed"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400 cursor-not-allowed"
                 />
+                <p className="mt-1 text-[11px] text-slate-400">Email addresses can't be changed.</p>
               </div>
 
               <div>

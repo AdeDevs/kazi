@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Professional, Booking, ChatMessage, Category } from '../types';
 import { formatCurrency, isBookingArchived } from '../utils';
 import { 
@@ -60,6 +61,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
 }) => {
   // Selected conversation (null = Inbox list view, string = dedicated Full-Screen Chat page)
   const [selectedProId, setSelectedProId] = useState<string | null>(initialProId || null);
+  const navigate = useNavigate();
 
   // Sync selectedProId whenever initialProId prop changes (e.g. clicking Message from explore/booking cards)
   useEffect(() => {
@@ -67,6 +69,13 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
       setSelectedProId(initialProId);
     }
   }, [initialProId]);
+
+  // Keeps /messages/:contactId in sync with which conversation is open, whichever end
+  // triggers the change -- an in-app open/close click, or the browser's own Back/Forward.
+  const selectProId = (id: string | null) => {
+    setSelectedProId(id);
+    navigate(id ? `/messages/${id}` : '/messages');
+  };
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTab, setFilterTab] = useState<'all' | 'unread' | 'active_jobs'>('all');
@@ -418,7 +427,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
   useEffect(() => {
     if (!selectedProId) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setSelectedProId(null);
+      if (e.key === 'Escape') selectProId(null);
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -526,7 +535,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
       <div className={`${MESSAGES_HEADER_HEIGHT} px-3 sm:px-3.5 border-b border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between gap-2 sm:gap-3 shrink-0`}>
         <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
           <button
-            onClick={() => setSelectedProId(null)}
+            onClick={() => selectProId(null)}
             className="-ml-1 p-1.5 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
             title={isMobile ? 'Back to all messages' : 'Close chat'}
             aria-label={isMobile ? 'Back to all messages' : 'Close chat'}
@@ -737,8 +746,10 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
   ) : null;
 
   // Composer / attachment menu / voice recorder -- identical between mobile and desktop chat views.
+  // Bottom padding adds the home-indicator safe-area inset on top of the normal spacing (0px on
+  // desktop/non-notched phones, so this is a no-op everywhere except a notched phone in portrait).
   const composerBody = (
-    <div className="p-3 sm:p-3.5 bg-white dark:bg-slate-900 border-t border-slate-200/90 dark:border-slate-800 shrink-0 relative">
+    <div className="pt-3 sm:pt-3.5 px-3 sm:px-3.5 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] sm:pb-[calc(0.875rem+env(safe-area-inset-bottom,0px))] bg-white dark:bg-slate-900 border-t border-slate-200/90 dark:border-slate-800 shrink-0 relative">
             {renderAttachmentMenu && (
               <div className={`absolute bottom-full left-3.5 mb-2 p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl space-y-3 z-20 w-72 origin-bottom-left transition-all duration-150 ease-out ${
                 showAttachmentMenu ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
@@ -878,6 +889,13 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
                     rows={1}
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
+                    onFocus={() => {
+                      // The chat container just shrunk to make room for the keyboard (see
+                      // useVisualViewportHeight) -- re-scroll so the latest message isn't left
+                      // above the new, shorter fold. Delayed to land after the keyboard's own
+                      // open animation, not mid-resize.
+                      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 300);
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
@@ -943,7 +961,11 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
   const mobileConversationListBody = (
     <div className="w-full space-y-5 animate-in fade-in duration-200">
       <h1 className="sr-only">Messages</h1>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* AppShell's own header already shows the "Messages" title + unread badge from md: up
+          (768px), but this whole body only switches to the desktop split-view at lg: (1024px) --
+          so md:hidden here (not lg:hidden) is what actually avoids a duplicate title+badge in the
+          768-1023px range, instead of leaving the page with two "Messages" headings stacked. */}
+      <div className="md:hidden flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <p className="text-2xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2.5">
             <span>Messages</span>
@@ -992,7 +1014,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
               onClick={() => setFilterTab('all')}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                 filterTab === 'all'
-                  ? 'bg-navy-900 text-white shadow-xs'
+                  ? 'bg-navy-900 text-white shadow-xs border border-navy-900'
                   : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
               }`}
             >
@@ -1002,7 +1024,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
               onClick={() => setFilterTab('unread')}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
                 filterTab === 'unread'
-                  ? 'bg-navy-900 text-white shadow-xs'
+                  ? 'bg-navy-900 text-white shadow-xs border border-navy-900'
                   : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
               }`}
             >
@@ -1017,7 +1039,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
               onClick={() => setFilterTab('active_jobs')}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                 filterTab === 'active_jobs'
-                  ? 'bg-navy-900 text-white shadow-xs'
+                  ? 'bg-navy-900 text-white shadow-xs border border-navy-900'
                   : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
               }`}
             >
@@ -1048,7 +1070,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
             return (
               <div
                 key={conv.proId}
-                onClick={() => setSelectedProId(conv.proId)}
+                onClick={() => selectProId(conv.proId)}
                 className={`p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border transition-all cursor-pointer shadow-xs active:scale-[0.99] flex items-start justify-between gap-3 sm:gap-4 hover:shadow-sm ${
                   hasUnread
                     ? 'border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600'
@@ -1149,7 +1171,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
             return (
               <div
                 key={conv.proId}
-                onClick={() => setSelectedProId(conv.proId)}
+                onClick={() => selectProId(conv.proId)}
                 className={`p-3 cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 ${selectedProId === conv.proId ? 'bg-navy-50 dark:bg-navy-900/20' : ''}`}
               >
                 <div className="flex items-center gap-3">
@@ -1223,7 +1245,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
         {hasActiveChat ? (
           // Full-screen chat -- breaks out of the page's padding so it's a true full page (not a
           // card floating in the gutter), WhatsApp-mobile style: back arrow lives in its own header.
-          <div className="-m-3.5 sm:-m-4 -mb-4 h-[calc(100vh-65px)] md:h-[calc(100vh-73px)] flex flex-col bg-white dark:bg-slate-900">
+          <div className="-m-3.5 sm:-m-4 -mb-4 h-[calc(var(--vvh,100dvh)-65px)] md:h-[calc(var(--vvh,100dvh)-73px)] flex flex-col bg-white dark:bg-slate-900">
             {renderChatHeader(true)}
             {jobContextStripBody}
             {messagesFeedBody}
@@ -1240,7 +1262,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
           it as a unit, WhatsApp Web / Claude style. A single border-r
           divider separates the panes instead of two card outlines.
           ============================================================ */}
-      <div className="hidden lg:flex -m-3.5 sm:-m-4 -mb-4 h-[calc(100vh-73px)] overflow-hidden">
+      <div className="hidden lg:flex -m-3.5 sm:-m-4 -mb-4 h-[calc(100dvh-73px)] overflow-hidden">
         <div className="w-80 xl:w-96 min-h-0 flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
           {/* Search row -- shares MESSAGES_HEADER_HEIGHT with the chat pane's header so both
               panes' header bottoms align in one continuous line. */}
@@ -1265,7 +1287,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
               onClick={() => setFilterTab('all')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                 filterTab === 'all'
-                  ? 'bg-navy-900 text-white shadow-xs'
+                  ? 'bg-navy-900 text-white shadow-xs border border-navy-900'
                   : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
               }`}
             >
@@ -1275,7 +1297,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
               onClick={() => setFilterTab('unread')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
                 filterTab === 'unread'
-                  ? 'bg-navy-900 text-white shadow-xs'
+                  ? 'bg-navy-900 text-white shadow-xs border border-navy-900'
                   : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
               }`}
             >
@@ -1290,7 +1312,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
               onClick={() => setFilterTab('active_jobs')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                 filterTab === 'active_jobs'
-                  ? 'bg-navy-900 text-white shadow-xs'
+                  ? 'bg-navy-900 text-white shadow-xs border border-navy-900'
                   : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
               }`}
             >

@@ -12,8 +12,6 @@ import {
 import * as authApi from '../lib/authApi';
 import { getAccessToken, clearTokens, setOnSessionExpired } from '../lib/apiClient';
 
-export type AuthModalView = 'login' | 'register' | 'verify' | 'forgot' | 'reset';
-
 const USER_KEY = 'kazihub_auth_user';
 const DEMO_TOKEN_KEY = 'kazihub_demo_session'; // marks a loginAsDemo() session, which has no real backend token
 
@@ -21,16 +19,22 @@ export interface AuthContextType {
   user: AuthUser | null;
   token: string | null;
   isAuthenticated: boolean;
-  isLoading: boolean;
   error: string | null;
 
-  // Modal state
-  isAuthModalOpen: boolean;
-  authModalView: AuthModalView;
+  // Per-operation loading flags -- kept separate (rather than one shared `isLoading`) so an
+  // in-flight request from one auth flow (e.g. Sign In) never shows as loading in an unrelated
+  // flow (e.g. Create Account) a user has since switched to.
+  isLoginLoading: boolean;
+  isRegisterLoading: boolean;
+  isVerifyLoading: boolean;
+  isResendOtpLoading: boolean;
+  isForgotPasswordLoading: boolean;
+  isResetPasswordLoading: boolean;
+  isUpdateUserLoading: boolean;
+  isUploadProfilePictureLoading: boolean;
+  isDeleteAccountLoading: boolean;
+
   pendingEmail: string;
-  openAuthModal: (view?: AuthModalView, email?: string) => void;
-  closeAuthModal: () => void;
-  setAuthModalView: (view: AuthModalView) => void;
   setPendingEmail: (email: string) => void;
   clearError: () => void;
 
@@ -129,12 +133,18 @@ function extractErrorMessage(err: unknown, fallback: string): string {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(() => getStoredUser());
   const [token, setToken] = useState<string | null>(() => getAccessToken());
-  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Auth Modal State
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
-  const [authModalView, setAuthModalView] = useState<AuthModalView>('login');
+  const [isLoginLoading, setIsLoginLoading] = useState<boolean>(false);
+  const [isRegisterLoading, setIsRegisterLoading] = useState<boolean>(false);
+  const [isVerifyLoading, setIsVerifyLoading] = useState<boolean>(false);
+  const [isResendOtpLoading, setIsResendOtpLoading] = useState<boolean>(false);
+  const [isForgotPasswordLoading, setIsForgotPasswordLoading] = useState<boolean>(false);
+  const [isResetPasswordLoading, setIsResetPasswordLoading] = useState<boolean>(false);
+  const [isUpdateUserLoading, setIsUpdateUserLoading] = useState<boolean>(false);
+  const [isUploadProfilePictureLoading, setIsUploadProfilePictureLoading] = useState<boolean>(false);
+  const [isDeleteAccountLoading, setIsDeleteAccountLoading] = useState<boolean>(false);
+
   const [pendingEmail, setPendingEmail] = useState<string>('');
 
   // On mount, if we have a real (non-demo) access token, re-sync the profile from the server --
@@ -168,24 +178,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => setOnSessionExpired(null);
   }, []);
 
-  const openAuthModal = useCallback((view: AuthModalView = 'login', email?: string) => {
-    setAuthModalView(view);
-    if (email) setPendingEmail(email);
-    setError(null);
-    setIsAuthModalOpen(true);
-  }, []);
-
-  const closeAuthModal = useCallback(() => {
-    setIsAuthModalOpen(false);
-    setError(null);
-  }, []);
-
   const clearError = useCallback(() => {
     setError(null);
   }, []);
 
   const login = async (credentials: LoginCredentials): Promise<AuthUser> => {
-    setIsLoading(true);
+    setIsLoginLoading(true);
     setError(null);
     try {
       try {
@@ -198,54 +196,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       persistUser(authedUser);
       setUser(authedUser);
       setToken(pair.access_token);
-      closeAuthModal();
       return authedUser;
     } catch (err) {
       const errMsg = extractErrorMessage(err, 'Unable to sign in. Please check your credentials.');
       setError(errMsg);
       throw new Error(errMsg);
     } finally {
-      setIsLoading(false);
+      setIsLoginLoading(false);
     }
   };
 
   const register = async (payload: UserCreate): Promise<{ message: string }> => {
-    setIsLoading(true);
+    setIsRegisterLoading(true);
     setError(null);
     try {
       await authApi.register(payload);
       setPendingEmail(payload.email);
-      setAuthModalView('verify');
       return { message: `Verification code sent to ${payload.email}` };
     } catch (err) {
       const errMsg = extractErrorMessage(err, 'Unable to register. Please try again.');
       setError(errMsg);
       throw new Error(errMsg);
     } finally {
-      setIsLoading(false);
+      setIsRegisterLoading(false);
     }
   };
 
   const verifyEmail = async (payload: VerifyEmailSchema): Promise<AuthUser> => {
-    setIsLoading(true);
+    setIsVerifyLoading(true);
     setError(null);
     try {
       // Verifying the email confirms the account but does not log it in -- the backend issues
       // tokens only from POST /auth/login, so the user still needs to sign in afterwards.
       const verifiedUser = await authApi.verifyEmail(payload);
-      setAuthModalView('login');
       return verifiedUser;
     } catch (err) {
       const errMsg = extractErrorMessage(err, 'Verification failed. Please try again.');
       setError(errMsg);
       throw new Error(errMsg);
     } finally {
-      setIsLoading(false);
+      setIsVerifyLoading(false);
     }
   };
 
   const resendOtp = async (payload: ResendOTPSchema): Promise<{ message: string }> => {
-    setIsLoading(true);
+    setIsResendOtpLoading(true);
     setError(null);
     try {
       await authApi.resendOtp(payload);
@@ -255,45 +250,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setError(errMsg);
       throw new Error(errMsg);
     } finally {
-      setIsLoading(false);
+      setIsResendOtpLoading(false);
     }
   };
 
   const forgotPassword = async (payload: ForgotPasswordSchema): Promise<{ message: string }> => {
-    setIsLoading(true);
+    setIsForgotPasswordLoading(true);
     setError(null);
     try {
       await authApi.forgotPassword(payload);
       setPendingEmail(payload.email);
-      setAuthModalView('reset');
       return { message: `Password reset code sent to ${payload.email}` };
     } catch (err) {
       const errMsg = extractErrorMessage(err, 'Unable to send reset code.');
       setError(errMsg);
       throw new Error(errMsg);
     } finally {
-      setIsLoading(false);
+      setIsForgotPasswordLoading(false);
     }
   };
 
   const resetPassword = async (payload: ResetPasswordSchema): Promise<{ message: string }> => {
-    setIsLoading(true);
+    setIsResetPasswordLoading(true);
     setError(null);
     try {
       await authApi.resetPassword(payload);
-      setAuthModalView('login');
       return { message: 'Password reset successfully! Please sign in with your new password.' };
     } catch (err) {
       const errMsg = extractErrorMessage(err, 'Unable to reset password.');
       setError(errMsg);
       throw new Error(errMsg);
     } finally {
-      setIsLoading(false);
+      setIsResetPasswordLoading(false);
     }
   };
 
   const updateUser = async (payload: UserUpdate): Promise<AuthUser> => {
-    setIsLoading(true);
+    setIsUpdateUserLoading(true);
     setError(null);
     try {
       if (!user) throw new Error('No user is currently authenticated.');
@@ -314,12 +307,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setError(errMsg);
       throw new Error(errMsg);
     } finally {
-      setIsLoading(false);
+      setIsUpdateUserLoading(false);
     }
   };
 
   const uploadProfilePicture = async (file: File | Blob): Promise<AuthUser> => {
-    setIsLoading(true);
+    setIsUploadProfilePictureLoading(true);
     setError(null);
     try {
       if (!user) throw new Error('No user is currently authenticated.');
@@ -344,12 +337,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setError(errMsg);
       throw new Error(errMsg);
     } finally {
-      setIsLoading(false);
+      setIsUploadProfilePictureLoading(false);
     }
   };
 
   const deleteAccount = async (): Promise<void> => {
-    setIsLoading(true);
+    setIsDeleteAccountLoading(true);
     setError(null);
     try {
       if (!isDemoSession()) {
@@ -361,7 +354,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setError(errMsg);
       throw new Error(errMsg);
     } finally {
-      setIsLoading(false);
+      setIsDeleteAccountLoading(false);
     }
   };
 
@@ -387,8 +380,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     persistUser(demoProfile);
     setUser(demoProfile);
     setToken(null);
-    closeAuthModal();
-  }, [closeAuthModal]);
+  }, []);
 
   return (
     <AuthContext.Provider
@@ -396,14 +388,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         token,
         isAuthenticated: Boolean(user),
-        isLoading,
         error,
-        isAuthModalOpen,
-        authModalView,
+        isLoginLoading,
+        isRegisterLoading,
+        isVerifyLoading,
+        isResendOtpLoading,
+        isForgotPasswordLoading,
+        isResetPasswordLoading,
+        isUpdateUserLoading,
+        isUploadProfilePictureLoading,
+        isDeleteAccountLoading,
         pendingEmail,
-        openAuthModal,
-        closeAuthModal,
-        setAuthModalView,
         setPendingEmail,
         clearError,
         login,

@@ -47,6 +47,33 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Mobile-native baseline -- the platform-layer fixes that decide whether the app feels
+   installed or embedded on a phone (see the mobile-native skill for the why behind each line). */
+html {
+  -webkit-tap-highlight-color: transparent; /* kill the gray/blue flash on every tap */
+  -webkit-text-size-adjust: 100%; /* no font inflation when the phone rotates to landscape */
+  overscroll-behavior: none; /* stop pull-to-refresh/rubber-band hijacking app-shell scroll */
+}
+
+button,
+a,
+[role="button"] {
+  touch-action: manipulation; /* skip the 300ms tap delay reserved for double-tap-zoom */
+  -webkit-user-select: none;
+  user-select: none; /* a long press selects nothing instead of highlighting the label */
+  -webkit-touch-callout: none; /* no long-press copy/share callout on link-styled controls */
+}
+
+/* iOS Safari zooms the page when a focused input's font is under 16px and won't zoom back out
+   on blur. Scoped to coarse pointers only, so desktop keeps its smaller Tailwind text sizes. */
+@media (pointer: coarse) {
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
 /* Hide scrollbars globally for a sleek UI while maintaining scroll functionality */
 * {
   -ms-overflow-style: none;  /* IE and Edge */

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus, Edit3, Trash2, Layers, Loader2 } from 'lucide-react';
 import { getGigsByProfessional, deleteGig } from '../lib/mockGigsStore';
 import { Gig } from '../types';
@@ -9,14 +10,21 @@ import { formatCurrency } from '../utils';
 interface ProfessionalGigsProps {
   professionalId: string;
   onPageSubtitleChange?: (title: string | null) => void;
+  /** Set when the URL is /gigs/new -- opens the creation form immediately. */
+  forceCreating?: boolean;
 }
 
-export const ProfessionalGigs: React.FC<ProfessionalGigsProps> = ({ professionalId, onPageSubtitleChange }) => {
+export const ProfessionalGigs: React.FC<ProfessionalGigsProps> = ({ professionalId, onPageSubtitleChange, forceCreating = false }) => {
+  const navigate = useNavigate();
   const [gigs, setGigs] = useState<Gig[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isCreating, setIsCreating] = useState(false);
+  const [isCreating, setIsCreating] = useState(forceCreating);
   const [gigToDelete, setGigToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    setIsCreating(forceCreating);
+  }, [forceCreating]);
 
   useEffect(() => {
     onPageSubtitleChange?.(isCreating ? 'Create New Gig' : null);
@@ -54,9 +62,9 @@ export const ProfessionalGigs: React.FC<ProfessionalGigsProps> = ({ professional
     return (
       <GigCreationForm
         professionalId={professionalId}
-        onCancel={() => setIsCreating(false)}
+        onCancel={() => navigate('/gigs')}
         onSuccess={() => {
-          setIsCreating(false);
+          navigate('/gigs');
           fetchGigs();
         }}
       />
@@ -73,7 +81,7 @@ export const ProfessionalGigs: React.FC<ProfessionalGigsProps> = ({ professional
           </p>
         </div>
         <button
-          onClick={() => setIsCreating(true)}
+          onClick={() => navigate('/gigs/new')}
           className="px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-sm shadow-md transition-all flex items-center gap-2 justify-center shrink-0"
         >
           <Plus className="w-4 h-4" />
