@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { Role, Professional, Booking, ChatMessage, Category, PortfolioItem, Notification } from './types';
 import { Language } from './translations';
@@ -14,15 +14,11 @@ import { useAuth } from './context/AuthContext';
 import { useDocumentMeta } from './hooks/useDocumentMeta';
 import { useVisualViewportHeight } from './hooks/useVisualViewportHeight';
 import { Toaster } from 'sonner';
-
-// Code-split the per-role dashboards, profile/settings, and notifications screens: an
-// anonymous visitor on the sign-in screen, or a customer, shouldn't have to download the
-// artisan dashboard (and vice versa) just to see their own view.
-const CustomerDashboard = lazy(() => import('./components/CustomerDashboard').then(m => ({ default: m.CustomerDashboard })));
-const ProfessionalDashboard = lazy(() => import('./components/ProfessionalDashboard').then(m => ({ default: m.ProfessionalDashboard })));
-const ProfileView = lazy(() => import('./components/ProfileView').then(m => ({ default: m.ProfileView })));
-const SettingsView = lazy(() => import('./components/SettingsView').then(m => ({ default: m.SettingsView })));
-const ProfessionalNotifications = lazy(() => import('./components/ProfessionalNotifications').then(m => ({ default: m.ProfessionalNotifications })));
+import { CustomerDashboard } from './components/CustomerDashboard';
+import { ProfessionalDashboard } from './components/ProfessionalDashboard';
+import { ProfileView } from './components/ProfileView';
+import { SettingsView } from './components/SettingsView';
+import { ProfessionalNotifications } from './components/ProfessionalNotifications';
 
 // Tiny route-param readers, kept at module scope (not defined inside App()) so they're stable
 // component identities across renders -- defining them inline inside App() would make React treat
@@ -751,8 +747,6 @@ export default function App() {
     onPageSubtitleChange: setPageSubtitle,
   };
 
-  const suspenseFallback = <div className="w-full py-24 flex items-center justify-center text-sm text-zinc-400">Loading&hellip;</div>;
-
   // After signing in, return the user to whatever protected URL they originally tried to visit
   // (preserved by RequireAuth via location state) instead of always the role home. Role itself
   // needs no handling here -- it's derived from `user` (already set by the AuthContext call that
@@ -790,58 +784,50 @@ export default function App() {
         <Route element={<RequireAuth />}>
           <Route path="/home" element={
             <AppShell {...commonAppShellProps} activeTab="explore">
-              <Suspense fallback={suspenseFallback}>
-                {currentRole === 'professional'
-                  ? <ProfessionalDashboard {...commonProfessionalProps} activeTab="explore" />
-                  : <CustomerDashboard {...commonCustomerProps} activeTab="explore" />}
-              </Suspense>
+              {currentRole === 'professional'
+                ? <ProfessionalDashboard {...commonProfessionalProps} activeTab="explore" />
+                : <CustomerDashboard {...commonCustomerProps} activeTab="explore" />}
             </AppShell>
           } />
           <Route path="/messages" element={
             <AppShell {...commonAppShellProps} activeTab="messages">
-              <Suspense fallback={suspenseFallback}>
-                {currentRole === 'professional'
-                  ? <ProfessionalDashboard {...commonProfessionalProps} activeTab="messages" />
-                  : <CustomerDashboard {...commonCustomerProps} activeTab="messages" />}
-              </Suspense>
+              {currentRole === 'professional'
+                ? <ProfessionalDashboard {...commonProfessionalProps} activeTab="messages" />
+                : <CustomerDashboard {...commonCustomerProps} activeTab="messages" />}
             </AppShell>
           } />
           <Route path="/messages/:contactId" element={
             <AppShell {...commonAppShellProps} activeTab="messages">
-              <Suspense fallback={suspenseFallback}>
-                <MessagesRoute
-                  currentRole={currentRole}
-                  customerProps={{ ...commonCustomerProps, activeTab: 'messages' }}
-                  professionalProps={{ ...commonProfessionalProps, activeTab: 'messages' }}
-                />
-              </Suspense>
+              <MessagesRoute
+                currentRole={currentRole}
+                customerProps={{ ...commonCustomerProps, activeTab: 'messages' }}
+                professionalProps={{ ...commonProfessionalProps, activeTab: 'messages' }}
+              />
             </AppShell>
           } />
           <Route path="/notifications" element={
             <AppShell {...commonAppShellProps} activeTab="notifications">
-              <Suspense fallback={suspenseFallback}>
-                {currentRole === 'professional' ? (
-                  <ProfessionalNotifications
-                    notifications={notifications}
-                    onNotificationClick={(notification) => {
-                      setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, isRead: true } : n));
-                      if (notification.relatedId === 'messages') {
-                        handleTabChange('messages');
-                      } else if (notification.relatedId) {
-                        handleTabChange('jobs');
-                      }
-                    }}
-                    onMarkAllAsRead={() => {
-                      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-                    }}
-                    onMarkAsRead={(id) => {
-                      setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
-                    }}
-                  />
-                ) : (
-                  <CustomerDashboard {...commonCustomerProps} activeTab="notifications" />
-                )}
-              </Suspense>
+              {currentRole === 'professional' ? (
+                <ProfessionalNotifications
+                  notifications={notifications}
+                  onNotificationClick={(notification) => {
+                    setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, isRead: true } : n));
+                    if (notification.relatedId === 'messages') {
+                      handleTabChange('messages');
+                    } else if (notification.relatedId) {
+                      handleTabChange('jobs');
+                    }
+                  }}
+                  onMarkAllAsRead={() => {
+                    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+                  }}
+                  onMarkAsRead={(id) => {
+                    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+                  }}
+                />
+              ) : (
+                <CustomerDashboard {...commonCustomerProps} activeTab="notifications" />
+              )}
             </AppShell>
           } />
 
@@ -850,23 +836,17 @@ export default function App() {
           <Route element={<RequireRole allow={['customer']} />}>
             <Route path="/search" element={
               <AppShell {...commonAppShellProps} activeTab="search">
-                <Suspense fallback={suspenseFallback}>
-                  <CustomerDashboard {...commonCustomerProps} activeTab="search" />
-                </Suspense>
+                <CustomerDashboard {...commonCustomerProps} activeTab="search" />
               </AppShell>
             } />
             <Route path="/bookings" element={
               <AppShell {...commonAppShellProps} activeTab="bookings">
-                <Suspense fallback={suspenseFallback}>
-                  <CustomerDashboard {...commonCustomerProps} activeTab="bookings" />
-                </Suspense>
+                <CustomerDashboard {...commonCustomerProps} activeTab="bookings" />
               </AppShell>
             } />
             <Route path="/saved" element={
               <AppShell {...commonAppShellProps} activeTab="saved">
-                <Suspense fallback={suspenseFallback}>
-                  <CustomerDashboard {...commonCustomerProps} activeTab="saved" />
-                </Suspense>
+                <CustomerDashboard {...commonCustomerProps} activeTab="saved" />
               </AppShell>
             } />
           </Route>
@@ -877,85 +857,73 @@ export default function App() {
           <Route element={<RequireRole allow={['professional']} />}>
             <Route path="/jobs" element={
               <AppShell {...commonAppShellProps} activeTab="jobs">
-                <Suspense fallback={suspenseFallback}>
-                  <ProfessionalDashboard {...commonProfessionalProps} activeTab="jobs" />
-                </Suspense>
+                <ProfessionalDashboard {...commonProfessionalProps} activeTab="jobs" />
               </AppShell>
             } />
             <Route path="/jobs/:bookingId" element={
               <AppShell {...commonAppShellProps} activeTab="jobs">
-                <Suspense fallback={suspenseFallback}>
-                  <ProfessionalJobsRoute {...commonProfessionalProps} activeTab="jobs" />
-                </Suspense>
+                <ProfessionalJobsRoute {...commonProfessionalProps} activeTab="jobs" />
               </AppShell>
             } />
             <Route path="/gigs" element={
               <AppShell {...commonAppShellProps} activeTab="gigs">
-                <Suspense fallback={suspenseFallback}>
-                  <ProfessionalDashboard {...commonProfessionalProps} activeTab="gigs" />
-                </Suspense>
+                <ProfessionalDashboard {...commonProfessionalProps} activeTab="gigs" />
               </AppShell>
             } />
             <Route path="/gigs/new" element={
               <AppShell {...commonAppShellProps} activeTab="gigs">
-                <Suspense fallback={suspenseFallback}>
-                  <ProfessionalGigsNewRoute {...commonProfessionalProps} activeTab="gigs" />
-                </Suspense>
+                <ProfessionalGigsNewRoute {...commonProfessionalProps} activeTab="gigs" />
               </AppShell>
             } />
           </Route>
 
           <Route path="/profile" element={
             <AppShell {...commonAppShellProps} activeTab="profile">
-              <Suspense fallback={suspenseFallback}>
-                <ProfileView
-                  currentRole={currentRole}
-                  activeProfessional={activeProfessional}
-                  bookings={roleBookings}
-                  professionals={professionals}
-                  savedProIds={savedProIds}
-                  customerAvatar={customerAvatar}
-                  onUpdateCustomerAvatar={setCustomerAvatar}
-                  onUpdateProfile={handleUpdateProfile}
-                  darkMode={darkMode}
-                  onToggleDarkMode={() => setDarkMode(!darkMode)}
-                  currentLanguage={currentLanguage}
-                  onLanguageChange={setCurrentLanguage}
-                  onLogout={handleLogout}
-                  onTabChange={handleTabChange}
-                  scrollToSection={profileScrollTarget}
-                  onScrollToSectionHandled={() => setProfileScrollTarget(null)}
-                  onDeleteAccount={() => {
-                    if (window.confirm('Are you sure you want to permanently delete your KaziHub account? All bookings and history will be removed.')) {
-                      handleLogout();
-                    }
-                  }}
-                />
-              </Suspense>
+              <ProfileView
+                currentRole={currentRole}
+                activeProfessional={activeProfessional}
+                bookings={roleBookings}
+                professionals={professionals}
+                savedProIds={savedProIds}
+                customerAvatar={customerAvatar}
+                onUpdateCustomerAvatar={setCustomerAvatar}
+                onUpdateProfile={handleUpdateProfile}
+                darkMode={darkMode}
+                onToggleDarkMode={() => setDarkMode(!darkMode)}
+                currentLanguage={currentLanguage}
+                onLanguageChange={setCurrentLanguage}
+                onLogout={handleLogout}
+                onTabChange={handleTabChange}
+                scrollToSection={profileScrollTarget}
+                onScrollToSectionHandled={() => setProfileScrollTarget(null)}
+                onDeleteAccount={() => {
+                  if (window.confirm('Are you sure you want to permanently delete your KaziHub account? All bookings and history will be removed.')) {
+                    handleLogout();
+                  }
+                }}
+              />
             </AppShell>
           } />
           <Route path="/settings" element={
             <AppShell {...commonAppShellProps} activeTab="settings">
-              <Suspense fallback={suspenseFallback}>
-                <SettingsView
-                  currentRole={currentRole}
-                  activeProfessional={activeProfessional}
-                  bookings={roleBookings}
-                  customerAvatar={customerAvatar}
-                  onUpdateCustomerAvatar={setCustomerAvatar}
-                  onUpdateProfile={handleUpdateProfile}
-                  darkMode={darkMode}
-                  onToggleDarkMode={() => setDarkMode(!darkMode)}
-                  currentLanguage={currentLanguage}
-                  onLanguageChange={setCurrentLanguage}
-                  onLogout={handleLogout}
-                  onDeleteAccount={() => {
-                    if (window.confirm('Are you sure you want to permanently delete your KaziHub account? All bookings and history will be removed.')) {
-                      handleLogout();
-                    }
-                  }}
-                />
-              </Suspense>
+              <SettingsView
+                currentRole={currentRole}
+                activeProfessional={activeProfessional}
+                bookings={roleBookings}
+                customerAvatar={customerAvatar}
+                onUpdateCustomerAvatar={setCustomerAvatar}
+                onUpdateProfile={handleUpdateProfile}
+                darkMode={darkMode}
+                onToggleDarkMode={() => setDarkMode(!darkMode)}
+                currentLanguage={currentLanguage}
+                onLanguageChange={setCurrentLanguage}
+                onLogout={handleLogout}
+                onDeleteAccount={() => {
+                  if (window.confirm('Are you sure you want to permanently delete your KaziHub account? All bookings and history will be removed.')) {
+                    handleLogout();
+                  }
+                }}
+              />
             </AppShell>
           } />
 
