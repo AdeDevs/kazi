@@ -67,7 +67,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-xs ${sheet.backdropAnimationClasses}`}
+      className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-md ${sheet.backdropAnimationClasses}`}
       onClick={onClose}
     >
       <div
