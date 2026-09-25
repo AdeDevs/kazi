@@ -25,6 +25,7 @@ export interface MessageResponse {
   audio_url?: string | null;
   media_type?: string | null;
   audio_duration?: number | null;
+  audio_wave_data?: number[];
   location_data?: { lat: number; lng: number; address?: string; landmark?: string } | null;
   message_type: string;
   status?: string;
@@ -38,6 +39,8 @@ export interface MessageCreate {
   attachments?: string[];
   audio_url?: string | null;
   audio_duration?: number | null;
+  /** 0–1 per bar; the schema declares it as a list of numbers. */
+  audio_wave_data?: number[];
   location_data?: { lat: number; lng: number; address?: string } | null;
   media_type?: string | null;
   message_type: 'text' | 'image' | 'audio' | 'location';

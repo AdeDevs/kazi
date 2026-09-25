@@ -13,6 +13,7 @@ import { SessionsSection } from './settings/SessionsSection';
 import { ConfirmationModal } from './ui/ConfirmationModal';
 import { UnsavedChangesModal } from './ui/UnsavedChangesModal';
 import { SheetDragHandle } from './ui/SheetDragHandle';
+import { Toggle } from './ui/Toggle';
 import { Card, CardHeader } from './ui/Card';
 import { useAuth } from '../context/AuthContext';
 import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
@@ -261,16 +262,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </p>
               <p className="text-[11px] text-slate-500">Require an SMS/Authenticator OTP code on every login attempt.</p>
             </div>
-            <label className="relative inline-flex items-center cursor-not-allowed shrink-0">
-              <input
-                type="checkbox"
-                checked={twoFactorAuth}
-                disabled
-                aria-label="Two-Factor Authentication (coming soon)"
-                className="sr-only peer"
-              />
-              <div className="w-9 h-5 bg-slate-200 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-navy-800 opacity-50"></div>
-            </label>
+            <Toggle checked={twoFactorAuth} label="Two-Factor Authentication (coming soon)" onChange={() => undefined} disabled />
           </div>
 
           {/* Biometric Unlock - not backed by a real auth backend yet */}
@@ -282,16 +274,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </p>
               <p className="text-[11px] text-slate-500">Allow Touch ID / Face ID authentication on supported mobile devices.</p>
             </div>
-            <label className="relative inline-flex items-center cursor-not-allowed shrink-0">
-              <input
-                type="checkbox"
-                checked={biometricLogin}
-                disabled
-                aria-label="Biometric Login (coming soon)"
-                className="sr-only peer"
-              />
-              <div className="w-9 h-5 bg-slate-200 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-navy-800 opacity-50"></div>
-            </label>
+            <Toggle checked={biometricLogin} label="Biometric Login (coming soon)" onChange={() => undefined} disabled />
           </div>
         </div>
       </Card>
@@ -332,17 +315,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     : 'Show your neighbourhood on your public profile so nearby customers can find you. When off, your neighbourhood, address and map location are hidden.'}
               </p>
             </div>
-            <label className={`relative inline-flex items-center shrink-0 ${shareNeighborhood === null ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
-              <input
-                type="checkbox"
-                checked={Boolean(shareNeighborhood)}
-                disabled={shareNeighborhood === null || isSavingNeighborhood}
-                onChange={(e) => handleToggleNeighborhood(e.target.checked)}
-                aria-label="Share approximate neighborhood"
-                className="sr-only peer"
-              />
-              <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-navy-800"></div>
-            </label>
+            <Toggle checked={Boolean(shareNeighborhood)} label="Share approximate neighborhood" onChange={handleToggleNeighborhood} disabled={shareNeighborhood === null} busy={isSavingNeighborhood} />
           </div>
 
           {/* Data Export */}

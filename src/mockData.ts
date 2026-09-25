@@ -1,4 +1,4 @@
-import { Professional, Category, Booking, ChatMessage, ServiceItem } from './types';
+import { Professional, Category, Booking, ServiceItem } from './types';
 
 export const CATEGORIES: Category[] = [
   'Electricians',
@@ -1965,25 +1965,3 @@ export const INITIAL_BOOKINGS: Booking[] = [
   }
 ];
 
-export const INITIAL_MESSAGES: ChatMessage[] = [
-  {
-    id: 'm1',
-    bookingId: 'b1',
-    senderId: 'c1',
-    senderName: 'Nneka Okonkwo',
-    senderRole: 'customer',
-    recipientId: 'p1',
-    message: 'Good morning Engr. Babatunde, are you available tomorrow morning for the DB box issue?',
-    timestamp: '2026-08-01T08:35:00Z'
-  },
-  {
-    id: 'm2',
-    bookingId: 'b1',
-    senderId: 'p1',
-    senderName: 'Babatunde "Spark" Adebayo',
-    senderRole: 'professional',
-    recipientId: 'c1',
-    message: 'Good morning Nneka! Yes, I can be at your place in Ring Road, Ibadan by 10 AM. I will bring a digital multimeter and replacement MCB breakers.',
-    timestamp: '2026-08-01T08:40:00Z'
-  }
-];

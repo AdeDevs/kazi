@@ -1,16 +1,23 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { BubbleMeta, ChatBubble, ChatDaySeparator, formatChatDay } from './chat/ChatBubble';
 import { useNavigate } from 'react-router-dom';
 import { useAccountFrozen } from '../hooks/useAccountFrozen';
 import { FrozenComposerNotice } from './ui/FrozenNotice';
 import { Professional, Booking, ChatMessage } from '../types';
 import { formatCurrency, isBookingArchived } from '../utils';
 import { 
-  Search, SendHorizontal, Image as ImageIcon, ArrowLeft, 
-  CheckCheck, Check, MessageSquare,
+  Search, ArrowLeft,
+  MessageSquare,
   X, MapPin, ExternalLink, Star,
-  Calendar, AlertCircle, Trash2
+  Calendar, AlertCircle
 } from 'lucide-react';
-import { DecibelAudioPlayer } from './DecibelAudioPlayer';
+import { VoiceNotePlayer } from './chat/VoiceNotePlayer';
+import { ImageMessage, imageCaption } from './chat/ImageMessage';
+import { PhotoPreviewSheet } from './chat/PhotoPreviewSheet';
+import { AttachmentMenu } from './chat/AttachmentMenu';
+import { ImageLightbox } from './chat/ImageLightbox';
+import { compressImage } from '../lib/imageCompress';
+import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
 import { ChatComposer } from './ChatComposer';
 import { VerifiedBadge } from './ui/VerifiedBadge';
 
@@ -77,233 +84,39 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
   const [filterTab, setFilterTab] = useState<'all' | 'unread' | 'active_jobs'>('all');
   const [inputText, setInputText] = useState('');
 
-  // Rich Attachments & Audio
+  // Attachments, photos and voice notes
   const [showAttachmentMenu, setShowAttachmentMenu] = useState<boolean>(false);
-  // Stays mounted ~150ms past showAttachmentMenu going false so the popover can animate its own
-  // exit instead of vanishing the instant it's dismissed.
-  const [renderAttachmentMenu, setRenderAttachmentMenu] = useState(false);
-  useEffect(() => {
-    if (showAttachmentMenu) {
-      setRenderAttachmentMenu(true);
-      return;
-    }
-    if (!renderAttachmentMenu) return;
-    const timeout = setTimeout(() => setRenderAttachmentMenu(false), 150);
-    return () => clearTimeout(timeout);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showAttachmentMenu]);
   const [selectedLightboxImage, setSelectedLightboxImage] = useState<string | null>(null);
-  
-  // Real voice recording states
-  const [isRecording, setIsRecording] = useState<boolean>(false);
-  const [recordingSeconds, setRecordingSeconds] = useState<number>(0);
-  const [recordingError, setRecordingError] = useState<string | null>(null);
-  const [liveWaveform, setLiveWaveform] = useState<number[]>(new Array(36).fill(6));
-  
-  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const animFrameRef = useRef<number | null>(null);
-  const recordingStartTimeRef = useRef<number>(0);
-
-  // Active voice playback state (tracked globally so only one audio note plays at a time)
+  // The photo picked from the attachment menu, waiting in the preview sheet for a caption / send.
+  const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
+  const recorder = useVoiceRecorder();
+  const [isSendingVoice, setIsSendingVoice] = useState(false);
+  // Only one voice note plays at a time across the thread.
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
+  // Microphone / location problems, shown above the composer.
+  const [chatError, setChatError] = useState<string | null>(null);
 
   const [isLocating, setIsLocating] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-
-  // Clean up recording and audio playback resources on unmount
-  useEffect(() => {
-    return () => {
-      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach(t => t.stop());
-      }
-      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-        audioContextRef.current.close().catch(() => {});
-      }
-    };
-  }, []);
-
-  // Real Hardware Microphone Recording Flow
-  const startRecording = async () => {
-    setRecordingError(null);
-    setPlayingAudioId(null);
-
-    try {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        setRecordingError("Microphone access is not supported by your browser environment.");
-        return;
-      }
-
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        }
-      });
-
-      mediaStreamRef.current = stream;
-      audioChunksRef.current = [];
-
-      // Determine supported mimeType across Chrome/Firefox/Safari
-      let options: MediaRecorderOptions = {};
-      if (typeof MediaRecorder !== 'undefined') {
-        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-          options = { mimeType: 'audio/webm;codecs=opus' };
-        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
-          options = { mimeType: 'audio/mp4' };
-        } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
-          options = { mimeType: 'audio/ogg' };
-        }
-      }
-
-      const recorder = new MediaRecorder(stream, options);
-      mediaRecorderRef.current = recorder;
-
-      recorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) {
-          audioChunksRef.current.push(e.data);
-        }
-      };
-
-      recorder.start(100);
-      setIsRecording(true);
-      setRecordingSeconds(0);
-      recordingStartTimeRef.current = Date.now();
-
-      // Recording elapsed duration timer
-      recordingTimerRef.current = setInterval(() => {
-        setRecordingSeconds(Math.max(1, Math.round((Date.now() - recordingStartTimeRef.current) / 1000)));
-      }, 1000);
-
-      // Web Audio API: Real-time AudioContext & AnalyserNode for frequency waveform
-      try {
-        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-        if (AudioCtx) {
-          const audioCtx = new AudioCtx();
-          audioContextRef.current = audioCtx;
-          const source = audioCtx.createMediaStreamSource(stream);
-          const analyser = audioCtx.createAnalyser();
-          analyser.fftSize = 64;
-          analyser.smoothingTimeConstant = 0.65;
-          source.connect(analyser);
-          analyserRef.current = analyser;
-
-          const dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-          const updateLiveWaveform = () => {
-            if (!analyserRef.current) return;
-            analyserRef.current.getByteFrequencyData(dataArray);
-
-            const numBars = 36;
-            const bars: number[] = [];
-            for (let i = 0; i < numBars; i++) {
-              const idx = Math.floor((i / numBars) * (dataArray.length * 0.75));
-              const val = dataArray[idx] || 0;
-              // Map energy to height between 4px and 26px
-              const h = Math.max(4, Math.min(26, Math.round((val / 255) * 26) + 4));
-              bars.push(h);
-            }
-            setLiveWaveform(bars);
-            animFrameRef.current = requestAnimationFrame(updateLiveWaveform);
-          };
-
-          animFrameRef.current = requestAnimationFrame(updateLiveWaveform);
-        }
-      } catch (err) {
-        console.warn("Live frequency analyser note:", err);
-      }
-
-    } catch (err: any) {
-      console.error("Microphone recording error:", err);
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        setRecordingError("Microphone access was denied. Please allow microphone permissions in your browser.");
-      } else if (err.name === 'NotFoundError') {
-        setRecordingError("No microphone was detected on this device.");
-      } else {
-        setRecordingError("Microphone initialization error: " + (err.message || "Unknown error"));
-      }
-      setIsRecording(false);
-    }
-  };
-
-  // Helper to cleanup hardware streams & analyzers
-  const cleanupHardwareStreams = () => {
-    if (recordingTimerRef.current) {
-      clearInterval(recordingTimerRef.current);
-      recordingTimerRef.current = null;
-    }
-    if (animFrameRef.current) {
-      cancelAnimationFrame(animFrameRef.current);
-      animFrameRef.current = null;
-    }
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach(t => t.stop());
-      mediaStreamRef.current = null;
-    }
-    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-      audioContextRef.current.close().catch(() => {});
-      audioContextRef.current = null;
-    }
-    mediaRecorderRef.current = null;
-    audioChunksRef.current = [];
-    setLiveWaveform(new Array(36).fill(6));
-  };
-
-  // Stop recording and send real audio note
-  const handleSendVoiceNote = () => {
-    const recorder = mediaRecorderRef.current;
-    if (!recorder || !selectedProId || !onSendMessage) {
-      cleanupHardwareStreams();
-      setIsRecording(false);
-      return;
-    }
-
-    const duration = Math.max(1, Math.round((Date.now() - recordingStartTimeRef.current) / 1000));
-
-    recorder.onstop = () => {
-      const mimeType = recorder.mimeType || 'audio/webm';
-      const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
-
-      // Convert audio Blob into base64 Data URL for instant in-browser playback & state persistence
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64Audio = reader.result as string;
-        onSendMessage(selectedProId, 'Voice Note', {
-          mediaType: 'audio',
-          mediaUrl: base64Audio,
-          duration: duration,
-          status: 'sent'
-        });
-        cleanupHardwareStreams();
-        setIsRecording(false);
-      };
-      reader.readAsDataURL(audioBlob);
-    };
-
-    if (recorder.state !== 'inactive') {
-      recorder.stop();
-    }
-  };
-
-  // Cancel and discard recorded audio
-  const handleCancelVoiceRecording = () => {
-    const recorder = mediaRecorderRef.current;
-    if (recorder && recorder.state !== 'inactive') {
-      recorder.onstop = null;
-      recorder.stop();
-    }
-    cleanupHardwareStreams();
-    setIsRecording(false);
-    setRecordingError(null);
+  const handleStartRecording = () => {
+    setChatError(null);
     setShowAttachmentMenu(false);
+    recorder.start();
+  };
+
+  const handleSendVoiceNote = async () => {
+    setIsSendingVoice(true);
+    const note = await recorder.stop();
+    setIsSendingVoice(false);
+    if (!note || !selectedProId || !onSendMessage) return;
+    onSendMessage(selectedProId, 'Voice note', {
+      mediaType: 'audio',
+      mediaUrl: note.dataUrl,
+      duration: note.durationSeconds,
+      waveform: note.peaks,
+      status: 'sent',
+    });
   };
 
   // Assemble conversations for professionals who have messages, active bookings, or is currently selected to chat
@@ -440,23 +253,19 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
   };
 
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0 || !selectedProId || !onSendMessage) return;
+  const handlePickPhoto = async (file: File) => {
+    setShowAttachmentMenu(false);
+    if (!file.type.startsWith('image/')) {
+      setChatError('Choose a photo to send.');
+      return;
+    }
+    setPendingPhoto(await compressImage(file));
+  };
 
-    const file = files[0];
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        onSendMessage(selectedProId, 'Photo attachment', {
-          mediaType: 'image',
-          mediaUrl: event.target.result as string,
-          status: 'sent'
-        });
-        setShowAttachmentMenu(false);
-      }
-    };
-    reader.readAsDataURL(file);
+  const handleSendPhoto = (caption: string) => {
+    if (!pendingPhoto || !selectedProId || !onSendMessage) return;
+    onSendMessage(selectedProId, caption || 'Photo', { mediaType: 'image', mediaUrl: pendingPhoto, status: 'sent' });
+    setPendingPhoto(null);
   };
 
   // Shares the phone's real position. No fallback pin: a made-up location would send the artisan
@@ -464,7 +273,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
   const handleShareLocation = () => {
     if (!selectedProId || !onSendMessage) return;
     if (!('geolocation' in navigator)) {
-      setRecordingError('This device can’t share its location.');
+      setChatError('This device can’t share its location.');
       return;
     }
     setIsLocating(true);
@@ -482,7 +291,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
       },
       () => {
         setIsLocating(false);
-        setRecordingError('Couldn’t get your location. Allow location access and try again.');
+        setChatError('Couldn’t get your location. Allow location access and try again.');
       },
       { timeout: 10000, enableHighAccuracy: true }
     );
@@ -603,7 +412,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
 
   // Message feed -- identical between mobile and desktop chat views.
   const messagesFeedBody = (
-    <div className="flex-1 min-h-0 p-3.5 sm:p-5 overflow-y-auto space-y-3.5 bg-slate-50/40 dark:bg-slate-950/40">
+    <div className="flex-1 min-h-0 px-3 py-3 sm:px-5 sm:py-4 overflow-y-auto overscroll-contain space-y-2 bg-slate-50/40 dark:bg-slate-950/40">
       {activeMessages.length === 0 ? (
         <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-3">
           <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 shadow-2xs">
@@ -617,98 +426,76 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
           </div>
         </div>
       ) : (
-        activeMessages.map((msg) => {
-                const isCustomer = msg.senderRole === 'customer';
+        activeMessages.map((msg, index) => {
+          const isCustomer = msg.senderRole === 'customer';
+          const day = formatChatDay(msg.timestamp);
+          const showDay = index === 0 || day !== formatChatDay(activeMessages[index - 1].timestamp);
+          const isMedia = msg.mediaType === 'image' || msg.mediaType === 'audio' || msg.mediaType === 'location';
 
-                return (
-                  <div
-                    key={msg.id}
-                    className={`flex flex-col ${isCustomer ? 'items-end' : 'items-start'}`}
-                  >
-                    <div
-                      className={`max-w-[85%] sm:max-w-[65%] p-3 rounded-2xl text-xs sm:text-sm space-y-2 shadow-2xs ${
-                        isCustomer
-                          ? 'bg-navy-900 text-white rounded-br-xs'
-                          : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-200/80 dark:border-slate-700/80 rounded-bl-xs'
-                      }`}
-                    >
-                      {/* Photo Attachment */}
-                      {msg.mediaType === 'image' && msg.mediaUrl && (
-                        <div className="rounded-xl overflow-hidden cursor-pointer" onClick={() => setSelectedLightboxImage(msg.mediaUrl || null)}>
-                          <img
-                            src={msg.mediaUrl}
-                            alt="Job attachment"
-                            className="w-full max-h-60 object-cover hover:opacity-95 transition-opacity rounded-lg"
-                          />
-                        </div>
-                      )}
+          return (
+            <React.Fragment key={msg.id}>
+              {showDay && <ChatDaySeparator label={day} />}
+              <ChatBubble
+                isMine={isCustomer}
+                timestamp={msg.timestamp}
+                status={msg.status}
+                onRetry={msg.retry}
+                media={isMedia && msg.mediaType !== 'audio'}
+                hideFooter={msg.mediaType === 'audio'}
+                overlayFooter={msg.mediaType === 'image' && !imageCaption(msg.message)}
+              >
+                {msg.mediaType === 'image' && msg.mediaUrl && (
+                  <ImageMessage
+                    src={msg.mediaUrl}
+                    caption={imageCaption(msg.message)}
+                    sending={msg.status === 'sending'}
+                    onOpen={() => setSelectedLightboxImage(msg.mediaUrl || null)}
+                  />
+                )}
 
-                      {/* WhatsApp / Instagram Style Decibel Voice Note Player */}
-                      {msg.mediaType === 'audio' && (
-                        <DecibelAudioPlayer
-                          msgId={msg.id}
-                          mediaUrl={msg.mediaUrl}
-                          duration={msg.duration || 5}
-                          isCustomer={isCustomer}
-                          activePlayingId={playingAudioId}
-                          onPlayStateChange={(id) => setPlayingAudioId(id)}
-                        />
-                      )}
+                {msg.mediaType === 'audio' && (
+                  <VoiceNotePlayer
+                    msgId={msg.id}
+                    src={msg.mediaUrl}
+                    duration={msg.duration}
+                    peaks={msg.waveform}
+                    isMine={isCustomer}
+                    activeId={playingAudioId}
+                    onActiveChange={setPlayingAudioId}
+                    meta={<BubbleMeta isMine={isCustomer} timestamp={msg.timestamp} status={msg.status} />}
+                  />
+                )}
 
-                      {/* Location Pin */}
-                      {msg.mediaType === 'location' && msg.locationData && (
-                        <div className={`p-2.5 rounded-xl border space-y-1 ${
-                          isCustomer
-                            ? 'bg-navy-950/40 border-navy-700 text-white'
-                            : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700'
-                        }`}>
-                          <div className="flex items-center gap-1.5 font-bold text-xs">
-                            <MapPin className="w-3.5 h-3.5 text-brand-orange-500 shrink-0" />
-                            <span>Service Location Pin</span>
-                          </div>
-                          <p className="text-xs opacity-90">{msg.locationData.address}</p>
-                          {msg.locationData.landmark && (
-                            <p className="text-[11px] opacity-75">Landmark: {msg.locationData.landmark}</p>
-                          )}
-                          <a
-                            href={`https://maps.google.com/?q=${msg.locationData.lat},${msg.locationData.lng}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className={`inline-flex items-center gap-1 text-xs font-bold mt-0.5 ${
-                              isCustomer ? 'text-brand-orange-400 hover:underline' : 'text-navy-700 dark:text-navy-400 hover:underline'
-                            }`}
-                          >
-                            <span>Open in Google Maps</span>
-                            <ExternalLink className="w-3 h-3" />
-                          </a>
-                        </div>
-                      )}
-
-                      {/* Regular Text Content */}
-                      {msg.message && msg.mediaType !== 'image' && msg.mediaType !== 'audio' && msg.mediaType !== 'location' && (
-                        <p className="leading-relaxed whitespace-pre-wrap">{msg.message}</p>
-                      )}
-
-                      {/* Timestamp & Status */}
-                      <div className={`flex items-center justify-end gap-1.5 text-[10px] pt-0.5 ${
-                        isCustomer ? 'text-slate-300' : 'text-slate-400'
-                      }`}>
-                        <span>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                        {isCustomer && (
-                          msg.status === 'read' ? (
-                            <CheckCheck className="w-3.5 h-3.5 text-sky-400" />
-                          ) : msg.status === 'delivered' ? (
-                            <CheckCheck className="w-3.5 h-3.5 text-slate-300" />
-                          ) : (
-                            <Check className="w-3.5 h-3.5 text-slate-300" />
-                          )
-                        )}
-                      </div>
+                {msg.mediaType === 'location' && msg.locationData && (
+                  <div className={`p-2.5 rounded-xl space-y-1 ${isCustomer ? 'bg-navy-950/40 text-white' : 'bg-slate-50 dark:bg-slate-900'}`}>
+                    <div className="flex items-center gap-1.5 font-bold text-xs">
+                      <MapPin className="w-3.5 h-3.5 text-brand-orange-500 shrink-0" />
+                      <span>Service location</span>
                     </div>
+                    <p className="text-xs opacity-90">{msg.locationData.address}</p>
+                    {msg.locationData.landmark && (
+                      <p className="text-[11px] opacity-75">Landmark: {msg.locationData.landmark}</p>
+                    )}
+                    <a
+                      href={`https://maps.google.com/?q=${msg.locationData.lat},${msg.locationData.lng}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={`inline-flex items-center gap-1 text-xs font-bold mt-0.5 hover:underline ${isCustomer ? 'text-brand-orange-400' : 'text-navy-700 dark:text-navy-400'}`}
+                    >
+                      <span>Open in Google Maps</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
                   </div>
-                );
-              })
-            )}
+                )}
+
+                {msg.message && !isMedia && (
+                  <p className="whitespace-pre-wrap break-words">{msg.message}</p>
+                )}
+              </ChatBubble>
+            </React.Fragment>
+          );
+        })
+      )}
       <div ref={messagesEndRef} />
     </div>
   );
@@ -720,114 +507,53 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
   const { isFrozen } = useAccountFrozen();
   const composerBody = (
     <div className="bg-white dark:bg-slate-900 shrink-0 relative">
-            {renderAttachmentMenu && (
-              <div className={`absolute bottom-full left-3.5 mb-2 p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl space-y-3 z-20 w-72 origin-bottom-left transition-all duration-150 ease-out ${
-                showAttachmentMenu ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
-              }`}>
-                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
-                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Share Media</span>
-                  <button onClick={() => setShowAttachmentMenu(false)} className="text-slate-400 hover:text-slate-600">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
+      <AttachmentMenu
+        open={showAttachmentMenu}
+        onClose={() => setShowAttachmentMenu(false)}
+        onPickPhoto={handlePickPhoto}
+        onShareLocation={handleShareLocation}
+        locating={isLocating}
+      />
 
-                <div className="grid grid-cols-2 gap-2">
-                  <label className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors">
-                    <ImageIcon className="w-4 h-4 text-brand-orange-500" />
-                    <span>Upload Photo</span>
-                    <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
-                  </label>
-                  <button
-                    type="button"
-                    onClick={handleShareLocation}
-                    disabled={isLocating}
-                    className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors"
-                  >
-                    <MapPin className="w-4 h-4 text-emerald-500" />
-                    <span>{isLocating ? 'Locating...' : 'Share Location'}</span>
-                  </button>
-                </div>
+      {(chatError || recorder.error) && (
+        <div role="alert" className="mx-3 sm:mx-4 mt-2.5 px-3 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 flex items-center justify-between gap-2 text-xs text-rose-700 dark:text-rose-300">
+          <span className="flex items-center gap-2 min-w-0">
+            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+            <span>{chatError || recorder.error}</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => { setChatError(null); recorder.clearError(); }}
+            aria-label="Dismiss"
+            className="p-1 -m-1 text-rose-500 hover:text-rose-800 cursor-pointer shrink-0"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
-              </div>
-            )}
-
-            {/* Voice Recording Error Alert if blocked */}
-            {recordingError && (
-              <div className="mx-3 sm:mx-4 mt-2.5 p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 flex items-center justify-between text-xs text-rose-700 dark:text-rose-300">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-                  <span>{recordingError}</span>
-                </div>
-                <button onClick={() => setRecordingError(null)} className="text-rose-500 hover:text-rose-800 p-0.5">
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            )}
-
-            {/* Voice Recording Bar with Real-Time Audio Decibel Waveform */}
-            {isRecording ? (
-              <div className="px-3 sm:px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] border-t border-slate-200/90 dark:border-slate-800">
-              <div className="flex items-center justify-between gap-2 sm:gap-3 p-2 sm:p-2.5 bg-slate-50 dark:bg-slate-800/90 rounded-xl border border-emerald-300 dark:border-emerald-700/60 shadow-xs animate-in fade-in duration-150">
-                {/* Live Recording Indicator & Timer */}
-                <div className="flex items-center gap-2 shrink-0 pl-1">
-                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping shrink-0" />
-                  <span className="text-xs font-mono font-black text-slate-900 dark:text-slate-100">
-                    0:{String(recordingSeconds).padStart(2, '0')}
-                  </span>
-                </div>
-
-                {/* Real-time Frequency Analyser Waveform Bars */}
-                <div className="flex-1 flex items-center justify-center gap-0.5 sm:gap-1 h-7 px-1.5 overflow-hidden">
-                  {liveWaveform.map((height, i) => (
-                    <span
-                      key={i}
-                      className="w-1 min-w-[2px] bg-emerald-500 rounded-full transition-all duration-75"
-                      style={{
-                        height: `${height}px`,
-                        opacity: Math.max(0.4, height / 26)
-                      }}
-                    />
-                  ))}
-                </div>
-
-                {/* Cancel & Send Actions */}
-                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={handleCancelVoiceRecording}
-                    className="p-2 sm:px-3 sm:py-2 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-800 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
-                    title="Cancel recording"
-                  >
-                    <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                    <span className="hidden sm:inline">Discard</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleSendVoiceNote}
-                    className="p-2 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold bg-navy-800 hover:bg-navy-900 text-white shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                    title="Send audio"
-                  >
-                    <SendHorizontal className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                    <span className="hidden sm:inline">Send Voice</span>
-                  </button>
-                </div>
-              </div>
-              </div>
-            ) : (
-              <ChatComposer
-                value={inputText}
-                onChange={setInputText}
-                onSend={() => handleSendText()}
-                placeholder={activeConversation ? `Message ${activeConversation.professional.name.length > 14 ? activeConversation.professional.name.slice(0, 12) + '…' : activeConversation.professional.name}…` : 'Type your message…'}
-                quickReplies={QUICK_REPLIES}
-                onQuickReply={handleSendQuickReply}
-                onAttach={() => setShowAttachmentMenu(!showAttachmentMenu)}
-                attachActive={showAttachmentMenu}
-                onMic={startRecording}
-                onFocus={() => setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 300)}
-              />
-            )}
+      <ChatComposer
+          value={inputText}
+          onChange={setInputText}
+          onSend={() => handleSendText()}
+          placeholder={activeConversation ? `Message ${activeConversation.professional.name.split(/\s+/)[0]}` : 'Type a message'}
+          quickReplies={QUICK_REPLIES}
+          onQuickReply={handleSendQuickReply}
+          onAttach={() => setShowAttachmentMenu(!showAttachmentMenu)}
+          attachActive={showAttachmentMenu}
+          onMic={handleStartRecording}
+          recording={recorder.isRecording ? {
+            seconds: recorder.seconds,
+            levels: recorder.levels,
+            paused: recorder.isPaused,
+            sending: isSendingVoice,
+            onPause: recorder.pause,
+            onResume: recorder.resume,
+            onDiscard: recorder.cancel,
+            onSend: handleSendVoiceNote,
+          } : null}
+          onFocus={() => setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 300)}
+        />
     </div>
   );
 
@@ -840,23 +566,6 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
       <p className="text-sm text-slate-500 max-w-sm">
         Select a conversation from the left to read messages and reply to your booked artisans.
       </p>
-    </div>
-  );
-
-  const lightboxBody = selectedLightboxImage && (
-    <div
-      className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4"
-      onClick={() => setSelectedLightboxImage(null)}
-    >
-      <div className="relative max-w-2xl max-h-[85vh] overflow-hidden rounded-2xl" onClick={(e) => e.stopPropagation()}>
-        <img src={selectedLightboxImage} alt="Enlarged preview" className="w-full h-full object-contain" />
-        <button
-          onClick={() => setSelectedLightboxImage(null)}
-          className="absolute top-3 right-3 p-2 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors"
-        >
-          <X className="w-5 h-5" />
-        </button>
-      </div>
     </div>
   );
 
@@ -1241,7 +950,13 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
         </div>
       </div>
 
-      {lightboxBody}
+      <ImageLightbox src={selectedLightboxImage} onClose={() => setSelectedLightboxImage(null)} />
+      <PhotoPreviewSheet
+        photo={pendingPhoto}
+        recipientName={activeConversation?.professional.name.split(/\s+/)[0] || 'artisan'}
+        onCancel={() => setPendingPhoto(null)}
+        onSend={handleSendPhoto}
+      />
     </>
   );
 };

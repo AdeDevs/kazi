@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Moon, Sun, Globe, CheckCircle2, X } from 'lucide-react';
 import { Language, SUPPORTED_LANGUAGES, languageCode } from '../../translations';
 import { useAuth } from '../../context/AuthContext';
+import { Toggle } from '../ui/Toggle';
 import { Card, CardHeader } from '../ui/Card';
 import { SheetDragHandle } from '../ui/SheetDragHandle';
 import { useSlideUpSheet } from '../../hooks/useSlideUpSheet';
@@ -22,10 +23,6 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({
 }) => {
   const { updateUser } = useAuth();
 
-  // Not backed by a real backend endpoint yet -- notification preferences have no API support,
-  // so these stay local-only rather than falsely implying they're saved server-side.
-  const [pushNotifications, setPushNotifications] = useState(true);
-  const [emailAlerts, setEmailAlerts] = useState(true);
 
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const languageSheet = useSlideUpSheet(showLanguageModal, () => setShowLanguageModal(false));
@@ -62,37 +59,25 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({
         {/* Push Notifications */}
         <div className="py-3 flex items-center justify-between">
           <div>
-            <p className="font-bold text-slate-900 dark:text-slate-100">Push Notifications</p>
+            <p className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              Push Notifications
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-extrabold">Coming soon</span>
+            </p>
             <p className="text-[11px] text-slate-500">Real-time alerts for booking acceptances & chats.</p>
           </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={pushNotifications}
-              onChange={(e) => setPushNotifications(e.target.checked)}
-              aria-label="Push notifications"
-              className="sr-only peer"
-            />
-            <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-navy-800"></div>
-          </label>
+          <Toggle checked={false} label="Push notifications (coming soon)" onChange={() => undefined} disabled />
         </div>
 
         {/* Email Alerts */}
         <div className="py-3 flex items-center justify-between">
           <div>
-            <p className="font-bold text-slate-900 dark:text-slate-100">Email Summaries</p>
+            <p className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              Email Summaries
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-extrabold">Coming soon</span>
+            </p>
             <p className="text-[11px] text-slate-500">Payment receipts and job completion reports.</p>
           </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={emailAlerts}
-              onChange={(e) => setEmailAlerts(e.target.checked)}
-              aria-label="Email summaries"
-              className="sr-only peer"
-            />
-            <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-navy-800"></div>
-          </label>
+          <Toggle checked={false} label="Email summaries (coming soon)" onChange={() => undefined} disabled />
         </div>
 
         {/* Theme Toggle */}

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { Role, Professional, Booking, ChatMessage, Category, Notification, Gig } from './types';
 import { Language, languageFromStored } from './translations';
-import { INITIAL_PROFESSIONALS, INITIAL_BOOKINGS, INITIAL_MESSAGES } from './mockData';
+import { INITIAL_PROFESSIONALS, INITIAL_BOOKINGS } from './mockData';
 import { AppShell } from './components/AppShell';
 import { ProfessionalProfileModal } from './components/ProfessionalProfileModal';
 import { BookingModal, BookingRequestInput } from './components/BookingModal';
@@ -80,7 +80,7 @@ function ProfessionalProfileRoute({
   }, [id, onNeedDetail]);
   useDocumentMeta(
     professional ? professional.name : 'Professional not found',
-    professional ? `${professional.name} -- ${professional.category} on KaziHub. ${professional.tagline || ''}`.trim() : 'This professional profile could not be found.'
+    professional ? `${professional.name} -- ${professional.category} on KaziHub.` : 'This professional profile could not be found.'
   );
   if (!professional) return <NotFound />;
   return <ProfessionalProfileModal {...rest} professional={professional} isOpen />;
@@ -277,11 +277,13 @@ export default function App() {
     localStorage.removeItem('kazihub_ng_messages_v5');
     localStorage.removeItem('kazihub_ng_messages_v9');
     localStorage.removeItem('kazihub_ng_messages_v10');
-    const saved = localStorage.getItem('kazihub_ng_messages_v11');
+    // v11 held the old sample conversation; chats now start empty, even on the demo account.
+    localStorage.removeItem('kazihub_ng_messages_v11');
+    const saved = localStorage.getItem('kazihub_ng_messages_v12');
     if (saved) {
       try { return JSON.parse(saved); } catch (e) { console.error(e); }
     }
-    return INITIAL_MESSAGES;
+    return [];
   });
 
   // Customer's saved/favorited artisans -- lifted up from CustomerDashboard so ProfileView can
@@ -540,15 +542,6 @@ export default function App() {
         timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
         isRead: false,
         relatedId: 'b1'
-      },
-      {
-        id: 'notif-2',
-        type: 'new_message',
-        title: 'New Message Received',
-        description: 'Nneka Okonkwo: "Good morning Engr. Babatunde, are you available tomorrow..."',
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-        isRead: false,
-        relatedId: 'messages'
       },
       {
         id: 'notif-3',
@@ -1054,12 +1047,17 @@ export default function App() {
         mediaType: kind,
         mediaUrl: kind === 'image' ? m.attachments?.[0] : kind === 'audio' ? m.audio_url || undefined : undefined,
         duration: m.audio_duration ?? undefined,
+        waveform: m.audio_wave_data?.length ? m.audio_wave_data : undefined,
         locationData: loc ? { lat: loc.lat, lng: loc.lng, address: loc.address || `${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}`, landmark: loc.landmark } : undefined,
         status: m.read_at || m.status === 'read' ? 'read' : 'sent',
       };
     });
   });
-  const shownMessages = usesBackendBookings ? liveChatMessages : messages;
+  // Messages you've sent that the server hasn't confirmed yet ('sending'), or that failed ('failed',
+  // with a retry). They show in the thread straight away and are replaced by the server's copy.
+  const [pendingChat, setPendingChat] = useState<ChatMessage[]>([]);
+  useEffect(() => { if (!usesBackendBookings) setPendingChat([]); }, [usesBackendBookings, user?.id]);
+  const shownMessages = usesBackendBookings ? [...liveChatMessages, ...pendingChat] : messages;
 
   const sendChat = async (peer: string, text: string, media?: Partial<ChatMessage>) => {
     const peerUserId = peerUserIdFor(peer);
@@ -1067,6 +1065,18 @@ export default function App() {
       toast.error('This is a sample artisan, so you can’t message them. Real artisans can be messaged.');
       return;
     }
+    const tempId = `pending-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    setPendingChat(prev => [...prev, {
+      id: tempId,
+      senderId: isArtisan ? (user?.id ?? '') : 'c1',
+      recipientId: peer,
+      senderName: 'You',
+      senderRole: isArtisan ? 'professional' : 'customer',
+      message: text,
+      timestamp: new Date().toISOString(),
+      status: 'sending',
+      ...media,
+    }]);
     try {
       let conv = conversationWith(peerUserId);
       if (!conv) {
@@ -1080,11 +1090,18 @@ export default function App() {
       const body: MessageCreate = { conversation_id: conv.id, content: text, message_type: 'text' };
       if (kind === 'image' || kind === 'audio') {
         if (!media?.mediaUrl?.startsWith('data:')) throw new Error('That attachment can’t be sent.');
-        const blob = await (await fetch(media.mediaUrl)).blob();
-        const ext = (blob.type.split('/')[1] || 'bin').split(';')[0];
+        const raw = await (await fetch(media.mediaUrl)).blob();
+        // The upload checks the bare type ("audio/webm"), so drop parameters like ";codecs=opus".
+        const type = raw.type.split(';')[0];
+        const blob = type === raw.type ? raw : new Blob([raw], { type });
+        const ext = type.split('/')[1] || 'bin';
         const url = await uploadChatMedia(blob, `${kind}-${Date.now()}.${ext}`);
         if (kind === 'image') Object.assign(body, { message_type: 'image', media_type: 'image', attachments: [url] });
-        else Object.assign(body, { message_type: 'audio', media_type: 'audio', audio_url: url, ...(media.duration ? { audio_duration: media.duration } : {}) });
+        else Object.assign(body, {
+          message_type: 'audio', media_type: 'audio', audio_url: url,
+          ...(media.duration ? { audio_duration: media.duration } : {}),
+          ...(media.waveform?.length ? { audio_wave_data: media.waveform } : {}),
+        });
       } else if (kind === 'location' && media?.locationData) {
         const { lat, lng, address } = media.locationData;
         Object.assign(body, { message_type: 'location', media_type: 'location', location_data: { lat, lng, address } });
@@ -1092,9 +1109,18 @@ export default function App() {
         throw new Error('That kind of message can’t be sent yet.');
       }
       await sendMessage(body);
-      await loadConversationMessages(conv.id);
+      await loadConversationMessages(conv.id).catch(() => undefined);
+      setPendingChat(prev => prev.filter(m => m.id !== tempId));
     } catch (err) {
       toast.error(errorText(err, 'Could not send your message. Try again.'));
+      setPendingChat(prev => prev.map(m => m.id !== tempId ? m : {
+        ...m,
+        status: 'failed',
+        retry: () => {
+          setPendingChat(p => p.filter(x => x.id !== tempId));
+          sendChat(peer, text, media);
+        },
+      }));
     }
   };
 

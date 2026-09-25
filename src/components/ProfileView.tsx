@@ -1,4 +1,7 @@
 import React, { useState, useRef } from 'react';
+import { NIGERIAN_STATES, isValidNigerianPhone, sanitizeName, toStoredPhone } from '../lib/inputRules';
+import { PhoneField, displayPhone } from './ui/PhoneField';
+import { CustomDropdown } from './CustomDropdown';
 import { Role, Professional, Booking } from '../types';
 import { Language } from '../translations';
 import {
@@ -66,7 +69,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [customerLastName, setCustomerLastName] = useState(() => user?.last_name || '');
   const [customerPhone, setCustomerPhone] = useState(() => user?.phone_number || '');
   const [customerEmail, setCustomerEmail] = useState(() => user?.email || '');
-  const [customerLocation, setCustomerLocation] = useState(() => user?.state ? `${user.state}, Nigeria` : 'Oyo, Nigeria');
+  // The client's location is their account's state (UserUpdate.state); there's no address field.
+  const customerState = user?.state || '';
+  const customerLocation = customerState ? `${customerState}, Nigeria` : 'Location not set';
 
   React.useEffect(() => {
     if (user) {
@@ -74,14 +79,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       setCustomerLastName(user.last_name || '');
       setCustomerPhone(user.phone_number || '');
       setCustomerEmail(user.email || '');
-      if (user.state) {
-        setCustomerLocation(`${user.state}, Nigeria`);
-      }
     }
   }, [user]);
 
   const customerName = `${customerFirstName} ${customerLastName}`.trim() || user?.email?.split('@')[0] || 'User Profile';
-  const customerSince = user?.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'March 2024';
+  const customerSince = user?.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '';
 
   // Edit-mode draft state: the form edits these, NOT the display values above, so nothing
   // appears to "save" until Save Changes actually runs -- and Cancel just discards the draft
@@ -102,7 +104,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     draftLastName !== customerLastName ||
     draftPhone !== customerPhone ||
     draftEmail !== customerEmail ||
-    draftLocation !== customerLocation;
+    draftLocation !== customerState;
 
   const startEditing = () => {
     if (blockIfFrozen()) return;
@@ -110,7 +112,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     setDraftLastName(customerLastName);
     setDraftPhone(customerPhone);
     setDraftEmail(customerEmail);
-    setDraftLocation(customerLocation);
+    setDraftLocation(customerState);
     setIsEditing(true);
   };
 
@@ -169,14 +171,22 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const handleSaveCustomerInfo = async (e: React.FormEvent) => {
     if (blockIfFrozen()) return;
     e.preventDefault();
+    if (!draftFirstName.trim() || !draftLastName.trim()) {
+      toast.error('Enter your first and last name.');
+      return;
+    }
+    if (!isValidNigerianPhone(draftPhone)) {
+      toast.error('Enter a valid Nigerian mobile number, e.g. 802 345 6789.');
+      return;
+    }
     setIsSavingProfile(true);
     try {
       if (user) {
         await updateUser({
-          first_name: draftFirstName,
-          last_name: draftLastName,
-          phone_number: draftPhone,
-          state: draftLocation.split(',')[0].trim() || user.state
+          first_name: draftFirstName.trim(),
+          last_name: draftLastName.trim(),
+          phone_number: toStoredPhone(draftPhone),
+          ...(draftLocation ? { state: draftLocation } : {}),
         });
       }
       setIsEditing(false);
@@ -276,7 +286,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
         <div className="sm:hidden pt-3 flex items-center justify-between gap-3">
           <p className="text-[11px] font-medium text-slate-400">
-            Customer since {customerSince}
+            {customerSince ? `Customer since ${customerSince}` : 'KaziHub customer'}
           </p>
           {!isEditing && (
             <button
@@ -343,7 +353,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <span>{customerLocation}</span>
             </p>
             <p className="text-[11px] font-medium text-slate-400 pt-0.5">
-              Customer since {customerSince}
+              {customerSince ? `Customer since ${customerSince}` : 'KaziHub customer'}
             </p>
           </div>
         </div>
@@ -353,14 +363,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
               <div className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-0.5 sm:gap-2">
                 <span className="font-semibold text-slate-500">Phone Number</span>
-                <span className="font-bold text-slate-900 dark:text-slate-100">{customerPhone}</span>
+                <span className="font-bold text-slate-900 dark:text-slate-100">{displayPhone(customerPhone) || 'Not set'}</span>
               </div>
               <div className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-0.5 sm:gap-2">
                 <span className="font-semibold text-slate-500">Email Address</span>
                 <span className="font-bold text-slate-900 dark:text-slate-100 break-all sm:break-normal">{customerEmail}</span>
               </div>
               <div className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-0.5 sm:gap-2">
-                <span className="font-semibold text-slate-500">Primary Location</span>
+                <span className="font-semibold text-slate-500">State</span>
                 <span className="font-bold text-slate-900 dark:text-slate-100">{customerLocation}</span>
               </div>
             </div>
@@ -372,7 +382,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   <input
                     type="text"
                     value={draftFirstName}
-                    onChange={(e) => setDraftFirstName(e.target.value)}
+                    onChange={(e) => setDraftFirstName(sanitizeName(e.target.value))}
+                    autoComplete="given-name"
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-navy-500/50"
                     required
                   />
@@ -382,7 +393,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   <input
                     type="text"
                     value={draftLastName}
-                    onChange={(e) => setDraftLastName(e.target.value)}
+                    onChange={(e) => setDraftLastName(sanitizeName(e.target.value))}
+                    autoComplete="family-name"
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-navy-500/50"
                     required
                   />
@@ -390,14 +402,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Phone Number</label>
-                <input
-                  type="text"
-                  value={draftPhone}
-                  onChange={(e) => setDraftPhone(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-navy-500/50"
-                  required
-                />
+                <label htmlFor="client-phone" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Phone Number</label>
+                <PhoneField id="client-phone" value={draftPhone} onChange={setDraftPhone} required />
               </div>
 
               <div>
@@ -424,13 +430,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Primary Neighborhood / Address</label>
-                <input
-                  type="text"
+                <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">State</span>
+                <CustomDropdown
                   value={draftLocation}
-                  onChange={(e) => setDraftLocation(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-navy-500/50"
-                  required
+                  onChange={(v) => setDraftLocation(String(v))}
+                  options={NIGERIAN_STATES.map(st => ({ value: st, label: st }))}
+                  placeholder="Choose your state"
+                  asFormField
+                  className="w-full"
+                  buttonClassName="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100"
                 />
               </div>
 

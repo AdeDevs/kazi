@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { DOCUMENT_RULES, DocumentType } from '../../lib/inputRules';
+import { Checkbox } from './Checkbox';
 import {
   X, ShieldCheck, Camera, Upload, CheckCircle2,
   RefreshCw, Lock, ChevronRight,
@@ -32,8 +34,10 @@ export const KYCVerificationModal: React.FC<KYCVerificationModalProps> = ({
   const [consent, setConsent] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [step, setStep] = useState<'intro' | 'document' | 'liveness' | 'verifying' | 'completed'>('intro');
-  const [docType, setDocType] = useState<'nin' | 'drivers_license' | 'voters_card' | 'passport'>('nin');
+  const [docType, setDocType] = useState<DocumentType>('nin');
   const [docNumber, setDocNumber] = useState('');
+  const docRule = DOCUMENT_RULES[docType];
+  const docNumberValid = docRule.isValid(docNumber);
   const [docImage, setDocImage] = useState<string | null>(null);
   const [livenessImage, setLivenessImage] = useState<string | null>(null);
   
@@ -352,7 +356,10 @@ export const KYCVerificationModal: React.FC<KYCVerificationModalProps> = ({
                   type="button"
                   role="radio"
                   aria-checked={docType === doc.id}
-                  onClick={() => setDocType(doc.id as any)}
+                  onClick={() => {
+                    setDocType(doc.id as DocumentType);
+                    setDocNumber(prev => DOCUMENT_RULES[doc.id as DocumentType].sanitize(prev));
+                  }}
                   className={`p-2.5 rounded-xl text-left border text-xs font-bold transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-navy-600 ${
                     docType === doc.id
                       ? 'border-navy-800 bg-navy-50/70 dark:bg-navy-950/60 dark:border-navy-600 text-navy-900 dark:text-navy-200'
@@ -367,16 +374,28 @@ export const KYCVerificationModal: React.FC<KYCVerificationModalProps> = ({
             {/* ID Number Input */}
             <div>
               <label htmlFor="doc-number-input" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Document Identification Number
+                {docRule.label}
               </label>
               <input
                 id="doc-number-input"
                 type="text"
+                inputMode={docRule.inputMode}
+                autoCapitalize="characters"
+                autoCorrect="off"
+                spellCheck={false}
+                maxLength={docRule.maxLength}
                 value={docNumber}
-                onChange={(e) => setDocNumber(e.target.value)}
-                placeholder="e.g. 11-digit NIN or License Number"
-                className="w-full px-3.5 sm:px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-slate-100"
+                onChange={(e) => setDocNumber(docRule.sanitize(e.target.value))}
+                placeholder={docRule.placeholder}
+                aria-invalid={docNumber.length > 0 && !docNumberValid}
+                aria-describedby="doc-number-hint"
+                className={`w-full px-3.5 sm:px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border text-xs font-bold tracking-wider text-slate-900 dark:text-slate-100 ${
+                  docNumber.length > 0 && !docNumberValid ? 'border-rose-400 dark:border-rose-500/70' : 'border-slate-200 dark:border-slate-700'
+                }`}
               />
+              <p id="doc-number-hint" className={`mt-1 text-[11px] ${docNumber.length > 0 && !docNumberValid ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400'}`}>
+                {docRule.hint}
+              </p>
             </div>
 
             {/* File Upload / Camera photo */}
@@ -437,13 +456,10 @@ export const KYCVerificationModal: React.FC<KYCVerificationModalProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  if (!docImage) {
-                    setDocImage('https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=600');
-                  }
-                  setStep('liveness');
-                }}
-                className="px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs shadow-xs cursor-pointer flex items-center gap-2"
+                onClick={() => setStep('liveness')}
+                disabled={!docImage || !docNumberValid}
+                title={!docImage ? 'Add a photo of your ID first' : !docNumberValid ? 'Enter a valid ID number first' : undefined}
+                className="px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs shadow-xs cursor-pointer flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span>Continue to Facial Check</span>
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -655,10 +671,9 @@ export const KYCVerificationModal: React.FC<KYCVerificationModalProps> = ({
               </div>
             )}
 
-            <label className="flex items-start gap-2.5 text-[11px] text-slate-600 dark:text-slate-400 cursor-pointer">
-              <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 w-4 h-4 accent-navy-800 shrink-0" />
-              <span>I agree to KaziHub using my ID photo and selfie to check my identity. They’re stored privately and only seen by the review team.</span>
-            </label>
+            <Checkbox checked={consent} onChange={setConsent} className="text-[11px] text-slate-600 dark:text-slate-400">
+              I agree to KaziHub using my ID photo and selfie to check my identity. They’re stored privately and only seen by the review team.
+            </Checkbox>
 
             {submitError && (
               <p className="text-xs font-bold text-rose-600 dark:text-rose-400" role="alert">{submitError}</p>

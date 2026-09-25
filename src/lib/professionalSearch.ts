@@ -7,7 +7,6 @@ const WEIGHTS = {
   category: 60,
   servicesOrSkills: 40,
   location: 30,
-  tagline: 20,
   bio: 10,
 } as const;
 
@@ -30,7 +29,6 @@ function tokenScore(pro: Professional, token: string): number {
   const ownOfferings = [...(pro.services || []).map(s => s.name), ...(pro.skills || [])];
   if (ownOfferings.some(text => re.test(text))) return WEIGHTS.servicesOrSkills;
   if (re.test(pro.neighborhood || '') || re.test(pro.state || '')) return WEIGHTS.location;
-  if (re.test(pro.tagline || '')) return WEIGHTS.tagline;
   if (re.test(pro.bio || '')) return WEIGHTS.bio;
   return 0;
 }

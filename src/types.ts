@@ -182,8 +182,12 @@ export interface ChatMessage {
   mediaType?: 'text' | 'image' | 'video' | 'audio' | 'location';
   mediaUrl?: string;
   duration?: number; // Voice note duration in seconds
+  /** Voice note loudness shape, 0–1 per bar (audio_wave_data). */
+  waveform?: number[];
   locationData?: { lat: number; lng: number; address: string; landmark?: string };
-  status?: 'sending' | 'sent' | 'delivered' | 'read';
+  status?: 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
+  /** Only on an unsent (failed) message of your own: sends it again. Never persisted. */
+  retry?: () => void;
 }
 
 export interface Gig {

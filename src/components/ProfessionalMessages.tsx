@@ -1,8 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { BubbleMeta, ChatBubble, ChatDaySeparator, formatChatDay } from './chat/ChatBubble';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAccountFrozen } from '../hooks/useAccountFrozen';
-import { DecibelAudioPlayer } from './DecibelAudioPlayer';
+import { VoiceNotePlayer } from './chat/VoiceNotePlayer';
+import { ImageMessage, imageCaption } from './chat/ImageMessage';
+import { PhotoPreviewSheet } from './chat/PhotoPreviewSheet';
+import { AttachmentMenu } from './chat/AttachmentMenu';
+import { ImageLightbox } from './chat/ImageLightbox';
+import { compressImage } from '../lib/imageCompress';
 import { ChatComposer } from './ChatComposer';
 import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
 
@@ -16,8 +22,8 @@ const ARTISAN_QUICK_REPLIES = [
 import { FrozenComposerNotice } from './ui/FrozenNotice';
 import { Professional, Booking, ChatMessage } from '../types';
 import { 
-  Search, Image as ImageIcon, ArrowLeft, 
-  CheckCheck, Check, MessageSquare,
+  Search, ArrowLeft, 
+  MessageSquare,
   X, MapPin, Navigation, 
   ExternalLink } from 'lucide-react';
 
@@ -77,20 +83,9 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
 
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
   const [showAttachmentMenu, setShowAttachmentMenu] = useState<boolean>(false);
-  // Stays mounted ~150ms past showAttachmentMenu going false so the panel can animate its own
-  // exit -- it's a normal in-flow block (not an overlay), so an instant unmount would also yank
-  // its height out from under the composer instead of collapsing smoothly.
-  const [renderAttachmentMenu, setRenderAttachmentMenu] = useState(false);
-  useEffect(() => {
-    if (showAttachmentMenu) {
-      setRenderAttachmentMenu(true);
-      return;
-    }
-    if (!renderAttachmentMenu) return;
-    const timeout = setTimeout(() => setRenderAttachmentMenu(false), 150);
-    return () => clearTimeout(timeout);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showAttachmentMenu]);
+  // The photo picked from the attachment menu, waiting in the preview sheet for a caption / send.
+  const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
+  const [isSendingVoice, setIsSendingVoice] = useState(false);
   const [selectedLightboxImage, setSelectedLightboxImage] = useState<string | null>(null);
   const [isLocating, setIsLocating] = useState<boolean>(false);
 
@@ -181,34 +176,33 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
     setShowAttachmentMenu(false);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0 || !selectedCustomerId || !onSendMessage) return;
+  const handlePickPhoto = async (file: File) => {
+    setShowAttachmentMenu(false);
+    if (!file.type.startsWith('image/')) {
+      toast.error('Choose a photo to send.');
+      return;
+    }
+    setPendingPhoto(await compressImage(file));
+  };
 
-    const file = files[0];
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        onSendMessage(selectedCustomerId, 'Photo attachment', {
-          mediaType: 'image',
-          mediaUrl: event.target.result as string,
-          status: 'sent'
-        });
-        setShowAttachmentMenu(false);
-      }
-    };
-    reader.readAsDataURL(file);
+  const handleSendPhoto = (caption: string) => {
+    if (!pendingPhoto || !selectedCustomerId || !onSendMessage) return;
+    onSendMessage(selectedCustomerId, caption || 'Photo', { mediaType: 'image', mediaUrl: pendingPhoto, status: 'sent' });
+    setPendingPhoto(null);
   };
 
 
 
   const handleStopAndSendVoiceNote = async () => {
+    setIsSendingVoice(true);
     const note = await recorder.stop();
+    setIsSendingVoice(false);
     if (!note || !selectedCustomerId || !onSendMessage) return;
     onSendMessage(selectedCustomerId, 'Voice note', {
       mediaType: 'audio',
       mediaUrl: note.dataUrl,
       duration: note.durationSeconds,
+      waveform: note.peaks,
       status: 'sent'
     });
   };
@@ -354,124 +348,82 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
 
   // Message feed -- identical between mobile and desktop chat views.
   const messagesFeedBody = (
-    <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 no-scrollbar bg-slate-50/50 dark:bg-slate-950/50">
+    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-3 sm:px-5 sm:py-4 space-y-2 no-scrollbar bg-slate-50/40 dark:bg-slate-950/40">
               {activeMessages.map((msg, index) => {
                 const isMe = msg.senderId === professional.id;
-                const showDate = index === 0 || formatDateLabel(msg.timestamp) !== formatDateLabel(activeMessages[index - 1].timestamp);
+                const day = formatChatDay(msg.timestamp);
+                const showDay = index === 0 || day !== formatChatDay(activeMessages[index - 1].timestamp);
+                const isImage = msg.mediaType === 'image' || Boolean(msg.imageUrl);
+                const isMedia = isImage || msg.mediaType === 'audio' || msg.mediaType === 'video' || msg.mediaType === 'location';
 
                 return (
                   <React.Fragment key={msg.id}>
-                    {showDate && (
-                      <div className="flex justify-center my-4">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-white dark:bg-slate-900 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-800">
-                          {formatDateLabel(msg.timestamp)}
-                        </span>
-                      </div>
-                    )}
-                    <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                      <div className={`max-w-[85%] sm:max-w-[75%] rounded-2xl p-3.5 shadow-xs transition-all ${
-                        isMe 
-                          ? 'bg-navy-800 text-white rounded-tr-xs' 
-                          : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-tl-xs'
-                      }`}>
-                        {/* Render Text Message if exists */}
-                        {msg.message && (
-                          <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">{msg.message}</p>
-                        )}
+                    {showDay && <ChatDaySeparator label={day} />}
+                    <ChatBubble
+                      isMine={isMe}
+                      timestamp={msg.timestamp}
+                      status={msg.status}
+                      onRetry={msg.retry}
+                      media={isMedia && msg.mediaType !== 'audio'}
+                      hideFooter={msg.mediaType === 'audio'}
+                      overlayFooter={isImage && !imageCaption(msg.message)}
+                    >
+                      {isImage && (
+                        <ImageMessage
+                          src={msg.mediaUrl || msg.imageUrl || ''}
+                          caption={imageCaption(msg.message)}
+                          sending={msg.status === 'sending'}
+                          onOpen={() => setSelectedLightboxImage(msg.mediaUrl || msg.imageUrl || null)}
+                        />
+                      )}
 
-                        {/* Render Image Attachments */}
-                        {(msg.mediaType === 'image' || msg.imageUrl) && (
-                          <div className="mt-2 space-y-2">
-                            <div 
-                              onClick={() => setSelectedLightboxImage(msg.mediaUrl || msg.imageUrl || null)}
-                              className="relative rounded-2xl overflow-hidden border border-slate-200/50 dark:border-slate-800/50 cursor-pointer group max-w-sm"
-                            >
-                              <img 
-                                src={msg.mediaUrl || msg.imageUrl} 
-                                alt="Attached Media" 
-                                className="w-full h-48 object-cover group-hover:scale-105 transition-transform" 
-                              />
-                              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-bold text-xs gap-1">
-                                <span>Click to Expand</span>
-                              </div>
-                            </div>
+                      {msg.mediaType === 'video' && msg.mediaUrl && (
+                        <video controls className="w-full max-h-52 rounded-xl bg-black">
+                          <source src={msg.mediaUrl} type="video/mp4" />
+                          Your browser does not support video playback.
+                        </video>
+                      )}
+
+                      {msg.mediaType === 'audio' && (
+                        <VoiceNotePlayer
+                          msgId={msg.id}
+                          src={msg.mediaUrl}
+                          duration={msg.duration}
+                          peaks={msg.waveform}
+                          isMine={isMe}
+                          activeId={playingAudioId}
+                          onActiveChange={setPlayingAudioId}
+                          meta={<BubbleMeta isMine={isMe} timestamp={msg.timestamp} status={msg.status} />}
+                        />
+                      )}
+
+                      {msg.mediaType === 'location' && msg.locationData && (
+                        <div className={`p-2.5 rounded-xl space-y-1 ${isMe ? 'bg-navy-950/40 text-white' : 'bg-slate-50 dark:bg-slate-900'}`}>
+                          <div className="flex items-center gap-1.5 font-bold text-xs">
+                            <MapPin className="w-3.5 h-3.5 text-brand-orange-500 shrink-0" />
+                            <span>Service location</span>
                           </div>
-                        )}
+                          <p className="text-xs opacity-90">{msg.locationData.address}</p>
+                          {msg.locationData.landmark && (
+                            <p className="text-[11px] opacity-75">Landmark: {msg.locationData.landmark}</p>
+                          )}
+                          <a
+                            href={`https://maps.google.com/?q=${msg.locationData.lat},${msg.locationData.lng}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className={`inline-flex items-center gap-1 text-xs font-bold mt-0.5 hover:underline ${isMe ? 'text-brand-orange-400' : 'text-navy-700 dark:text-navy-400'}`}
+                          >
+                            <Navigation className="w-3 h-3" />
+                            <span>Get directions</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
+                      )}
 
-                        {/* Render Video Clips */}
-                        {msg.mediaType === 'video' && msg.mediaUrl && (
-                          <div className="mt-2 space-y-2">
-                            <div className="rounded-2xl overflow-hidden border border-slate-200/50 dark:border-slate-800/50 max-w-sm bg-black">
-                              <video 
-                                controls 
-                                className="w-full max-h-52 rounded-2xl"
-                              >
-                                <source src={msg.mediaUrl} type="video/mp4" />
-                                Your browser does not support video playback.
-                              </video>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Render Audio / Voice Note -- the real recording, via the same player as the client's chat */}
-                        {msg.mediaType === 'audio' && (
-                          <div className="mt-2">
-                            <DecibelAudioPlayer
-                              msgId={msg.id}
-                              mediaUrl={msg.mediaUrl}
-                              duration={msg.duration || 5}
-                              isCustomer={isMe}
-                              activePlayingId={playingAudioId}
-                              onPlayStateChange={(id) => setPlayingAudioId(id)}
-                            />
-                          </div>
-                        )}
-
-                        {/* Render Location Card */}
-                        {msg.mediaType === 'location' && msg.locationData && (
-                          <div className="mt-2 p-3 rounded-2xl bg-slate-900 text-white space-y-2.5 max-w-sm border border-slate-800">
-                            <div className="flex items-center justify-between text-xs font-bold text-navy-400">
-                              <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4 text-navy-400" /> GPS Live Pin</span>
-                              <span className="px-2 py-0.5 rounded-md bg-white/10 text-[10px]">Active</span>
-                            </div>
-                            <div className="relative rounded-xl overflow-hidden h-28 bg-slate-800 flex items-center justify-center text-center p-3 border border-slate-700">
-                              <div className="absolute inset-0 opacity-30 bg-[radial-gradient(#2b5f93_1px,transparent_1px)] [background-size:16px_16px]"></div>
-                              <div className="relative z-10 space-y-1">
-                                <MapPin className="w-6 h-6 text-navy-400 mx-auto animate-bounce" />
-                                <p className="font-bold text-xs truncate max-w-[200px]">{msg.locationData.address}</p>
-                                <p className="text-[10px] text-slate-400">{msg.locationData.landmark || 'GPS Coordinates'}</p>
-                              </div>
-                            </div>
-                            <a
-                              href={`https://maps.google.com/?q=${msg.locationData.lat},${msg.locationData.lng}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="w-full py-2 bg-navy-800 hover:bg-navy-900 rounded-xl text-center text-xs font-bold text-white flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                            >
-                              <Navigation className="w-3.5 h-3.5" />
-                              <span>Navigate with Map</span>
-                              <ExternalLink className="w-3 h-3 ml-1" />
-                            </a>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Msg Ticks & Timestamp */}
-                      <div className="flex items-center gap-1.5 mt-1 mx-1">
-                        <span className="text-[10px] font-medium text-slate-400">
-                          {formatTime(msg.timestamp)}
-                        </span>
-                        {isMe && (
-                          msg.status === 'read' ? (
-                            <CheckCheck className="w-3.5 h-3.5 text-emerald-500" />
-                          ) : msg.status === 'delivered' ? (
-                            <CheckCheck className="w-3.5 h-3.5 text-slate-400" />
-                          ) : (
-                            <Check className="w-3.5 h-3.5 text-slate-400" />
-                          )
-                        )}
-                      </div>
-                    </div>
+                      {msg.message && !isMedia && (
+                        <p className="whitespace-pre-wrap break-words">{msg.message}</p>
+                      )}
+                    </ChatBubble>
                   </React.Fragment>
                 );
               })}
@@ -479,76 +431,21 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
     </div>
   );
 
-  // Attachment menu -- identical between mobile and desktop chat views. Stays mounted through its
-  // own exit (see renderAttachmentMenu above); showAttachmentMenu drives the actual transition so
-  // it retargets smoothly if toggled again mid-animation, instead of restarting from a keyframe.
   const attachmentMenuBody = (
-    renderAttachmentMenu && (
-              <div className={`p-4 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 space-y-3 transition-all duration-150 ease-out ${
-                showAttachmentMenu ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
-              }`}>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Share Media Attachment</span>
-                  <button onClick={() => setShowAttachmentMenu(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  {/* Photo Upload */}
-                  <label className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center gap-1.5 cursor-pointer hover:border-navy-800 transition-all shadow-xs">
-                    <ImageIcon className="w-5 h-5 text-navy-800 dark:text-navy-400" />
-                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Upload Photo</span>
-                    <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                  </label>
-
-                  {/* GPS Location Pin */}
-                  <button
-                    type="button"
-                    onClick={handleShareLiveLocation}
-                    disabled={isLocating}
-                    className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center gap-1.5 cursor-pointer hover:border-navy-800 transition-all shadow-xs"
-                  >
-                    <MapPin className={`w-5 h-5 text-navy-800 dark:text-navy-400 ${isLocating ? 'animate-bounce' : ''}`} />
-                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{isLocating ? 'Locating...' : 'Live GPS Pin'}</span>
-                  </button>
-
-                </div>
-              </div>
-    )
+    <AttachmentMenu
+      open={showAttachmentMenu}
+      onClose={() => setShowAttachmentMenu(false)}
+      onPickPhoto={handlePickPhoto}
+      onShareLocation={handleShareLiveLocation}
+      locating={isLocating}
+    />
   );
 
   // Composer / voice recorder -- identical between mobile and desktop chat views. Bottom padding
   // adds the home-indicator safe-area inset on top of the normal spacing (0px on desktop/
   // non-notched phones, so this is a no-op everywhere except a notched phone in portrait).
   const { isFrozen } = useAccountFrozen();
-  const composerBody = recorder.isRecording ? (
-    <div className="px-3 sm:px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] border-t border-rose-500/20 bg-rose-500/5 dark:bg-rose-950/10 flex items-center gap-3">
-      <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-pulse shrink-0" aria-hidden="true" />
-      <span className="font-mono text-xs font-bold text-rose-600 dark:text-rose-400 tabular-nums shrink-0">
-        {Math.floor(recorder.seconds / 60)}:{String(recorder.seconds % 60).padStart(2, '0')}
-      </span>
-      <div className="flex-1 min-w-0 flex items-center gap-[2px] h-7 overflow-hidden" aria-hidden="true">
-        {recorder.waveform.map((h, i) => (
-          <span key={i} className="w-[3px] shrink-0 rounded-full bg-rose-500/70" style={{ height: h }} />
-        ))}
-      </div>
-      <button
-        type="button"
-        onClick={recorder.cancel}
-        className="px-3 h-11 rounded-xl text-rose-600 dark:text-rose-400 text-xs font-bold hover:bg-rose-100/60 dark:hover:bg-rose-950/40 cursor-pointer shrink-0"
-      >
-        Cancel
-      </button>
-      <button
-        type="button"
-        onClick={handleStopAndSendVoiceNote}
-        className="px-4 h-11 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold cursor-pointer shrink-0 active:scale-[0.97] transition-transform"
-      >
-        Send
-      </button>
-    </div>
-  ) : (
+  const composerBody = (
     <>
       {recorder.error && (
         <p className="px-4 py-2 text-[11px] font-bold text-rose-600 dark:text-rose-400 border-t border-slate-200/90 dark:border-slate-800" role="alert">
@@ -559,14 +456,24 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
         value={inputText}
         onChange={setInputText}
         onSend={handleSend}
-        placeholder={activeConversation ? `Message ${activeConversation.customerName.split(' · ')[0]}…` : 'Type your message…'}
+        placeholder={activeConversation ? `Message ${activeConversation.customerName.split(' · ')[0].split(/\s+/)[0]}` : 'Type a message'}
         quickReplies={ARTISAN_QUICK_REPLIES}
         onQuickReply={(text) => {
           if (selectedCustomerId && onSendMessage) onSendMessage(selectedCustomerId, text, { mediaType: 'text', status: 'sent' });
         }}
         onAttach={() => setShowAttachmentMenu(!showAttachmentMenu)}
         attachActive={showAttachmentMenu}
-        onMic={() => { recorder.clearError(); recorder.start(); }}
+        onMic={() => { recorder.clearError(); setShowAttachmentMenu(false); recorder.start(); }}
+        recording={recorder.isRecording ? {
+          seconds: recorder.seconds,
+          levels: recorder.levels,
+          paused: recorder.isPaused,
+          sending: isSendingVoice,
+          onPause: recorder.pause,
+          onResume: recorder.resume,
+          onDiscard: recorder.cancel,
+          onSend: handleStopAndSendVoiceNote,
+        } : null}
         onFocus={() => setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 300)}
       />
     </>
@@ -601,8 +508,12 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
           <div className="-m-3.5 sm:-m-4 -mb-4 h-[calc(var(--vvh,100dvh)-65px)] md:h-[calc(var(--vvh,100dvh)-73px)] flex flex-col bg-white dark:bg-slate-900">
             {renderChatHeader(true)}
             {messagesFeedBody}
-            {attachmentMenuBody}
-            {isFrozen ? <FrozenComposerNotice /> : composerBody}
+            <div className="relative shrink-0">
+              <div className="relative shrink-0">
+                {attachmentMenuBody}
+                {isFrozen ? <FrozenComposerNotice /> : composerBody}
+              </div>
+            </div>
           </div>
         ) : (
           // Conversation list page -- normal page flow (the page itself scrolls), matching the
@@ -675,30 +586,22 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
             <>
               {renderChatHeader(false)}
               {messagesFeedBody}
-              {attachmentMenuBody}
-              {isFrozen ? <FrozenComposerNotice /> : composerBody}
+              <div className="relative shrink-0">
+                {attachmentMenuBody}
+                {isFrozen ? <FrozenComposerNotice /> : composerBody}
+              </div>
             </>
           ) : emptyStateBody}
         </div>
       </div>
 
-      {/* LIGHTBOX FOR ZOOMING IMAGES */}
-      {selectedLightboxImage && (
-        <div
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4"
-          onClick={() => setSelectedLightboxImage(null)}
-        >
-          <div className="relative max-w-2xl max-h-[85vh] overflow-hidden rounded-2xl" onClick={(e) => e.stopPropagation()}>
-            <img src={selectedLightboxImage} alt="Enlarged preview" className="w-full h-full object-contain" />
-            <button
-              onClick={() => setSelectedLightboxImage(null)}
-              className="absolute top-3 right-3 p-2 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      )}
+      <ImageLightbox src={selectedLightboxImage} onClose={() => setSelectedLightboxImage(null)} />
+      <PhotoPreviewSheet
+        photo={pendingPhoto}
+        recipientName={activeConversation?.customerName.split(' · ')[0] || 'client'}
+        onCancel={() => setPendingPhoto(null)}
+        onSend={handleSendPhoto}
+      />
     </>
   );
 };

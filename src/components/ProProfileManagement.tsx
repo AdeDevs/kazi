@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Toggle } from './ui/Toggle';
 import { Professional, ServiceItem, PortfolioItem, ServicePricingType, Category } from '../types';
 import { formatAmount, formatCurrency, localDateISO } from '../utils';
 import { CATEGORIES } from '../mockData';
@@ -17,6 +18,11 @@ import {
   saveMyProfile, createService, updateService, deleteService,
   createPortfolioItem, deletePortfolioItem, uploadPortfolioImage, mapService, mapPortfolioItem,
 } from '../lib/profilesApi';
+import { NIGERIAN_STATES, LIMITS, DURATION_OPTIONS, RESPONSE_TIME_OPTIONS, digitsOnly, isValidNigerianPhone, knownResponseTime, sanitizeName, sanitizePlace, toStoredPhone } from '../lib/inputRules';
+import { PhoneField, displayPhone } from './ui/PhoneField';
+import { ChoiceChips } from './ui/ChoiceChips';
+import { SkillsInput } from './ui/SkillsInput';
+import { SlideTabPanel, useSlidingIndicator, useTabDirection } from './ui/SlidingTabs';
 import { toast } from 'sonner';
 import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
@@ -35,7 +41,7 @@ const PRICING_LABELS: Record<ServicePricingType, string> = {
 
 interface WorkDraft {
   years: number;
-  skills: string;
+  skills: string[];
   responseTime: string;
   pricingType: ServicePricingType;
   basePrice: number;
@@ -44,8 +50,9 @@ interface WorkDraft {
 
 const workDraftFrom = (p: Pick<Professional, 'years_of_experience' | 'skills' | 'response_time' | 'pricing_type' | 'base_price' | 'is_available'>): WorkDraft => ({
   years: p.years_of_experience || 0,
-  skills: (p.skills || []).join(', '),
-  responseTime: p.response_time || '',
+  skills: p.skills || [],
+  // Anything saved before this was a fixed choice (free text) reads as "not set".
+  responseTime: knownResponseTime(p.response_time),
   pricingType: p.pricing_type || 'starting',
   basePrice: p.base_price || 0,
   accepting: p.is_available ?? true,
@@ -74,7 +81,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
   scrollToSection,
   onScrollToSectionHandled
 }) => {
-  const { updateUser, uploadProfilePicture, isDemo } = useAuth();
+  const { user, updateUser, uploadProfilePicture, isDemo } = useAuth();
   const navigate = useNavigate();
   const { blockIfFrozen } = useAccountFrozen();
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
@@ -83,47 +90,18 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
 
   // Basic Pro Info State
   const [name, setName] = useState(activeProfessional.name);
-  const [tagline, setTagline] = useState(activeProfessional.tagline);
   const [bio, setBio] = useState(activeProfessional.bio);
   const [phone, setPhone] = useState(activeProfessional.phone_number);
   const [email, setEmail] = useState(activeProfessional.email);
   const [category, setCategory] = useState<Category>(activeProfessional.category);
-  const [primaryLocation, setPrimaryLocation] = useState(
-    activeProfessional.neighborhood ? `${activeProfessional.neighborhood}, ${activeProfessional.state}` : activeProfessional.state
-  );
+  // Location is two real fields: the account's state (UserUpdate.state, picked from the list) and
+  // the profile's neighbourhood (ProfileUpdate.neighborhood, typed).
+  const [homeState, setHomeState] = useState(user?.state || '');
+  const [neighborhood, setNeighborhood] = useState(activeProfessional.neighborhood || '');
+  const primaryLocation = [neighborhood.trim(), homeState].filter(Boolean).join(', ');
 
   // Services State
-  const [services, setServices] = useState<ServiceItem[]>(
-    activeProfessional.services || [
-      {
-        id: 'srv-pro-1',
-        name: 'Socket & Switch Replacement',
-        category: activeProfessional.category,
-        description: 'Single or multi-gang socket/switch rewiring, earthing check, and circuit safety test.',
-        pricing_type: 'fixed',
-        price: 5000,
-        duration_estimate: '1 hr'
-      },
-      {
-        id: 'srv-pro-2',
-        name: 'Distribution Board (DB Box) Inspection & Overhaul',
-        category: activeProfessional.category,
-        description: 'Breaker replacement, phase balancing, short circuit tracing, and fuse maintenance.',
-        pricing_type: 'fixed',
-        price: 15000,
-        duration_estimate: '2-3 hrs'
-      },
-      {
-        id: 'srv-pro-3',
-        name: 'Inverter & Changeover Installation',
-        category: activeProfessional.category,
-        description: 'Complete battery rack, inverter hookup, and manual/auto changeover switch wiring.',
-        pricing_type: 'starting',
-        price: 25000,
-        duration_estimate: '3-5 hrs'
-      }
-    ]
-  );
+  const [services, setServices] = useState<ServiceItem[]>(activeProfessional.services || []);
 
   // Portfolio State
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>(activeProfessional.portfolio || []);
@@ -135,27 +113,27 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
   // Inline edit mode. The fields are live-bound to the same state the card displays, so a
   // snapshot taken on entry tells us whether anything changed and lets Cancel revert to it.
   const [isEditing, setIsEditing] = useState(false);
-  const [editBaseline, setEditBaseline] = useState({ name, tagline, bio, phone, category, primaryLocation, work });
+  const [editBaseline, setEditBaseline] = useState({ name, bio, phone, category, homeState, neighborhood, work });
   const startEditing = () => {
     if (blockIfFrozen()) return;
-    setEditBaseline({ name, tagline, bio, phone, category, primaryLocation, work });
+    setEditBaseline({ name, bio, phone, category, homeState, neighborhood, work });
     setIsEditing(true);
   };
   const isEditDirty =
     name !== editBaseline.name ||
-    tagline !== editBaseline.tagline ||
     bio !== editBaseline.bio ||
     phone !== editBaseline.phone ||
     category !== editBaseline.category ||
-    primaryLocation !== editBaseline.primaryLocation ||
+    homeState !== editBaseline.homeState ||
+    neighborhood !== editBaseline.neighborhood ||
     JSON.stringify(work) !== JSON.stringify(editBaseline.work);
   const discardEdits = () => {
     setName(editBaseline.name);
-    setTagline(editBaseline.tagline);
     setBio(editBaseline.bio);
     setPhone(editBaseline.phone);
     setCategory(editBaseline.category);
-    setPrimaryLocation(editBaseline.primaryLocation);
+    setHomeState(editBaseline.homeState);
+    setNeighborhood(editBaseline.neighborhood);
     setWork(editBaseline.work);
     setIsEditing(false);
   };
@@ -165,26 +143,26 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
   // The artisan's profile arrives from the backend after mount, so re-seed the form whenever the
   // underlying values change -- but never mid-edit, which would clobber what they're typing.
   const {
-    name: proName, tagline: proTagline, bio: proBio, phone_number: proPhone, email: proEmail,
-    category: proCategory, neighborhood: proNeighborhood, state: proState,
+    name: proName, bio: proBio, phone_number: proPhone, email: proEmail,
+    category: proCategory, neighborhood: proNeighborhood,
     services: proServices, portfolio: proPortfolio,
   } = activeProfessional;
   useEffect(() => {
     if (isEditing) return;
     setName(proName);
-    setTagline(proTagline);
     setBio(proBio);
     setPhone(proPhone);
     setEmail(proEmail);
     setCategory(proCategory);
-    setPrimaryLocation(proNeighborhood ? `${proNeighborhood}, ${proState}` : proState);
+    setNeighborhood(proNeighborhood || '');
+    setHomeState(user?.state || '');
     // eslint-disable-next-line react-hooks/exhaustive-deps -- isEditing only gates, it isn't a trigger
-  }, [proName, proTagline, proBio, proPhone, proEmail, proCategory, proNeighborhood, proState]);
+  }, [proName, proBio, proPhone, proEmail, proCategory, proNeighborhood, user?.state]);
   const {
     years_of_experience: proYears, skills: proSkills, response_time: proResponseTime,
     pricing_type: proPricingType, base_price: proBasePrice, is_available: proAvailable,
   } = activeProfessional;
-  const proSkillsKey = (proSkills || []).join(', ');
+  const proSkillsKey = (proSkills || []).join('\n');
   useEffect(() => {
     if (isEditing) return;
     setWork(workDraftFrom({
@@ -365,59 +343,68 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
     }
   };
 
+  const validateEdits = (): string | null => {
+    if (name.trim().split(/\s+/).length < 2) return 'Enter your first and last name.';
+    if (!category) return 'Choose your trade.';
+    if (!isValidNigerianPhone(phone)) return 'Enter a valid Nigerian mobile number, e.g. 802 345 6789.';
+    if (!homeState) return 'Choose your state.';
+    if (work.pricingType !== 'quote_required' && work.basePrice <= 0) return 'Enter your price, or choose “Quote only”.';
+    return null;
+  };
+
   const handleSaveBasicInfo = async (e: React.FormEvent) => {
     e.preventDefault();
+    const problem = validateEdits();
+    if (problem) {
+      toast.error(problem);
+      return;
+    }
     setIsSavingBasicInfo(true);
     try {
-      // Name/phone live on the user account; tagline/bio/category on the artisan profile.
-      // `primaryLocation` is a free-text "Neighborhood, State" string -- only the neighborhood
-      // half is sent (and only when both halves are present), never a parsed guess at user.state.
+      // Name, phone and state live on the user account; everything else on the artisan profile.
       const [firstName, ...rest] = name.trim().split(/\s+/);
       await updateUser({
-        first_name: firstName || name,
+        first_name: firstName,
         last_name: rest.join(' '),
-        phone_number: phone,
+        phone_number: toStoredPhone(phone),
+        state: homeState,
       });
-      // Untouched, this field shows "State, Nigeria" when no neighbourhood is set -- sending its
-      // first half would save the state as the neighbourhood, so only send an actual edit.
-      const locationEdited = primaryLocation !== editBaseline.primaryLocation;
-      const locationParts = locationEdited ? primaryLocation.split(',').map(s => s.trim()).filter(Boolean) : [];
-      const skills = work.skills.split(',').map(s => s.trim()).filter(Boolean);
       const basePrice = work.pricingType === 'quote_required' ? 0 : work.basePrice;
       await saveMyProfile({
         business_name: name.trim(),
-        tagline,
-        bio,
-        ...(category ? { category } : {}),
-        ...(locationParts.length >= 2 ? { neighborhood: locationParts[0] } : {}),
+        // The trade (category) is the one description of what an artisan does; the old free-text
+        // title duplicated it and often disagreed, so it's cleared rather than left stale.
+        tagline: null,
+        bio: bio.trim(),
+        category,
+        neighborhood: neighborhood.trim() || null,
         years_of_experience: work.years,
-        skills,
-        response_time: work.responseTime.trim() || null,
+        skills: work.skills,
+        response_time: work.responseTime || null,
         pricing_type: work.pricingType,
         base_price: basePrice,
         is_available: work.accepting,
       });
-      if (onUpdateProfile) {
-        onUpdateProfile({
-          name,
-          tagline,
-          bio,
-          phone_number: phone,
-          email,
-          category,
-          state: primaryLocation,
-          years_of_experience: work.years,
-          skills,
-          response_time: work.responseTime.trim() || undefined,
-          pricing_type: work.pricingType,
-          base_price: basePrice,
-          is_available: work.accepting,
-        });
-      }
+      onUpdateProfile?.({
+        name: name.trim(),
+        tagline: '',
+        bio: bio.trim(),
+        phone_number: toStoredPhone(phone),
+        email,
+        category,
+        neighborhood: neighborhood.trim(),
+        state: `${homeState}, Nigeria`,
+        years_of_experience: work.years,
+        skills: work.skills,
+        response_time: work.responseTime || undefined,
+        pricing_type: work.pricingType,
+        base_price: basePrice,
+        is_available: work.accepting,
+      });
       setIsEditing(false);
-      toast.success('Profile updated successfully!');
+      toast.success('Profile saved.');
     } catch (err: any) {
-      toast.error(err.message || 'Failed to update profile.');
+      toast.error(err.message || 'Could not save your profile. Try again.');
     } finally {
       setIsSavingBasicInfo(false);
     }
@@ -600,33 +587,52 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
     onUpdateProfile?.({ is_verified: true, verificationStatus: 'verified' });
   };
 
+  const [section, setSection] = useState<'services' | 'portfolio'>('services');
+  const sectionTabs = useSlidingIndicator(section);
+  const sectionDirection = useTabDirection(section, ['services', 'portfolio'] as const);
   useEffect(() => {
     if (!scrollToSection) return;
-    const el = document.getElementById(scrollToSection);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // A link from elsewhere (e.g. Home's "Manage Portfolio") opens that tab, then scrolls to it.
+    if (scrollToSection === 'work-portfolio') setSection('portfolio');
+    requestAnimationFrame(() => {
+      const el = document.getElementById(scrollToSection);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
     onScrollToSectionHandled?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scrollToSection]);
 
 
-  const detailRows: { label: string; value: string }[] = [
-    { label: 'Tagline', value: tagline || 'Not set' },
-    { label: 'Phone Number', value: phone || 'Not set' },
-    { label: 'Email Address', value: email || 'Not set' },
-    { label: 'Base Location', value: primaryLocation || 'Not set' },
-  ];
-  const workRows: { label: string; value: string }[] = [
-    { label: 'Accepting new jobs', value: work.accepting ? 'Yes' : 'No, paused' },
-    { label: 'Experience', value: work.years ? `${work.years} year${work.years === 1 ? '' : 's'}` : 'Not set' },
-    { label: 'Skills', value: work.skills || 'Not set' },
-    { label: 'Response time', value: work.responseTime || 'Not set' },
+  const shownPhone = displayPhone(phone);
+  const workTiles: { label: string; value: string; muted?: boolean }[] = [
+    { label: 'Availability', value: work.accepting ? 'Taking new jobs' : 'Paused' },
+    { label: 'Experience', value: work.years ? `${work.years} year${work.years === 1 ? '' : 's'}` : 'Not set', muted: !work.years },
+    { label: 'Response time', value: work.responseTime || 'Not set', muted: !work.responseTime },
     {
       label: 'Pricing',
       value: work.pricingType === 'quote_required'
         ? 'Quote only'
         : work.basePrice ? `${PRICING_LABELS[work.pricingType]} ${formatCurrency(work.basePrice)}` : 'Not set',
+      muted: work.pricingType !== 'quote_required' && !work.basePrice,
     },
   ];
+  const editButton = (size: 'sm' | 'md') => !isEditing && (
+    <button
+      type="button"
+      onClick={startEditing}
+      className={`${size === 'sm' ? 'px-3.5 py-2 text-[11px]' : 'px-4 py-2 text-xs'} rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-extrabold shadow-xs transition-[background-color,transform] duration-150 active:scale-[0.97] cursor-pointer flex items-center justify-center gap-1.5 shrink-0`}
+    >
+      <Edit3 className={size === 'sm' ? 'w-3 h-3' : 'w-3.5 h-3.5'} />
+      <span>Edit profile</span>
+    </button>
+  );
+  const workHeading = (
+    <div>
+      <h2 className="text-sm font-black text-slate-900 dark:text-slate-100 leading-tight">Work details</h2>
+      <p className="text-[11px] text-slate-500 dark:text-slate-400">What customers see before they book you.</p>
+    </div>
+  );
+
   return (
     <div className="w-full max-w-none space-y-4 animate-in fade-in">
       {/* Hidden File Input for Avatar */}
@@ -638,18 +644,14 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
         className="hidden"
       />
 
-      {/* 1. PRIMARY ARTISAN IDENTITY CARD. No space-y-* at the top level here: Tailwind's space-y
-          selector only excludes elements carrying the literal `hidden` HTML attribute, not ones
-          hidden via a responsive class like sm:hidden -- so it can't tell the mobile-only and
-          desktop-only blocks below apart from any other sibling, and would add its margin-top
-          onto whichever one happens to render, regardless of breakpoint. Each block below is
-          self-spaced instead. */}
+      {/* 1. IDENTITY + DETAILS + WORK DETAILS -- one card, edited inline. No space-y-* at the top
+          level: Tailwind's space-y can't tell the mobile-only and desktop-only blocks apart, so
+          each block below is self-spaced instead. */}
       <Card className="relative overflow-hidden">
 
-        {/* Mobile: full-bleed hero -- the real photo if there is one, otherwise the same
-            deterministic color + initials UserAvatar falls back to everywhere else, just at
-            full-bleed scale. Tapping anywhere on it still opens the photo picker. */}
-        <div className="sm:hidden -mx-[15px] -mt-[15px] relative h-[220px] rounded-t-2xl overflow-hidden">
+        {/* Mobile: full-bleed hero with the photo (or initials), and the name, title, rating and
+            contact details over it. Tapping the photo opens the picker; the links stay tappable. */}
+        <div className="sm:hidden -mx-[15px] -mt-[15px] relative h-[264px] rounded-t-2xl overflow-hidden">
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
@@ -671,45 +673,47 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
               </div>
             )}
           </button>
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/15 to-transparent pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/35 to-transparent pointer-events-none" />
           {isUploadingAvatar && (
             <div className="absolute inset-0 bg-slate-950/50 flex items-center justify-center pointer-events-none">
               <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
             </div>
           )}
-          <div className="absolute left-4 right-4 bottom-3.5 text-white pointer-events-none">
+          <div className="absolute left-4 right-4 bottom-3.5 text-white pointer-events-none space-y-0.5">
             <div className="flex items-center gap-1.5">
               <h1 className="text-lg font-black tracking-tight truncate">{name}</h1>
               {isVerified && <VerifiedBadge title="Verified" />}
             </div>
-            <p className="text-xs font-semibold text-white/85 flex items-center gap-1">
-              <span>{category}</span>
+            <p className="text-xs font-semibold text-white/80 flex items-center gap-1 truncate">
+              <span className="truncate">{category || 'Trade not set'}</span>
               <span>&middot;</span>
               <span className="text-amber-400">★</span>
-              <span>{activeProfessional.rating_average} ({activeProfessional.review_count})</span>
+              <span className="shrink-0">{activeProfessional.rating_average} ({activeProfessional.review_count})</span>
             </p>
+            {(shownPhone || email) && (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 pt-1 text-[11px] text-white/80">
+                {shownPhone && (
+                  <a href={`tel:${toStoredPhone(phone)}`} className="pointer-events-auto hover:text-white">{shownPhone}</a>
+                )}
+                {email && (
+                  <a href={`mailto:${email}`} className="pointer-events-auto hover:text-white truncate max-w-full">{email}</a>
+                )}
+              </div>
+            )}
           </div>
         </div>
         <div className="sm:hidden pt-3 space-y-3">
-          <div className="flex items-start justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600 dark:text-slate-300 min-w-0">
-            <span className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 px-2.5 py-1 rounded-lg">
-              <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" /> {primaryLocation}
-            </span>
-            <span className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 px-2.5 py-1 rounded-lg font-bold">
-              {activeProfessional.completed_jobs_count ?? 0} jobs
-            </span>
-          </div>
-          {!isEditing && (
-            <button
-              type="button"
-              onClick={startEditing}
-              className="px-3.5 py-1.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-extrabold text-[11px] shadow-xs transition-[background-color,transform] duration-150 active:scale-[0.97] cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
-            >
-              <Edit3 className="w-3 h-3" />
-              <span>Edit</span>
-            </button>
-          )}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600 dark:text-slate-300 min-w-0">
+              <span className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 px-2.5 py-1 rounded-lg min-w-0">
+                <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span className="truncate">{primaryLocation || 'Location not set'}</span>
+              </span>
+              <span className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 px-2.5 py-1 rounded-lg font-bold">
+                {activeProfessional.completed_jobs_count ?? 0} jobs
+              </span>
+            </div>
+            {editButton('sm')}
           </div>
 
           {!isVerified && (
@@ -722,27 +726,9 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
           )}
-
-          {(phone || email) && (
-            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
-              {phone && (
-                <a href={`tel:${phone}`} className="hover:text-navy-800 dark:hover:text-navy-400 transition-colors">
-                  {phone}
-                </a>
-              )}
-              {email && (
-                <a href={`mailto:${email}`} className="hover:text-navy-800 dark:hover:text-navy-400 transition-colors">
-                  {email}
-                </a>
-              )}
-            </div>
-          )}
-
         </div>
 
-        {/* Desktop: banner + overlapping avatar. Banner + avatar overlap live in one wrapper so
-            the internal -mt-11 overlap only has to reckon with its one sibling (the banner right
-            above it), not fight anything else for control of its own margin-top. */}
+        {/* Desktop: banner + overlapping avatar, then the identity lines. */}
         <div className="hidden sm:block">
           <div className="-mx-[15px] -mt-[15px]">
             <div className="h-[104px] rounded-t-2xl bg-gradient-to-br from-navy-900 to-navy-950" />
@@ -769,28 +755,13 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
                   </div>
                 )}
               </button>
-
-              {!isEditing && (
-                <button
-                  type="button"
-                  onClick={startEditing}
-                  className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-extrabold text-xs shadow-xs transition-[background-color,transform] duration-150 active:scale-[0.97] cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
-                >
-                  <Edit3 className="w-3.5 h-3.5" />
-                  <span>Edit</span>
-                </button>
-              )}
+              {editButton('md')}
             </div>
           </div>
 
-          {/* Identity Hierarchy: Name + Verified Badge -> Category & Location -> Phone/Email */}
           <div className="space-y-1.5 mt-4">
-
-            {/* Name & Badge */}
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
-                {name}
-              </h1>
+              <h1 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight">{name}</h1>
               {isVerified ? (
                 <VerifiedBadge label="Verified" />
               ) : (
@@ -805,33 +776,26 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
               )}
             </div>
 
-            {/* Trade Category & Location */}
             <div className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
               <span className="px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold">
-                {category}
+                {category || 'Trade not set'}
               </span>
               <span className="text-slate-300 dark:text-slate-600">•</span>
               <span className="flex items-center gap-1 text-slate-600 dark:text-slate-400">
                 <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                <span>{primaryLocation}</span>
+                <span>{primaryLocation || 'Location not set'}</span>
               </span>
             </div>
 
-            {/* Direct Contact Details */}
             <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400 pt-0.5">
-              {phone && (
-                <a href={`tel:${phone}`} className="hover:text-navy-800 dark:hover:text-navy-400 transition-colors">
-                  {phone}
-                </a>
+              {shownPhone && (
+                <a href={`tel:${toStoredPhone(phone)}`} className="hover:text-navy-800 dark:hover:text-navy-400 transition-colors">{shownPhone}</a>
               )}
               {email && (
-                <a href={`mailto:${email}`} className="hover:text-navy-800 dark:hover:text-navy-400 transition-colors">
-                  {email}
-                </a>
+                <a href={`mailto:${email}`} className="hover:text-navy-800 dark:hover:text-navy-400 transition-colors">{email}</a>
               )}
             </div>
 
-            {/* Key Trust Stats */}
             <div className="flex items-center gap-2.5 text-xs font-bold pt-0.5 text-slate-600 dark:text-slate-300">
               <span className="px-2 py-0.5 rounded-md bg-slate-50 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60">
                 {activeProfessional.completed_jobs_count ?? 0} Jobs Completed
@@ -844,54 +808,63 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
           </div>
         </div>
 
-        {/* Details + work details, read-only or edited inline in the same place */}
-        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+        {/* Bio + work details, read-only or edited inline in the same place */}
+        <div className="mt-4 pt-3.5 border-t border-slate-100 dark:border-slate-800">
           {!isEditing ? (
-            <>
-              {bio && (
-                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed pb-3">{bio}</p>
+            <div className="space-y-3.5">
+              {bio ? (
+                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800/80">{bio}</p>
+              ) : (
+                <button type="button" onClick={startEditing} className="text-xs font-bold text-navy-800 dark:text-navy-400 hover:underline cursor-pointer">
+                  + Add a short bio so customers know what you do best
+                </button>
               )}
-              <dl className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
-                {detailRows.map(row => (
-                  <div key={row.label} className="py-3 flex items-start justify-between gap-4">
-                    <dt className="font-semibold text-slate-500 shrink-0">{row.label}</dt>
-                    <dd className={`text-right font-bold min-w-0 break-words ${row.value === 'Not set' ? 'text-slate-400' : 'text-slate-900 dark:text-slate-100'}`}>{row.value}</dd>
-                  </div>
-                ))}
-              </dl>
-              <p className="pt-4 pb-1 text-[11px] font-bold uppercase tracking-wide text-slate-400 border-t border-slate-100 dark:border-slate-800">Work details</p>
-              <dl className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
-                {workRows.map(row => (
-                  <div key={row.label} className="py-3 flex items-start justify-between gap-4">
-                    <dt className="font-semibold text-slate-500 shrink-0">{row.label}</dt>
-                    <dd className={`text-right font-bold min-w-0 break-words ${row.value === 'Not set' ? 'text-slate-400' : 'text-slate-900 dark:text-slate-100'}`}>{row.value}</dd>
-                  </div>
-                ))}
-              </dl>
-            </>
+
+              <section className="pt-3.5 border-t border-slate-100 dark:border-slate-800 space-y-3" aria-label="Work details">
+                {workHeading}
+                <dl className="grid grid-cols-2 gap-2">
+                  {workTiles.map(tile => (
+                    <div key={tile.label} className="rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-700/60 px-2.5 py-2 min-w-0">
+                      <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{tile.label}</dt>
+                      <dd className={`mt-0.5 text-xs font-bold break-words ${tile.muted ? 'text-slate-400' : 'text-slate-900 dark:text-slate-100'}`}>
+                        {tile.value}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1.5">Skills</p>
+                  {work.skills.length ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {work.skills.map(skill => (
+                        <span key={skill} className="px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-700/60 text-xs font-bold text-slate-800 dark:text-slate-200">{skill}</span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs font-bold text-slate-400">Not set</p>
+                  )}
+                </div>
+              </section>
+            </div>
           ) : (
-            <form onSubmit={handleSaveBasicInfo} className="space-y-3.5">
+            <form onSubmit={handleSaveBasicInfo} className="space-y-3.5" noValidate>
               <div>
                 <label htmlFor="pp-name" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Full Name</label>
-                <input id="pp-name" type="text" value={name} onChange={(e) => setName(e.target.value)} className={fieldClass} required />
-              </div>
-
-              <div>
-                <label htmlFor="pp-tagline" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Tagline / Professional Title</label>
                 <input
-                  id="pp-tagline"
+                  id="pp-name"
                   type="text"
-                  value={tagline}
-                  onChange={(e) => setTagline(e.target.value)}
-                  placeholder="e.g. Master Electrician & Smart Home Wiring Expert"
+                  autoComplete="name"
+                  maxLength={LIMITS.name * 2}
+                  value={name}
+                  onChange={(e) => setName(sanitizeName(e.target.value))}
+                  placeholder="First and last name"
                   className={fieldClass}
-                  required
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <span className="block text-xs font-bold text-slate-700 dark:text-slate-300">Trade Category</span>
+                <div>
+                  <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Trade</span>
                   <CustomDropdown
                     value={category}
                     onChange={(cat) => setCategory(cat as Category)}
@@ -899,152 +872,165 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
                     placeholder="Choose your trade"
                     className="w-full"
                     asFormField
-                    buttonClassName="px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                    buttonClassName="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100"
                   />
                 </div>
                 <div>
-                  <label htmlFor="pp-location" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Base Location / City</label>
-                  <input
-                    id="pp-location"
-                    type="text"
-                    value={primaryLocation}
-                    onChange={(e) => setPrimaryLocation(e.target.value)}
-                    placeholder="e.g. Ikeja, Lagos"
-                    className={fieldClass}
-                    required
-                  />
+                  <label htmlFor="pp-phone" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Phone Number</label>
+                  <PhoneField id="pp-phone" value={phone} onChange={setPhone} required />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="pp-phone" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Phone Number</label>
-                  <input id="pp-phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className={fieldClass} required />
+                  <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">State</span>
+                  <CustomDropdown
+                    value={homeState}
+                    onChange={(v) => setHomeState(String(v))}
+                    options={NIGERIAN_STATES.map(st => ({ value: st, label: st }))}
+                    placeholder="Choose your state"
+                    className="w-full"
+                    asFormField
+                    buttonClassName="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                  />
                 </div>
                 <div>
-                  <label htmlFor="pp-email" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Email Address</label>
+                  <label htmlFor="pp-neighborhood" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Neighbourhood / Area</label>
                   <input
-                    id="pp-email"
-                    type="email"
-                    value={email}
-                    disabled
-                    readOnly
-                    title="Change your email in Account Settings"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400 cursor-not-allowed"
+                    id="pp-neighborhood"
+                    type="text"
+                    maxLength={LIMITS.neighborhood}
+                    value={neighborhood}
+                    onChange={(e) => setNeighborhood(sanitizePlace(e.target.value))}
+                    placeholder="e.g. Ikeja"
+                    className={fieldClass}
                   />
-                  <p className="mt-1 text-[11px] text-slate-400">
-                    Change your email in{' '}
-                    <button
-                      type="button"
-                      onClick={() => navigate('/settings#email')}
-                      className="font-bold text-navy-800 dark:text-navy-400 hover:underline cursor-pointer"
-                    >
-                      Account Settings
-                    </button>
-                    .
-                  </p>
                 </div>
               </div>
 
               <div>
-                <label htmlFor="pp-bio" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Bio / Overview</label>
+                <label htmlFor="pp-email" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Email Address</label>
+                <input
+                  id="pp-email"
+                  type="email"
+                  value={email}
+                  disabled
+                  readOnly
+                  title="Change your email in Account Settings"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400 cursor-not-allowed"
+                />
+                <p className="mt-1 text-[11px] text-slate-400">
+                  Change your email in{' '}
+                  <button
+                    type="button"
+                    onClick={() => navigate('/settings#email')}
+                    className="font-bold text-navy-800 dark:text-navy-400 hover:underline cursor-pointer"
+                  >
+                    Account Settings
+                  </button>
+                  .
+                </p>
+              </div>
+
+              <div>
+                <div className="flex items-baseline justify-between mb-1">
+                  <label htmlFor="pp-bio" className="block text-xs font-bold text-slate-700 dark:text-slate-300">Bio</label>
+                  <span className="text-[10px] text-slate-400">{bio.length}/{LIMITS.bio}</span>
+                </div>
                 <textarea
                   id="pp-bio"
                   rows={3}
+                  maxLength={LIMITS.bio}
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
-                  placeholder="Describe your trade experience, specialties, and standard work guarantee..."
-                  className={fieldClass}
-                  required
-                />
-              </div>
-
-              <p className="pt-3 text-[11px] font-bold uppercase tracking-wide text-slate-400 border-t border-slate-100 dark:border-slate-800">Work details</p>
-
-              <label className="flex items-center justify-between gap-3 py-1 cursor-pointer">
-                <span>
-                  <span className="block text-xs font-bold text-slate-900 dark:text-slate-100">Accepting new jobs</span>
-                  <span className="block text-[11px] text-slate-500">Turn off to pause new requests without freezing your account.</span>
-                </span>
-                <input
-                  type="checkbox"
-                  checked={work.accepting}
-                  onChange={(e) => setWorkField('accepting', e.target.checked)}
-                  className="w-5 h-5 accent-navy-800 shrink-0"
-                />
-              </label>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label htmlFor="pp-years" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Years of Experience</label>
-                  <input
-                    id="pp-years"
-                    type="text"
-                    inputMode="numeric"
-                    value={work.years ? String(work.years) : ''}
-                    onChange={(e) => setWorkField('years', Math.min(80, Number(e.target.value.replace(/\D/g, '')) || 0))}
-                    placeholder="e.g. 5"
-                    className={fieldClass}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="pp-response" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Response Time</label>
-                  <input
-                    id="pp-response"
-                    type="text"
-                    value={work.responseTime}
-                    onChange={(e) => setWorkField('responseTime', e.target.value)}
-                    placeholder="e.g. within 1 hour"
-                    className={fieldClass}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="pp-skills" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Skills</label>
-                <input
-                  id="pp-skills"
-                  type="text"
-                  value={work.skills}
-                  onChange={(e) => setWorkField('skills', e.target.value)}
-                  placeholder="Separate with commas, e.g. Wiring, Inverters, CCTV"
+                  placeholder="Your experience, what you specialise in, and any guarantee you give on your work."
                   className={fieldClass}
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <span className="block text-xs font-bold text-slate-700 dark:text-slate-300">Pricing</span>
-                  <CustomDropdown
-                    value={work.pricingType}
-                    onChange={(v) => setWorkField('pricingType', v as ServicePricingType)}
-                    options={[
-                      { value: 'starting', label: 'Starting from' },
-                      { value: 'fixed', label: 'Fixed price' },
-                      { value: 'quote_required', label: 'Quote only' },
-                    ]}
-                    asFormField
-                    className="w-full"
-                    buttonClassName="px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100"
-                  />
+              <section className="pt-3.5 border-t border-slate-100 dark:border-slate-800 space-y-3.5" aria-label="Work details">
+                {workHeading}
+
+                <div className="flex items-center justify-between gap-3">
+                  <span>
+                    <span className="block text-xs font-bold text-slate-900 dark:text-slate-100">Taking new jobs</span>
+                    <span className="block text-[11px] text-slate-500">Turn off to pause new requests without freezing your account.</span>
+                  </span>
+                  <Toggle checked={work.accepting} onChange={(v) => setWorkField('accepting', v)} label="Taking new jobs" />
                 </div>
-                {work.pricingType !== 'quote_required' && (
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label htmlFor="pp-price" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Price (₦)</label>
+                    <label htmlFor="pp-years" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Years of experience</label>
                     <input
-                      id="pp-price"
+                      id="pp-years"
                       type="text"
                       inputMode="numeric"
-                      value={work.basePrice ? formatAmount(work.basePrice) : ''}
-                      onChange={(e) => setWorkField('basePrice', Number(e.target.value.replace(/\D/g, '')) || 0)}
-                      placeholder="e.g. 5,000"
+                      maxLength={2}
+                      value={work.years ? String(work.years) : ''}
+                      onChange={(e) => setWorkField('years', Math.min(LIMITS.years, Number(digitsOnly(e.target.value, 2)) || 0))}
+                      placeholder="e.g. 5"
                       className={fieldClass}
                     />
                   </div>
-                )}
-              </div>
+                  <div>
+                    <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Pricing</span>
+                    <CustomDropdown
+                      value={work.pricingType}
+                      onChange={(v) => setWorkField('pricingType', v as ServicePricingType)}
+                      options={[
+                        { value: 'starting', label: 'Starting from' },
+                        { value: 'fixed', label: 'Fixed price' },
+                        { value: 'quote_required', label: 'Quote only' },
+                      ]}
+                      asFormField
+                      className="w-full"
+                      buttonClassName="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                    />
+                  </div>
+                </div>
 
-              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+                {work.pricingType !== 'quote_required' && (
+                  <div>
+                    <label htmlFor="pp-price" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      {work.pricingType === 'fixed' ? 'Price' : 'Starting price'}
+                    </label>
+                    <div className="flex rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden bg-slate-50 dark:bg-slate-800 focus-within:ring-2 focus-within:ring-navy-500/50">
+                      <span className="inline-flex items-center px-3 text-xs font-bold text-slate-500 border-r border-slate-200 dark:border-slate-700 select-none">₦</span>
+                      <input
+                        id="pp-price"
+                        type="text"
+                        inputMode="numeric"
+                        value={work.basePrice ? formatAmount(work.basePrice) : ''}
+                        onChange={(e) => setWorkField('basePrice', Math.min(100_000_000, Number(digitsOnly(e.target.value, 9)) || 0))}
+                        placeholder="5,000"
+                        className="w-full min-w-0 px-3 py-2.5 bg-transparent text-xs text-slate-900 dark:text-slate-100 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <span id="pp-response-label" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">How fast you usually reply</span>
+                  <ChoiceChips
+                    value={work.responseTime}
+                    options={RESPONSE_TIME_OPTIONS}
+                    onChange={(v) => setWorkField('responseTime', v)}
+                    label="Response time"
+                    labelledBy="pp-response-label"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-baseline justify-between mb-1">
+                    <label htmlFor="pp-skills" className="block text-xs font-bold text-slate-700 dark:text-slate-300">Skills</label>
+                    <span className="text-[10px] text-slate-400">{work.skills.length}/{LIMITS.skillsCount}</span>
+                  </div>
+                  <SkillsInput id="pp-skills" value={work.skills} onChange={(v) => setWorkField('skills', v)} />
+                </div>
+              </section>
+
+              <div className="flex items-center justify-end gap-2.5 pt-1">
                 <button
                   type="button"
                   onClick={editGuard.requestClose}
@@ -1055,8 +1041,8 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
                 </button>
                 <button
                   type="submit"
-                  disabled={isSavingBasicInfo}
-                  className="px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-extrabold text-xs shadow-xs cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-w-[7.5rem]"
+                  disabled={isSavingBasicInfo || !isEditDirty}
+                  className="px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-extrabold text-xs shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-w-[7.5rem]"
                 >
                   {isSavingBasicInfo && (
                     <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -1082,7 +1068,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
           </div>
           <button
             type="button"
-            onClick={handleOpenAddPortfolio}
+            onClick={() => { setSection('portfolio'); handleOpenAddPortfolio(); }}
             className="px-3 py-1.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs cursor-pointer shrink-0 self-start sm:self-auto"
           >
             Add Portfolio
@@ -1090,6 +1076,41 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
         </div>
       )}
 
+      {/* Services and portfolio share one slot behind tabs, so the page shows one long list at a
+          time instead of stacking both. Verification stays its own card below. */}
+      <div ref={sectionTabs.listRef} role="tablist" aria-label="Profile sections" className="relative grid grid-cols-2 gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/70">
+        <span aria-hidden="true" style={sectionTabs.indicatorStyle} className="tab-indicator top-1 bottom-1 rounded-lg bg-white dark:bg-slate-900 shadow-xs" />
+        {([
+          { id: 'services', label: 'Services', badge: String(services.length) },
+          { id: 'portfolio', label: 'Portfolio', badge: String(portfolio.length) },
+        ] as const).map(tab => {
+          const active = section === tab.id;
+          return (
+            <button
+              key={tab.id}
+              data-tab={tab.id}
+              type="button"
+              role="tab"
+              id={`profile-tab-${tab.id}`}
+              aria-selected={active}
+              aria-controls={`profile-panel-${tab.id}`}
+              onClick={() => setSection(tab.id)}
+              className={`relative min-h-10 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-[color,transform] duration-200 active:scale-[0.97] ${
+                active
+                  ? 'text-slate-900 dark:text-slate-100'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              <span className="truncate">{tab.label}</span>
+              <span className="px-1.5 min-w-[1.25rem] rounded-full text-[10px] leading-4 bg-slate-200/80 dark:bg-slate-700 text-slate-600 dark:text-slate-300">{tab.badge}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <SlideTabPanel panelKey={section} direction={sectionDirection} id={`profile-panel-${section}`} labelledBy={`profile-tab-${section}`}>
+        {section === 'services' && (
+          <>
       {/* 3. SERVICES & PRICING */}
       {/* overflow-hidden: the horizontal-scroll row below bleeds edge-to-edge via a negative
           margin, and its own overflow-x-auto clips as a plain rectangle -- without this, that
@@ -1169,7 +1190,6 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
                       </button>
                     </div>
                   </div>
-
                   <h3 className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-slate-100 leading-snug">{srv.name}</h3>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2">{srv.description}</p>
                 </div>
@@ -1190,7 +1210,10 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
           </div>
         )}
       </Card>
-
+          </>
+        )}
+        {section === 'portfolio' && (
+          <>
       {/* 4. WORK PORTFOLIO */}
       {/* overflow-hidden: same reason as Services & Pricing above -- masks the horizontal-scroll
           row's bleed to the card's own rounded corners instead of a plain rectangular clip. */}
@@ -1280,6 +1303,9 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
           </div>
         )}
       </Card>
+          </>
+        )}
+      </SlideTabPanel>
 
       {/* 5. IDENTITY & KYC VERIFICATION */}
       <Card className="space-y-3.5">
@@ -1454,6 +1480,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
                 <input
                   type="text"
                   value={serviceName}
+                  maxLength={60}
                   onChange={(e) => setServiceName(e.target.value)}
                   placeholder="e.g. Inverter Installation & Wiring"
                   className="w-full px-3.5 sm:px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-slate-100"
@@ -1479,14 +1506,16 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Estimated Duration</label>
-                  <input
-                    type="text"
+                  <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Estimated Duration</span>
+                  <CustomDropdown
                     value={serviceDuration}
-                    onChange={(e) => setServiceDuration(e.target.value)}
-                    placeholder="e.g. 1-2 hrs"
-                    className="w-full px-3.5 sm:px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-slate-100"
-                    required
+                    onChange={(v) => setServiceDuration(String(v))}
+                    // A duration saved before this was a fixed list still shows, so editing doesn't lose it.
+                    options={[...new Set<string>([...DURATION_OPTIONS, ...(serviceDuration ? [serviceDuration] : [])])].map(d => ({ value: d, label: d }))}
+                    placeholder="How long it usually takes"
+                    className="w-full"
+                    asFormField
+                    buttonClassName="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100"
                   />
                 </div>
               </div>
@@ -1510,6 +1539,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
                 <textarea
                   rows={3}
                   value={serviceDesc}
+                  maxLength={300}
                   onChange={(e) => setServiceDesc(e.target.value)}
                   placeholder="What is included in this service..."
                   className="w-full px-3.5 sm:px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-slate-100"
@@ -1576,6 +1606,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
                 <input
                   type="text"
                   value={portTitle}
+                  maxLength={60}
                   onChange={(e) => setPortTitle(e.target.value)}
                   placeholder="e.g. Duplex 5kVA Solar Inverter Setup"
                   className="w-full px-3.5 sm:px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-slate-100"
@@ -1651,6 +1682,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
                 <textarea
                   rows={3}
                   value={portDesc}
+                  maxLength={300}
                   onChange={(e) => setPortDesc(e.target.value)}
                   placeholder="Details of materials installed, challenges resolved..."
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-slate-100"

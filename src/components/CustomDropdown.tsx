@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown, Check } from 'lucide-react';
 
 export interface DropdownOption<T extends string | number> {
@@ -34,42 +35,70 @@ export function CustomDropdown<T extends string | number>({
   asFormField = false
 }: CustomDropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
-  const [alignRight, setAlignRight] = useState(align === 'right');
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  // The menu renders in a portal with fixed positioning, so no ancestor's overflow or height can
+  // clip it (cards with overflow-hidden, scrolling sheets, modals). Placement is measured from the
+  // trigger: below it when there's room, above it otherwise; aligned to whichever side fits.
+  const [placement, setPlacement] = useState<React.CSSProperties | null>(null);
 
   const selectedOption = options.find((opt) => opt.value === value);
 
-  useEffect(() => {
-    if (isOpen && containerRef.current) {
-      if (align === 'right') {
-        setAlignRight(true);
-      } else if (align === 'left') {
-        setAlignRight(false);
-      } else {
-        const rect = containerRef.current.getBoundingClientRect();
-        // If the right edge of container plus menu buffer overflows viewport or is in right 40% of screen
-        const spaceOnRight = window.innerWidth - rect.left;
-        if (spaceOnRight < 240 || rect.right > window.innerWidth - 60) {
-          setAlignRight(true);
-        } else {
-          setAlignRight(false);
-        }
-      }
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      setPlacement(null);
+      return;
     }
-  }, [isOpen, align]);
+    const place = () => {
+      const trigger = containerRef.current;
+      if (!trigger) return;
+      const rect = trigger.getBoundingClientRect();
+      const gap = 6;
+      const menuHeight = Math.min(256, menuRef.current?.scrollHeight ?? 256);
+      const spaceBelow = window.innerHeight - rect.bottom - gap;
+      const openUp = spaceBelow < menuHeight && rect.top > spaceBelow;
+      const minWidth = dropdownWidth === 'w-full' ? Math.max(rect.width, 200) : undefined;
+      const alignRight = align === 'right' || (align === 'auto' && window.innerWidth - rect.left < 240);
+      setPlacement({
+        position: 'fixed',
+        ...(openUp ? { bottom: window.innerHeight - rect.top + gap } : { top: rect.bottom + gap }),
+        ...(alignRight ? { right: Math.max(12, window.innerWidth - rect.right) } : { left: Math.max(12, rect.left) }),
+        minWidth,
+        maxHeight: Math.max(160, Math.min(256, (openUp ? rect.top : spaceBelow) - 12)),
+      });
+    };
+    place();
+    // Scrolling the page (not the menu's own list) closes it, like a native select.
+    const onScroll = (event: Event) => {
+      if (menuRef.current && event.target instanceof Node && menuRef.current.contains(event.target)) return;
+      setIsOpen(false);
+    };
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', onScroll, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', onScroll, true);
+    };
+  }, [isOpen, align, dropdownWidth]);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
+    if (!isOpen) return;
+    const handleClickOutside = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (containerRef.current?.contains(target) || menuRef.current?.contains(target)) return;
+      setIsOpen(false);
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    const handleKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setIsOpen(false); };
+    document.addEventListener('pointerdown', handleClickOutside);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('pointerdown', handleClickOutside);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [isOpen]);
 
   return (
-    <div ref={containerRef} className={`relative block text-left ${isOpen ? 'z-50' : 'z-10'} ${className}`}>
+    <div ref={containerRef} className={`relative block text-left ${className}`}>
       {/* Trigger Button. Sizing/spacing/radius are fixed here, not part of buttonClassName --
           every dropdown in the app should be pixel-identical by construction (same padding, same
           radius, same chevron position) rather than by each caller happening to pass the same
@@ -77,6 +106,8 @@ export function CustomDropdown<T extends string | number>({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
         className={`w-full flex items-center justify-between gap-2.5 sm:gap-3 px-3.5 sm:px-4 py-2.5 rounded-xl border text-xs ${asFormField ? 'font-bold form-field-text' : 'font-semibold'} focus:outline-none focus:ring-2 focus:ring-navy-500/50 dark:focus:ring-navy-400/50 transition-all cursor-pointer shadow-xs ${
           buttonClassName || 'border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 hover:border-navy-500/50 dark:hover:border-navy-400/50'
         }`}
@@ -89,14 +120,21 @@ export function CustomDropdown<T extends string | number>({
       </button>
 
       {/* Dropdown Options Popup */}
-      {isOpen && (
-        <div className={`absolute ${alignRight ? 'right-0 left-auto' : 'left-0 right-auto'} mt-1.5 min-w-[200px] sm:min-w-[220px] max-w-[calc(100vw-24px)] ${dropdownWidth} z-50 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xl p-1.5 space-y-0.5 max-h-64 overflow-y-auto no-scrollbar animate-in fade-in zoom-in-95 duration-100`}>
+      {isOpen && createPortal(
+        <div
+          ref={menuRef}
+          role="listbox"
+          style={placement ?? { position: 'fixed', visibility: 'hidden' }}
+          className={`min-w-[200px] sm:min-w-[220px] max-w-[calc(100vw-24px)] ${dropdownWidth === 'w-full' ? '' : dropdownWidth} z-[80] rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xl p-1.5 space-y-0.5 overflow-y-auto overscroll-contain no-scrollbar animate-in fade-in zoom-in-95 duration-100`}
+        >
           {options.map((opt) => {
             const isSelected = opt.value === value;
             return (
               <button
                 key={String(opt.value)}
                 type="button"
+                role="option"
+                aria-selected={isSelected}
                 onClick={() => {
                   onChange(opt.value);
                   setIsOpen(false);
@@ -115,7 +153,8 @@ export function CustomDropdown<T extends string | number>({
               </button>
             );
           })}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

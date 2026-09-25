@@ -8,9 +8,8 @@ import { ProfessionalNotifications } from './ProfessionalNotifications';
 import { ProfessionalGigs } from './ProfessionalGigs';
 import { VerifiedBadge } from './ui/VerifiedBadge';
 import { SheetDragHandle } from './ui/SheetDragHandle';
-import { UnsavedChangesModal } from './ui/UnsavedChangesModal';
 import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
-import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
+import { SlideTabPanel, useSlidingIndicator, useTabDirection } from './ui/SlidingTabs';
 import {
   Briefcase, Star, CheckCircle2, Clock, MapPin, Image as ImageIcon, Calendar, Layers,
   MessageSquare, ClipboardList, ArrowRight, ArrowLeft, Eye, X, AlertCircle
@@ -68,6 +67,10 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
   // Sub-tabs for home view or jobs page
   const [homeSubTab, setHomeSubTab] = useState<'overview' | 'portfolio'>('overview');
   const [jobsSubTab, setJobsSubTab] = useState<'requests' | 'active' | 'completed'>('requests');
+  const homeTabs = useSlidingIndicator(homeSubTab);
+  const homeDirection = useTabDirection(homeSubTab, ['overview', 'portfolio'] as const);
+  const jobsTabs = useSlidingIndicator(jobsSubTab);
+  const jobsDirection = useTabDirection(jobsSubTab, ['requests', 'active', 'completed'] as const);
   const [activeJobFilter, setActiveJobFilter] = useState<'all' | 'in_progress' | 'completion_submitted' | 'issue_reported'>('all');
   
   // Selected booking for View Details modal. The sheet stays mounted ~200ms past isOpen going
@@ -101,20 +104,10 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
   useEffect(() => {
     if (completingJob) setCachedCompletingJob(completingJob);
   }, [completingJob]);
-  const [completionDesc, setCompletionDesc] = useState('');
-  const [completionPhoto1, setCompletionPhoto1] = useState('');
-  const [completionPhoto2, setCompletionPhoto2] = useState('');
-  const [completionVideoUrl, setCompletionVideoUrl] = useState('');
-  const closeCompletionModal = () => {
-    setCompletingJob(null);
-    setCompletionDesc('');
-    setCompletionPhoto1('');
-    setCompletionPhoto2('');
-    setCompletionVideoUrl('');
-  };
-  const isCompletionFormDirty = Boolean(completionDesc.trim() || completionPhoto1.trim() || completionPhoto2.trim() || completionVideoUrl.trim());
-  const completionGuard = useUnsavedChangesGuard(isCompletionFormDirty, closeCompletionModal);
-  const completionSheet = useSlideUpSheet(Boolean(completingJob), completionGuard.requestClose);
+  // POST /bookings/{id}/submit-completion takes no body, so this is a confirmation, not a form: a
+  // description or proof photos typed here would never reach the backend or the client.
+  const closeCompletionModal = () => setCompletingJob(null);
+  const completionSheet = useSlideUpSheet(Boolean(completingJob), closeCompletionModal);
 
   const [showAllPortfolio, setShowAllPortfolio] = useState(false);
 
@@ -284,18 +277,19 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
         </div>
 
         {/* Page Navigation Tabs (Requests, Active, Completed) */}
-        <div className="flex overflow-x-auto no-scrollbar border-b border-slate-200 dark:border-slate-800 w-full gap-1">
+        <div ref={jobsTabs.listRef} role="tablist" className="relative flex overflow-x-auto no-scrollbar border-b border-slate-200 dark:border-slate-800 w-full gap-1">
+          <span aria-hidden="true" style={jobsTabs.indicatorStyle} className="tab-indicator bottom-0 h-0.5 rounded-full bg-navy-800 dark:bg-navy-400" />
           <button
+            data-tab="requests"
+            role="tab"
+            aria-selected={jobsSubTab === 'requests'}
             onClick={() => setJobsSubTab('requests')}
-            className={`pb-3 pt-2.5 px-5 font-bold text-sm border-b-2 transition-colors cursor-pointer flex items-center gap-2 whitespace-nowrap select-none active:scale-95 shrink-0 ${
+            className={`pb-3 pt-2.5 px-5 font-bold text-sm border-b-2 border-transparent transition-colors cursor-pointer flex items-center gap-2 whitespace-nowrap select-none active:scale-95 shrink-0 ${
               jobsSubTab === 'requests'
-                ? 'border-navy-800 text-navy-800 dark:border-navy-400 dark:text-navy-400'
+                ? 'text-navy-800 dark:text-navy-400'
                 : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-100'
             }`}
           >
-            {jobsSubTab === 'requests' && (
-              <span className="w-1.5 h-1.5 rounded-full bg-brand-orange-500 shrink-0" />
-            )}
             <span>Requests</span>
             {pendingRequests.length > 0 && (
               <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-brand-orange-700 text-white">
@@ -304,16 +298,16 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
             )}
           </button>
           <button
+            data-tab="active"
+            role="tab"
+            aria-selected={jobsSubTab === 'active'}
             onClick={() => setJobsSubTab('active')}
-            className={`pb-3 pt-2.5 px-5 font-bold text-sm border-b-2 transition-colors cursor-pointer flex items-center gap-2 whitespace-nowrap select-none active:scale-95 shrink-0 ${
+            className={`pb-3 pt-2.5 px-5 font-bold text-sm border-b-2 border-transparent transition-colors cursor-pointer flex items-center gap-2 whitespace-nowrap select-none active:scale-95 shrink-0 ${
               jobsSubTab === 'active'
-                ? 'border-navy-800 text-navy-800 dark:border-navy-400 dark:text-navy-400'
+                ? 'text-navy-800 dark:text-navy-400'
                 : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-100'
             }`}
           >
-            {jobsSubTab === 'active' && (
-              <span className="w-1.5 h-1.5 rounded-full bg-brand-orange-500 shrink-0" />
-            )}
             <span>Active</span>
             {activeJobs.length > 0 && (
               <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-navy-800 dark:bg-navy-600 text-white">
@@ -322,16 +316,16 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
             )}
           </button>
           <button
+            data-tab="completed"
+            role="tab"
+            aria-selected={jobsSubTab === 'completed'}
             onClick={() => setJobsSubTab('completed')}
-            className={`pb-3 pt-2.5 px-5 font-bold text-sm border-b-2 transition-colors cursor-pointer flex items-center gap-2 whitespace-nowrap select-none active:scale-95 shrink-0 ${
+            className={`pb-3 pt-2.5 px-5 font-bold text-sm border-b-2 border-transparent transition-colors cursor-pointer flex items-center gap-2 whitespace-nowrap select-none active:scale-95 shrink-0 ${
               jobsSubTab === 'completed'
-                ? 'border-navy-800 text-navy-800 dark:border-navy-400 dark:text-navy-400'
+                ? 'text-navy-800 dark:text-navy-400'
                 : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-100'
             }`}
           >
-            {jobsSubTab === 'completed' && (
-              <span className="w-1.5 h-1.5 rounded-full bg-brand-orange-500 shrink-0" />
-            )}
             <span>Completed</span>
             {completedJobs.length > 0 && (
               <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
@@ -341,6 +335,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
           </button>
         </div>
 
+        <SlideTabPanel panelKey={jobsSubTab} direction={jobsDirection}>
         {/* Requests Tab Content */}
         {jobsSubTab === 'requests' && (
           <div className="space-y-4">
@@ -675,10 +670,6 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                             <button
                               onClick={() => {
                                 setCompletingJob(job);
-                                setCompletionDesc('');
-                                setCompletionPhoto1('');
-                                setCompletionPhoto2('');
-                                setCompletionVideoUrl('');
                               }}
                               className="col-span-2 min-h-11 sm:min-h-0 px-4 py-2 bg-navy-800 hover:bg-navy-900 text-white text-xs font-bold rounded-xl transition-[background-color,transform] duration-150 active:scale-[0.97] cursor-pointer shadow-xs flex items-center justify-center gap-1.5 whitespace-nowrap"
                             >
@@ -780,6 +771,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
             )}
           </div>
         )}
+        </SlideTabPanel>
 
         {/* View Details Modal */}
         {detailsSheet.shouldRender && cachedBookingForDetails && (() => {
@@ -890,7 +882,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
           return (
           <div
             className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4 ${completionSheet.backdropAnimationClasses}`}
-            onClick={completionGuard.requestClose}
+            onClick={closeCompletionModal}
           >
             <div
               className={`bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl max-w-lg w-full p-4 sm:p-5 space-y-4 shadow-2xl border-t sm:border border-slate-200 dark:border-slate-800 relative max-h-[92vh] sm:max-h-[85vh] overflow-y-auto sm:my-8 ${completionSheet.sheetAnimationClasses}`}
@@ -899,139 +891,48 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
             >
               <SheetDragHandle dragHandleProps={completionSheet.dragHandleProps} className="sm:hidden -mx-4 -mt-4 mb-1 px-4 pt-4 pb-3 cursor-grab active:cursor-grabbing touch-none" />
               <button
-                onClick={completionGuard.requestClose}
+                onClick={closeCompletionModal}
                 className="absolute top-6 right-6 p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
 
               <div className="space-y-1.5">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold border border-emerald-500/20">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Job Completion Step
-                </div>
-                <h3 className="text-xl font-black text-slate-900 dark:text-white">
-                  Submit Work Completion Proof
+                <h3 className="text-lg font-black text-slate-900 dark:text-white pr-10">
+                  Mark this job as done?
                 </h3>
-                <p className="text-xs text-slate-500">
-                  Provide a description and mandatory proof photo(s) for "{job.title || job.category}" with {job.customerName}.
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  {job.customerName} will be asked to confirm that “{job.title || job.category}” is finished. They have 4 days to confirm or raise an issue.
                 </p>
               </div>
 
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (!completionDesc.trim()) {
-                    alert('Please provide a short description of the work completed.');
-                    return;
-                  }
-                  if (!completionPhoto1.trim()) {
-                    alert('Please provide at least one completion photo.');
-                    return;
-                  }
-
-                  const photos = [completionPhoto1, completionPhoto2].filter(Boolean);
-
-                  // Update job status to completion-submitted
-                  const updated: Booking = {
-                    ...job,
-                    status: 'completed_by_artisan',
-                    completionDetails: {
-                      description: completionDesc,
-                      photos,
-                      videoUrl: completionVideoUrl || undefined,
-                      submittedAt: new Date().toISOString()
-                    }
-                  };
-
-                  handleOptimisticUpdateStatus(updated.id, 'completed_by_artisan', {
-                    completionDetails: updated.completionDetails
-                  });
-                  setCompletingJob(null);
-                  alert('Job completion proof submitted successfully! Status changed to Completion Submitted.');
-                }}
-                className="space-y-4"
-              >
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Work Completed Description <span className="text-rose-500">*</span>
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={completionDesc}
-                    onChange={(e) => setCompletionDesc(e.target.value)}
-                    placeholder="Summarize the repair work done, parts replaced, or testing results..."
-                    required
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:border-navy-800"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Primary Completion Photo (Image URL) <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="url"
-                    value={completionPhoto1}
-                    onChange={(e) => setCompletionPhoto1(e.target.value)}
-                    placeholder="https://images.unsplash.com/photo-..."
-                    required
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:border-navy-800"
-                  />
-                  <p className="text-[10px] text-slate-400 mt-1">At least 1 completion photo is required.</p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Additional Completion Photo (Optional)
-                  </label>
-                  <input
-                    type="url"
-                    value={completionPhoto2}
-                    onChange={(e) => setCompletionPhoto2(e.target.value)}
-                    placeholder="https://images.unsplash.com/photo-..."
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:border-navy-800"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Optional Video Walkthrough / Demo URL
-                  </label>
-                  <input
-                    type="url"
-                    value={completionVideoUrl}
-                    onChange={(e) => setCompletionVideoUrl(e.target.value)}
-                    placeholder="https://example.com/video-walkthrough.mp4"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:border-navy-800"
-                  />
-                </div>
-
-                <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
-                  <button
-                    type="button"
-                    onClick={completionGuard.requestClose}
-                    className="px-5 py-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-bold text-xs hover:bg-rose-100 dark:hover:bg-rose-950/60 cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-6 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>Submit Completion Proof</span>
-                  </button>
-                </div>
-              </form>
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={closeCompletionModal}
+                  className="px-4 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                >
+                  Not yet
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleOptimisticUpdateStatus(job.id, 'completed_by_artisan', {
+                      completionDetails: { description: '', photos: [], submittedAt: new Date().toISOString() },
+                    });
+                    setCompletingJob(null);
+                  }}
+                  className="px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs shadow-xs transition-[background-color,transform] duration-150 active:scale-[0.97] cursor-pointer flex items-center gap-1.5"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Mark as done</span>
+                </button>
+              </div>
             </div>
           </div>
           );
         })()}
 
-        <UnsavedChangesModal
-          guard={completionGuard}
-          description="This job completion proof hasn't been submitted yet. Closing now will discard what you've entered."
-        />
       </div>
     );
   }
@@ -1179,35 +1080,37 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
       </div>
 
       {/* Home Tabs */}
-      <div className="flex overflow-x-auto no-scrollbar border-b border-slate-200 dark:border-slate-800 w-full gap-1">
+      <div ref={homeTabs.listRef} role="tablist" className="relative flex overflow-x-auto no-scrollbar border-b border-slate-200 dark:border-slate-800 w-full gap-1">
+          <span aria-hidden="true" style={homeTabs.indicatorStyle} className="tab-indicator bottom-0 h-0.5 rounded-full bg-navy-800 dark:bg-navy-400" />
         <button
-          onClick={() => setHomeSubTab('overview')}
-          className={`pb-3 pt-2.5 px-5 font-bold text-sm border-b-2 transition-colors cursor-pointer whitespace-nowrap select-none active:scale-95 shrink-0 flex items-center gap-2 ${
+          data-tab="overview"
+            role="tab"
+            aria-selected={homeSubTab === 'overview'}
+            onClick={() => setHomeSubTab('overview')}
+          className={`pb-3 pt-2.5 px-5 font-bold text-sm border-b-2 border-transparent transition-colors cursor-pointer whitespace-nowrap select-none active:scale-95 shrink-0 flex items-center gap-2 ${
             homeSubTab === 'overview'
-              ? 'border-navy-800 text-navy-800 dark:border-navy-400 dark:text-navy-400 font-extrabold'
+              ? 'text-navy-800 dark:text-navy-400'
               : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-100'
           }`}
         >
-          {homeSubTab === 'overview' && (
-            <span className="w-1.5 h-1.5 rounded-full bg-brand-orange-500 shrink-0" />
-          )}
           <span>Assigned Job Bookings ({activeJobs.length})</span>
         </button>
         <button
-          onClick={() => setHomeSubTab('portfolio')}
-          className={`pb-3 pt-2.5 px-5 font-bold text-sm border-b-2 transition-colors cursor-pointer whitespace-nowrap select-none active:scale-95 shrink-0 flex items-center gap-2 ${
+          data-tab="portfolio"
+            role="tab"
+            aria-selected={homeSubTab === 'portfolio'}
+            onClick={() => setHomeSubTab('portfolio')}
+          className={`pb-3 pt-2.5 px-5 font-bold text-sm border-b-2 border-transparent transition-colors cursor-pointer whitespace-nowrap select-none active:scale-95 shrink-0 flex items-center gap-2 ${
             homeSubTab === 'portfolio'
-              ? 'border-navy-800 text-navy-800 dark:border-navy-400 dark:text-navy-400 font-extrabold'
+              ? 'text-navy-800 dark:text-navy-400'
               : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-100'
           }`}
         >
-          {homeSubTab === 'portfolio' && (
-            <span className="w-1.5 h-1.5 rounded-full bg-brand-orange-500 shrink-0" />
-          )}
           <span>Portfolio Showcase ({professional.portfolio.length})</span>
         </button>
       </div>
 
+      <SlideTabPanel panelKey={homeSubTab} direction={homeDirection}>
       {/* Tab 1: Overview / Bookings */}
       {homeSubTab === 'overview' && (
         <div className="space-y-6">
@@ -1270,10 +1173,6 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                       <button
                         onClick={() => {
                           setCompletingJob(job);
-                          setCompletionDesc('');
-                          setCompletionPhoto1('');
-                          setCompletionPhoto2('');
-                          setCompletionVideoUrl('');
                         }}
                         className="px-4 py-2 bg-navy-800 hover:bg-navy-900 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer w-full sm:w-auto shadow-xs flex items-center justify-center gap-1.5"
                       >
@@ -1372,6 +1271,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
           )}
         </div>
       )}
+      </SlideTabPanel>
 
     </div>
   );

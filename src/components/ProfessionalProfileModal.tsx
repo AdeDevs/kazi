@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { SlideTabPanel, useSlidingIndicator, useTabDirection } from './ui/SlidingTabs';
 import { X, Star, MapPin, Briefcase, Award, MessageSquare, Calendar, Clock } from 'lucide-react';
-import { Professional, ServiceItem, ServicePricingType, Gig } from '../types';
+import { Professional, ServiceItem, Gig } from '../types';
 import { VerifiedBadge } from './ui/VerifiedBadge';
 import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
 import { getGigsByProfessional } from '../lib/mockGigsStore';
@@ -29,6 +30,8 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
   onAddReview
 }) => {
   const [activeTab, setActiveTab] = useState<'about' | 'gigs' | 'reviews'>('about');
+  const profileTabs = useSlidingIndicator(activeTab);
+  const tabDirection = useTabDirection(activeTab, ['about', 'gigs', 'reviews'] as const);
   const [gigs, setGigs] = useState<Gig[]>([]);
   const [showAvatarLightbox, setShowAvatarLightbox] = useState(false);
   const [showWriteReview, setShowWriteReview] = useState(false);
@@ -142,7 +145,6 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
           </div>
         </div>
         <div className="sm:hidden px-4 pt-2 pb-1">
-          <p className="text-slate-500 dark:text-slate-400 font-medium text-xs mb-2 line-clamp-2">{professional.tagline}</p>
           <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-600 dark:text-slate-300">
             <span className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 px-2.5 py-1 rounded-lg">
               <MapPin className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400 shrink-0" /> <span className="truncate max-w-[150px]">{professional.neighborhood}, {professional.state}</span>
@@ -153,9 +155,11 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
             <span className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 px-2.5 py-1 rounded-lg">
               <Award className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400 shrink-0" /> {professional.years_of_experience} yrs exp
             </span>
-            <span className="flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-400 px-2.5 py-1 rounded-lg">
-              <Clock className="w-3.5 h-3.5 shrink-0" /> ~15 min reply
-            </span>
+            {professional.response_time && (
+              <span className="flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-400 px-2.5 py-1 rounded-lg">
+                <Clock className="w-3.5 h-3.5 shrink-0" /> Replies {professional.response_time.toLowerCase()}
+              </span>
+            )}
           </div>
         </div>
 
@@ -205,7 +209,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
               <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100 truncate">{professional.name}</h2>
               {professional.is_verified && <VerifiedBadge label="Verified Pro" />}
             </div>
-            <p className="text-slate-500 dark:text-slate-400 font-medium text-sm mb-3 line-clamp-2">{professional.tagline}</p>
+            <p className="text-slate-500 dark:text-slate-400 font-medium text-sm mb-3">{professional.category}</p>
 
             <div className="flex flex-wrap items-center gap-x-2 gap-y-2 text-xs text-slate-600 dark:text-slate-300">
               <span className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 px-2.5 py-1 rounded-lg">
@@ -222,12 +226,16 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
         </div>
 
         {/* Navigation Tabs - Horizontal Scrollable on Mobile */}
-        <div className="flex shrink-0 border-b border-slate-200 dark:border-slate-800 px-4 sm:px-8 bg-slate-50 dark:bg-slate-950 overflow-x-auto scrollbar-none whitespace-nowrap flex-nowrap">
+        <div ref={profileTabs.listRef} role="tablist" className="relative flex shrink-0 border-b border-slate-200 dark:border-slate-800 px-4 sm:px-8 bg-slate-50 dark:bg-slate-950 overflow-x-auto scrollbar-none whitespace-nowrap flex-nowrap">
+          <span aria-hidden="true" style={profileTabs.indicatorStyle} className="tab-indicator bottom-0 h-0.5 rounded-full bg-navy-800 dark:bg-navy-400" />
           <button
+            data-tab="about"
+            role="tab"
+            aria-selected={activeTab === 'about'}
             onClick={() => setActiveTab('about')}
             className={`py-3.5 sm:py-4 px-4 sm:px-6 text-xs sm:text-sm font-semibold border-b-2 transition-colors cursor-pointer flex-shrink-0 ${
               activeTab === 'about'
-                ? 'border-navy-800 text-navy-800 dark:border-navy-400 dark:text-navy-400'
+                ? 'border-transparent text-navy-800 dark:text-navy-400'
                 : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
             }`}
           >
@@ -235,10 +243,13 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
           </button>
           {gigs.length > 0 && (
             <button
-              onClick={() => setActiveTab('gigs')}
+              data-tab="gigs"
+            role="tab"
+            aria-selected={activeTab === 'gigs'}
+            onClick={() => setActiveTab('gigs')}
               className={`py-3.5 sm:py-4 px-4 sm:px-6 text-xs sm:text-sm font-semibold border-b-2 transition-colors cursor-pointer flex-shrink-0 ${
                 activeTab === 'gigs'
-                  ? 'border-navy-800 text-navy-800 dark:border-navy-400 dark:text-navy-400'
+                  ? 'border-transparent text-navy-800 dark:text-navy-400'
                   : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
               }`}
             >
@@ -246,10 +257,13 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
             </button>
           )}
           <button
+            data-tab="reviews"
+            role="tab"
+            aria-selected={activeTab === 'reviews'}
             onClick={() => setActiveTab('reviews')}
             className={`py-3.5 sm:py-4 px-4 sm:px-6 text-xs sm:text-sm font-semibold border-b-2 transition-colors cursor-pointer flex-shrink-0 ${
               activeTab === 'reviews'
-                ? 'border-navy-800 text-navy-800 dark:border-navy-400 dark:text-navy-400'
+                ? 'border-transparent text-navy-800 dark:text-navy-400'
                 : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
             }`}
           >
@@ -262,8 +276,9 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
             to shrink, which pushed the *whole sheet* taller than its max-h and made the header and
             footer scroll away with it instead of staying pinned. */}
         <div className="p-3.5 sm:p-4 flex-1 min-h-0 overflow-y-auto">
+          <SlideTabPanel panelKey={activeTab} direction={tabDirection}>
           {activeTab === 'about' && (
-            <div className="space-y-6 animate-in fade-in duration-200">
+            <div className="space-y-6">
               <div>
                 <h4 className="text-[10px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Professional Bio</h4>
                 <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">{professional.bio}</p>
@@ -313,18 +328,11 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                   Service Offerings
                 </h4>
 
+                {!professional.services?.length && (
+                  <p className="text-xs text-slate-500">No services listed yet. Message {professional.name.split(' ')[0]} to ask for a quote.</p>
+                )}
                 <div className="space-y-2.5">
-                  {(professional.services && professional.services.length > 0
-                    ? professional.services
-                    : [{
-                        id: `custom-srv-${professional.id}`,
-                        name: `${professional.category} Standard Service`,
-                        category: professional.category,
-                        description: professional.tagline || professional.bio,
-                        pricing_type: 'starting' as ServicePricingType,
-                        duration_estimate: '1-2 hrs'
-                      }]
-                  ).map((svc: ServiceItem) => (
+                  {(professional.services || []).map((svc: ServiceItem) => (
                     <div
                       key={svc.id}
                       className="p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-navy-500/50 transition-colors"
@@ -396,7 +404,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
           )}
 
           {activeTab === 'gigs' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in fade-in duration-200">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {gigs.map((gig) => (
                 <div key={gig.id} className="border border-slate-200 dark:border-slate-800 rounded-2xl bg-white dark:bg-slate-900 shadow-xs p-4 flex flex-col">
                   <span className="self-start px-2.5 py-1 bg-navy-50 dark:bg-navy-900/30 text-navy-700 dark:text-navy-300 rounded-lg text-[10px] font-bold border border-navy-100/50 dark:border-navy-800/50 mb-2">
@@ -599,6 +607,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
               )}
             </div>
           )}
+          </SlideTabPanel>
         </div>
 
         {/* Footer actions -- square on mobile (flush with the bottom-sheet's screen edge),

@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { NIGERIAN_STATES, digitsOnly, formatNigerianPhone, isValidNigerianPhone, nationalDigits, sanitizeName } from '../lib/inputRules';
+import { Checkbox } from './ui/Checkbox';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -9,14 +11,6 @@ import { useDocumentMeta } from '../hooks/useDocumentMeta';
 import { TermsAndPrivacyModal } from './ui/TermsAndPrivacyModal';
 import { CustomDropdown } from './CustomDropdown';
 
-const NIGERIAN_STATES = [
-  'Lagos', 'Abuja (FCT)', 'Oyo', 'Rivers', 'Ogun', 'Kano', 'Kaduna', 
-  'Edo', 'Delta', 'Enugu', 'Anambra', 'Abia', 'Akwa Ibom', 'Ondo', 
-  'Osun', 'Kwara', 'Plateau', 'Imo', 'Cross River', 'Benue', 'Bauchi', 
-  'Borno', 'Adamawa', 'Bayelsa', 'Ebonyi', 'Ekiti', 'Gombe', 'Jigawa', 
-  'Katsina', 'Kebbi', 'Kogi', 'Nasarawa', 'Niger', 'Sokoto', 'Taraba', 
-  'Yobe', 'Zamfara'
-];
 
 export type AuthPageView = 'signin' | 'signup' | 'verify' | 'forgot' | 'reset';
 
@@ -113,7 +107,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   const [nin, setNin] = useState('');
   const [showSignUpPassword, setShowSignUpPassword] = useState(false);
   const [showSignUpConfirmPassword, setShowSignUpConfirmPassword] = useState(false);
-  const [termsAccepted, setTermsAccepted] = useState(true);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   // Terms & Privacy Modal State
@@ -160,23 +154,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   };
 
   // Nigerian phone number input formatter
-  const formatNigerianPhone = (val: string) => {
-    let digits = val.replace(/[^0-9]/g, '');
-    if (digits.startsWith('234')) {
-      digits = digits.slice(3);
-    }
-    if (digits.startsWith('0')) {
-      digits = digits.slice(1);
-    }
-    digits = digits.slice(0, 10);
-    if (digits.length <= 3) return digits;
-    if (digits.length <= 6) return `${digits.slice(0, 3)} ${digits.slice(3)}`;
-    return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
-  };
 
   const emailIsValid = (em: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em.trim());
-  const phoneDigits = phoneNumber.replace(/[^0-9]/g, '');
-  const phoneIsValid = phoneDigits.length >= 10;
+  const phoneDigits = nationalDigits(phoneNumber);
+  const phoneIsValid = isValidNigerianPhone(phoneNumber);
   const passwordIsValid = password.length >= 6;
   const passwordsMatch = password === confirmPassword;
   const ninIsValid = !nin || nin.length === 11;
@@ -628,7 +609,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                         placeholder="Babatunde"
                         value={firstName}
                         onBlur={() => markTouched('firstName')}
-                        onChange={(e) => setFirstName(e.target.value)}
+                        onChange={(e) => setFirstName(sanitizeName(e.target.value))}
                         className={`w-full px-3.5 py-2.5 rounded-lg border bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 ${
                           touched.firstName && !firstName.trim()
                             ? 'border-rose-400 focus:ring-rose-200'
@@ -650,7 +631,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                         placeholder="Adebayo"
                         value={lastName}
                         onBlur={() => markTouched('lastName')}
-                        onChange={(e) => setLastName(e.target.value)}
+                        onChange={(e) => setLastName(sanitizeName(e.target.value))}
                         className={`w-full px-3.5 py-2.5 rounded-lg border bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 ${
                           touched.lastName && !lastName.trim()
                             ? 'border-rose-400 focus:ring-rose-200'
@@ -813,6 +794,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                           type="tel"
                           required
                           placeholder="802 345 6789"
+                          inputMode="tel"
+                          autoComplete="tel-national"
                           value={phoneNumber}
                           onBlur={() => markTouched('phone')}
                           onChange={(e) => setPhoneNumber(formatNigerianPhone(e.target.value))}
@@ -820,7 +803,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                         />
                       </div>
                       {touched.phone && (!phoneNumber || !phoneIsValid) && (
-                        <p className="text-[11px] text-rose-500 mt-1">Enter a valid 10-digit number</p>
+                        <p className="text-[11px] text-rose-500 mt-1">Enter a valid Nigerian mobile number, e.g. 802 345 6789</p>
                       )}
                     </div>
 
@@ -867,16 +850,13 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                   </div>
 
                   {/* Terms */}
-                  <div className="flex items-start gap-2 pt-1">
-                    <input
-                      type="checkbox"
-                      id="signup-terms"
-                      required
-                      checked={termsAccepted}
-                      onChange={(e) => setTermsAccepted(e.target.checked)}
-                      className="mt-0.5 rounded border-zinc-300 text-navy-900 focus:ring-navy-900 cursor-pointer"
-                    />
-                    <label htmlFor="signup-terms" className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                  <Checkbox
+                    id="signup-terms"
+                    required
+                    checked={termsAccepted}
+                    onChange={setTermsAccepted}
+                    className="pt-1 text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed"
+                  >
                       I agree to the KaziHub{' '}
                       <button
                         type="button"
@@ -886,8 +866,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                         Terms of Service
                       </button>
                       .
-                    </label>
-                  </div>
+                  </Checkbox>
 
                   <button
                     type="submit"
@@ -1092,8 +1071,12 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                       type="text"
                       required
                       placeholder="Enter 5-digit code"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      maxLength={5}
+                      pattern="\d{5}"
                       value={resetOtp}
-                      onChange={(e) => setResetOtp(e.target.value)}
+                      onChange={(e) => setResetOtp(digitsOnly(e.target.value, 5))}
                       className="w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100"
                     />
                   </div>

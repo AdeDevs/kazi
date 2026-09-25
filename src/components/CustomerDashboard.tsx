@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { Toggle } from './ui/Toggle';
 import { Professional, Category, Booking, ChatMessage } from '../types';
 import { CATEGORIES, CATEGORY_SERVICES_CATALOG } from '../mockData';
 import { CustomDropdown } from './CustomDropdown';
@@ -514,15 +515,10 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
 
             {/* Availability Toggle */}
             <div className="space-y-1.5 flex flex-col justify-end">
-              <label className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-navy-600 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={searchAvailabilityOnly}
-                  onChange={(e) => setSearchAvailabilityOnly(e.target.checked)}
-                  className="w-4 h-4 accent-navy-800 rounded cursor-pointer"
-                />
+              <div className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
                 <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Available Now Only</span>
-              </label>
+                <Toggle checked={searchAvailabilityOnly} onChange={setSearchAvailabilityOnly} label="Available now only" />
+              </div>
             </div>
 
           </div>
@@ -572,7 +568,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     </button>
                   </div>
 
-                  <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2">{pro.tagline}</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2">{pro.bio}</p>
 
                   <div className="flex items-center gap-2 text-[10px]">
                     <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/60 dark:border-slate-700/60 font-bold">{pro.years_of_experience} Yrs Exp</span>
@@ -1060,16 +1056,18 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
                           <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 font-bold text-xs">
                             <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                            <span>Work Completed — Please Review Proof</span>
+                            <span>Work marked as done. Please check and confirm</span>
                           </div>
                           <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
                             Deadline: <strong className="text-slate-700 dark:text-slate-300">{deadlineDate.toLocaleDateString()}</strong>
                           </span>
                         </div>
 
-                        <div className="text-xs text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900/90 p-3 rounded-lg border border-emerald-100 dark:border-emerald-900/40 space-y-1">
-                          <div><strong className="text-slate-900 dark:text-white">Summary:</strong> {b.completionDetails.description}</div>
-                        </div>
+                        {b.completionDetails.description && (
+                          <div className="text-xs text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900/90 p-3 rounded-lg border border-emerald-100 dark:border-emerald-900/40 space-y-1">
+                            <div><strong className="text-slate-900 dark:text-white">Summary:</strong> {b.completionDetails.description}</div>
+                          </div>
+                        )}
 
                         {b.completionDetails.photos && b.completionDetails.photos.length > 0 && (
                           <div className="flex items-center gap-2 flex-wrap pt-1">
@@ -1567,7 +1565,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
         const matches = 
           pro.name.toLowerCase().includes(savedSearchTrimmed) ||
           pro.category.toLowerCase().includes(savedSearchTrimmed) ||
-          pro.tagline.toLowerCase().includes(savedSearchTrimmed) ||
+          (pro.bio || '').toLowerCase().includes(savedSearchTrimmed) ||
           pro.neighborhood.toLowerCase().includes(savedSearchTrimmed) ||
           pro.bio.toLowerCase().includes(savedSearchTrimmed);
         if (!matches) return false;
@@ -1718,7 +1716,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     <Bookmark className="w-4 h-4 fill-white" />
                   </button>
                 </div>
-                <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2">{pro.tagline}</p>
+                <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2">{pro.bio}</p>
                 <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
                   <span className="font-bold text-amber-500 flex items-center gap-1">
                     <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
@@ -2270,7 +2268,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
 
                   {/* Tagline / Specialty */}
                   <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2 leading-relaxed">
-                    {pro.tagline}
+                    {pro.bio}
                   </p>
 
                   {/* Single Clean Trust & Rating Strip */}
