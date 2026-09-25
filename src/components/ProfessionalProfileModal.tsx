@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { HeroScrim } from './ui/HeroScrim';
 import { SlideTabPanel, useSlidingIndicator, useTabDirection } from './ui/SlidingTabs';
 import { X, Star, MapPin, Briefcase, Award, MessageSquare, Calendar, Clock } from 'lucide-react';
 import { Professional, ServiceItem, Gig } from '../types';
@@ -113,7 +114,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
               className="w-full h-full object-cover"
             />
           </button>
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/25 to-transparent pointer-events-none" />
+          <HeroScrim src={professional.profile_picture} />
           <button
             onClick={onClose}
             className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer z-10"

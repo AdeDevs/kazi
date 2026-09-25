@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { HeroScrim } from './ui/HeroScrim';
 import { NIGERIAN_STATES, isValidNigerianPhone, sanitizeName, toStoredPhone } from '../lib/inputRules';
 import { PhoneField, displayPhone } from './ui/PhoneField';
 import { CustomDropdown } from './CustomDropdown';
@@ -270,7 +271,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               </div>
             )}
           </button>
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/15 to-transparent pointer-events-none" />
+          <HeroScrim src={hasHeroPhoto ? currentAvatar : undefined} />
           {isUploadingAvatar && (
             <div className="absolute inset-0 bg-slate-950/50 flex items-center justify-center pointer-events-none">
               <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />

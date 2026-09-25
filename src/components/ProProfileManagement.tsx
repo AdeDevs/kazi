@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { HeroScrim } from './ui/HeroScrim';
 import { Toggle } from './ui/Toggle';
 import { Professional, ServiceItem, PortfolioItem, ServicePricingType, Category } from '../types';
 import { formatAmount, formatCurrency, localDateISO } from '../utils';
@@ -673,7 +674,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
               </div>
             )}
           </button>
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/35 to-transparent pointer-events-none" />
+          <HeroScrim src={hasHeroPhoto ? activeProfessional.profile_picture : undefined} />
           {isUploadingAvatar && (
             <div className="absolute inset-0 bg-slate-950/50 flex items-center justify-center pointer-events-none">
               <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
