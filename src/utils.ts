@@ -15,17 +15,54 @@ export function isBookingArchived(booking: Booking): boolean {
   return Date.now() - new Date(referenceTime).getTime() >= ARCHIVE_AFTER_MS;
 }
 
-/**
- * Formats a numeric price into Naira currency format using the en-NG locale.
- * E.g., 5000 => '₦5,000'
- */
+// Every monetary value in the UI goes through these two -- never `₦${n}` or n.toLocaleString(),
+// which follow the viewer's browser locale (a German phone would show "150.000").
+const NAIRA = new Intl.NumberFormat('en-NG', {
+  style: 'currency',
+  currency: 'NGN',
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0
+});
+const GROUPED_NUMBER = new Intl.NumberFormat('en-NG', { maximumFractionDigits: 0 });
+
+/** "just now", "5 min ago", "3 hrs ago", "2 days ago". */
+export function timeAgo(value: string | Date): string {
+  // Backend timestamps are UTC but sent without a timezone suffix.
+  const date = typeof value === 'string' && !/[zZ]|[+-]\d\d:?\d\d$/.test(value) ? new Date(`${value}Z`) : new Date(value);
+  const minutes = Math.round((Date.now() - date.getTime()) / 60000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} hr${hours === 1 ? '' : 's'} ago`;
+  const days = Math.round(hours / 24);
+  return `${days} day${days === 1 ? '' : 's'} ago`;
+}
+
+/** When a booking is for. Bookings from the backend carry no date or time slot yet. */
+export function bookingWhen(booking: Pick<Booking, 'scheduled_date' | 'timeSlot'>): string {
+  if (!booking.scheduled_date) return 'Date not set yet';
+  return booking.timeSlot ? `${booking.scheduled_date} (${booking.timeSlot})` : booking.scheduled_date;
+}
+
+/** "Name (phone)", leaving out the phone when there isn't one -- the backend never shares it. */
+export function customerLabel(booking: Pick<Booking, 'customerName' | 'customerPhone'>): string {
+  return booking.customerPhone ? `${booking.customerName} (${booking.customerPhone})` : booking.customerName;
+}
+
+/** Today as YYYY-MM-DD in the device's own timezone (toISOString() would give the UTC date). */
+export function localDateISO(date: Date = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+/** 5000 => '₦5,000' */
 export function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-NG', {
-    style: 'currency',
-    currency: 'NGN',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(value);
+  return NAIRA.format(value);
+}
+
+/** 150000 => '150,000' -- for amounts shown without the ₦ sign, such as a price input's value. */
+export function formatAmount(value: number): string {
+  return GROUPED_NUMBER.format(value);
 }
 
 /**

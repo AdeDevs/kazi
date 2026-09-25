@@ -1,9 +1,5 @@
-import React, { useState } from 'react';
-import {
-  ShieldCheck, FileText, ArrowLeft, Lock, Scale,
-  HelpCircle, CheckCircle2, ChevronRight, AlertTriangle,
-  Building2, ExternalLink
-} from 'lucide-react';
+import React from 'react';
+import { FileText } from 'lucide-react';
 import { SheetDragHandle } from './SheetDragHandle';
 import { useSlideUpSheet } from '../../hooks/useSlideUpSheet';
 

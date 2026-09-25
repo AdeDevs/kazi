@@ -13,6 +13,9 @@ export interface AuthUser {
   is_admin: boolean;
   is_active: boolean;
   is_email_verified: boolean;
+  /** Frozen via /auth/freeze-me: hidden from search and blocked from new bookings, login still works. */
+  is_paused?: boolean;
+  two_factor_enabled?: boolean;
   profile_picture?: string | null;
   theme: string;
   preferred_language: string;
@@ -56,6 +59,26 @@ export interface TokenPair {
 export interface TwoFactorSetupResponse {
   secret: string;
   otpauth_url: string;
+}
+
+export interface ChangePasswordSchema {
+  current_password: string;
+  new_password: string;
+}
+
+export interface RequestEmailChangeSchema {
+  new_email: string;
+  current_password: string;
+}
+
+/** One active (non-revoked, unexpired) refresh-token session, from GET /auth/sessions. */
+export interface SessionInfo {
+  id: string;
+  user_agent?: string | null;
+  ip_address?: string | null;
+  created_at: string;
+  last_used_at: string;
+  expires_at: string;
 }
 
 export interface VerifyEmailSchema {

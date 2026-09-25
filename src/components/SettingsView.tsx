@@ -1,14 +1,19 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Role, Professional, Booking } from '../types';
 import { Language } from '../translations';
 import {
-  Key, Download, Snowflake, Trash2, X, Laptop
+  Key, Download, Snowflake, Trash2, X
 } from 'lucide-react';
+import { changePassword, freezeMe, unfreezeMe } from '../lib/authApi';
+import { getMyProfile, saveMyProfile } from '../lib/profilesApi';
+import { useAccountFrozen } from '../hooks/useAccountFrozen';
+import { EmailSection, EMAIL_SECTION_ID } from './settings/EmailSection';
+import { SessionsSection } from './settings/SessionsSection';
 import { ConfirmationModal } from './ui/ConfirmationModal';
 import { UnsavedChangesModal } from './ui/UnsavedChangesModal';
 import { SheetDragHandle } from './ui/SheetDragHandle';
 import { Card, CardHeader } from './ui/Card';
-import { CustomDropdown } from './CustomDropdown';
 import { useAuth } from '../context/AuthContext';
 import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
@@ -46,28 +51,64 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   currentLanguage = 'English (Nigeria)',
   onLanguageChange
 }) => {
-  const { user, deleteAccount } = useAuth();
+  const { user, deleteAccount, isDemo, refreshUser } = useAuth();
+  const { blockIfFrozen } = useAccountFrozen();
+  const location = useLocation();
+
+  // "Change email" links elsewhere (e.g. the profile editor) land here as /settings#email.
+  // Delayed past App's route-change scroll restore, which would otherwise snap back to the top.
+  useEffect(() => {
+    if (location.hash !== '#email') return;
+    const timer = setTimeout(() => {
+      document.getElementById(EMAIL_SECTION_ID)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [location.hash]);
   // Security States - 2FA and biometric login aren't backed by a real auth backend yet,
   // so these are shown disabled/"Coming soon" rather than falsely reporting them as active.
   const [twoFactorAuth] = useState(false);
-  const [sessionTimeout, setSessionTimeout] = useState('30_days');
   const [biometricLogin] = useState(false);
 
   // Privacy States
-  const [phoneVisibility, setPhoneVisibility] = useState<'after_escrow' | 'verified_only' | 'hidden'>('after_escrow');
-  const [neighborhoodSharing, setNeighborhoodSharing] = useState(true);
-  const [publicReviews, setPublicReviews] = useState(true);
-  const [marketingAnalytics, setMarketingAnalytics] = useState(false);
+  // null = unavailable (customer/demo) or still loading from GET /profiles/me.
+  const [shareNeighborhood, setShareNeighborhood] = useState<boolean | null>(null);
+  const [isSavingNeighborhood, setIsSavingNeighborhood] = useState(false);
+  useEffect(() => {
+    if (isDemo || user?.role !== 'artisan') return;
+    let cancelled = false;
+    getMyProfile()
+      .then(p => { if (!cancelled) setShareNeighborhood(p.share_neighborhood ?? true); })
+      .catch(() => { if (!cancelled) setShareNeighborhood(null); });
+    return () => { cancelled = true; };
+  }, [isDemo, user?.role]);
+
+  const handleToggleNeighborhood = async (next: boolean) => {
+    if (blockIfFrozen()) return;
+    setIsSavingNeighborhood(true);
+    try {
+      const saved = await saveMyProfile({ share_neighborhood: next });
+      setShareNeighborhood(saved.share_neighborhood ?? next);
+      toast.success(next ? 'Your neighbourhood is shown on your profile.' : 'Your neighbourhood is now hidden from your profile.');
+    } catch (err: any) {
+      toast.error(err?.message || 'Could not update this setting. Try again.');
+    } finally {
+      setIsSavingNeighborhood(false);
+    }
+  };
 
   // Account Lifecycle States
-  const [isFrozen, setIsFrozen] = useState(false);
+  const isFrozen = Boolean(user?.is_paused);
+  // Verified against the live API: freezing a client account changes nothing the backend enforces
+  // (bookings, messages and edits all still go through) and nothing reports the state back, so
+  // offering it to customers would be a toggle that does nothing. Artisans' freeze is real.
+  const canFreeze = user?.role === 'artisan';
+  const [isFreezeBusy, setIsFreezeBusy] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   // Modals & Confirmation States
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [show2FAModal, setShow2FAModal] = useState(false);
   const [showFreezeModal, setShowFreezeModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showExportModal, setShowExportModal] = useState(false);
 
   // Password Form States
   const [currentPassword, setCurrentPassword] = useState('');
@@ -83,26 +124,46 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const passwordGuard = useUnsavedChangesGuard(isPasswordFormDirty, closePasswordModal);
   const passwordSheet = useSlideUpSheet(showPasswordModal, passwordGuard.requestClose);
 
-  const handlePasswordSubmit = (e: React.FormEvent) => {
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentPassword || !newPassword || !confirmPassword) {
-      toast.error('Please fill out all password fields.');
+      toast.error('Fill in all three password fields.');
       return;
     }
     if (newPassword !== confirmPassword) {
-      toast.error('New passwords do not match.');
+      toast.error('The new passwords don’t match. Type the same password in both fields.');
       return;
     }
-    toast.success('Password updated successfully!');
-    setShowPasswordModal(false);
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
+    if (newPassword === currentPassword) {
+      toast.error('Your new password must be different from your current one.');
+      return;
+    }
+    setIsChangingPassword(true);
+    try {
+      await changePassword({ current_password: currentPassword, new_password: newPassword });
+      // The backend ends every session on a password change (verified live), this one included.
+      toast.success('Password changed. Sign in again with your new password.');
+      closePasswordModal();
+      onLogout?.();
+    } catch (err: any) {
+      toast.error(err?.message || 'Could not change your password. Try again.');
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
-  const handleFreezeToggle = () => {
-    setIsFrozen(prev => !prev);
-    toast.success(isFrozen ? 'Account successfully unfrozen!' : 'Account frozen. Activity has been paused.');
+  const handleFreezeToggle = async () => {
+    const wasFrozen = isFrozen;
+    setIsFreezeBusy(true);
+    try {
+      await (wasFrozen ? unfreezeMe() : freezeMe());
+      await refreshUser();
+      toast.success(wasFrozen ? 'Account unfrozen. Bookings are open again.' : 'Account frozen. New bookings are paused.');
+    } catch (err: any) {
+      toast.error(err?.message || `Could not ${wasFrozen ? 'unfreeze' : 'freeze'} your account. Try again.`);
+    } finally {
+      setIsFreezeBusy(false);
+    }
   };
 
   const handlePermanentDelete = async () => {
@@ -164,6 +225,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         onLanguageChange={onLanguageChange}
       />
 
+      <EmailSection />
+
       {/* 1. SECURITY & AUTHENTICATION */}
       <Card className="space-y-4">
         <CardHeader
@@ -181,7 +244,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <button
               type="button"
               onClick={() => setShowPasswordModal(true)}
-              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs transition-colors cursor-pointer shrink-0 flex items-center gap-1.5 border border-slate-200 dark:border-slate-700"
+              disabled={isDemo}
+              className="disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs transition-colors cursor-pointer shrink-0 flex items-center gap-1.5 border border-slate-200 dark:border-slate-700"
             >
               <Key className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400" />
               <span>Change Password</span>
@@ -233,31 +297,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       </Card>
 
       {/* 2. ACTIVE SESSIONS & DEVICE MANAGEMENT */}
-      <Card className="space-y-4">
-        <CardHeader
-          title="Active Devices & Sessions"
-          subtitle="Devices currently logged into this KaziHub account."
-        />
-
-        <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
-          <div className="py-3 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-400">
-                <Laptop className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                  This device <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-extrabold">Current session</span>
-                </p>
-                <p className="text-[11px] text-slate-500">Active right now</p>
-              </div>
-            </div>
-          </div>
-          <p className="py-3 text-slate-400 dark:text-slate-500 text-[11px]">
-            Multi-device session tracking isn't available yet - this will show every device signed into your account once it's wired up.
-          </p>
-        </div>
-      </Card>
+      <SessionsSection onSignedOutEverywhere={() => onLogout?.()} />
 
       {/* 3. PRIVACY & DATA VISIBILITY */}
       <Card className="space-y-4">
@@ -267,39 +307,37 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         />
 
         <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
-          {/* Phone Visibility */}
+          {/* Phone Visibility -- the backend never exposes phone numbers publicly yet, and its docs say
+              enforcing this rule needs booking context that isn't built, so it's shown as unavailable. */}
           <div className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <p className="font-bold text-slate-900 dark:text-slate-100">Telephone Number Privacy</p>
-              <p className="text-[11px] text-slate-500">Determine when verified artisans can view your direct telephone number.</p>
+              <p className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                Telephone Number Privacy
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-extrabold">Coming soon</span>
+              </p>
+              <p className="text-[11px] text-slate-500">Your number isn’t shown on your public profile. Choosing when it’s shared after a booking is coming soon.</p>
             </div>
-            <CustomDropdown
-              value={phoneVisibility}
-              onChange={(val) => {
-                setPhoneVisibility(val);
-                toast.success('Privacy rule updated.');
-              }}
-              options={[
-                { value: 'after_escrow', label: 'Only After Escrow Payment (Recommended)' },
-                { value: 'verified_only', label: 'Any Verified Artisan in Chat' },
-                { value: 'hidden', label: 'Keep Hidden (In-App Calling Only)' }
-              ]}
-              className="shrink-0"
-              buttonClassName="py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200"
-            />
           </div>
 
-          {/* Neighborhood Sharing */}
-          <div className="py-3.5 flex items-center justify-between">
+          {/* Neighborhood Sharing -- real for artisans (PUT /profiles/me share_neighborhood; verified the
+              public listing and profile then omit neighbourhood, address and coordinates). */}
+          <div className="py-3.5 flex items-center justify-between gap-3">
             <div>
               <p className="font-bold text-slate-900 dark:text-slate-100">Share Approximate Neighborhood</p>
-              <p className="text-[11px] text-slate-500">Display your general district (e.g. Bodija) to get accurate proximity quotes.</p>
+              <p className="text-[11px] text-slate-500">
+                {isDemo
+                  ? 'Not available on the demo account.'
+                  : user?.role !== 'artisan'
+                    ? 'Not available for customer accounts yet.'
+                    : 'Show your neighbourhood on your public profile so nearby customers can find you. When off, your neighbourhood, address and map location are hidden.'}
+              </p>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
+            <label className={`relative inline-flex items-center shrink-0 ${shareNeighborhood === null ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
               <input
                 type="checkbox"
-                checked={neighborhoodSharing}
-                onChange={(e) => setNeighborhoodSharing(e.target.checked)}
+                checked={Boolean(shareNeighborhood)}
+                disabled={shareNeighborhood === null || isSavingNeighborhood}
+                onChange={(e) => handleToggleNeighborhood(e.target.checked)}
                 aria-label="Share approximate neighborhood"
                 className="sr-only peer"
               />
@@ -355,22 +393,27 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 )}
               </div>
               <p className="text-[11px] text-slate-500 max-w-lg leading-relaxed">
-                {isFrozen
-                  ? 'Your account is currently paused. Unfreeze at any time to resume booking verified artisans.'
-                  : 'Temporarily pause your account activity without losing your past bookings, reviews, or saved addresses.'}
+                {isDemo
+                  ? 'Not available on the demo account.'
+                  : !canFreeze
+                    ? 'Freezing isn’t available for customer accounts yet.'
+                  : isFrozen
+                    ? 'Your account is paused: new bookings are blocked and any artisan profile is hidden from search. Unfreeze any time.'
+                    : 'Pause new bookings and hide any artisan profile from search, without deleting anything. You can still sign in.'}
               </p>
             </div>
             <button
               type="button"
               onClick={() => setShowFreezeModal(true)}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
+              disabled={isDemo || isFreezeBusy || !canFreeze}
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed ${
                 isFrozen
                   ? 'bg-navy-800 hover:bg-navy-900 text-white shadow-xs'
                   : 'bg-navy-800/10 text-navy-800 dark:text-navy-300 hover:bg-navy-800/20 border border-navy-800/30'
               }`}
             >
               <Snowflake className="w-3.5 h-3.5" />
-              <span>{isFrozen ? 'Unfreeze Account' : 'Freeze Account'}</span>
+              <span>{isFreezeBusy ? 'Saving…' : isFrozen ? 'Unfreeze Account' : 'Freeze Account'}</span>
             </button>
           </div>
 
@@ -404,16 +447,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         title={isFrozen ? 'Unfreeze Your Account?' : 'Freeze Your Account?'}
         description={
           isFrozen
-            ? 'Unfreezing will restore full booking, messaging, and quote request features immediately.'
-            : 'Freezing hides your profile from new artisans while preserving your historical bookings and ratings.'
+            ? 'New bookings open again straight away, and any artisan profile shows in search again.'
+            : 'New bookings are blocked and any artisan profile drops out of search until you unfreeze.'
         }
         confirmText={isFrozen ? 'Yes, Unfreeze Account' : 'Yes, Freeze Account'}
         cancelText="Keep as is"
         type="freeze"
-        details={[
-          'All past transaction receipts stay saved and safe',
-          'You can reactivate your account at any moment by signing in'
-        ]}
+        details={
+          isFrozen
+            ? undefined
+            : ['You can still sign in while frozen', 'Unfreeze any time from this page']
+        }
       />
 
       {/* DELETE ACCOUNT CONFIRMATION MODAL */}
@@ -454,7 +498,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
             <div className="space-y-1">
               <h3 className="text-xl font-black text-slate-900 dark:text-slate-100">Update Password</h3>
-              <p className="text-xs text-slate-500">Ensure your password has at least 8 characters with numbers and symbols.</p>
+              <p className="text-xs text-slate-500">Use at least 6 characters, the same rule as when you signed up.</p>
             </div>
 
             <form onSubmit={handlePasswordSubmit} className="space-y-3">
@@ -475,6 +519,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
+                  minLength={6}
+                  autoComplete="new-password"
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100"
                   required
                 />
@@ -491,19 +537,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 />
               </div>
 
-              <div className="flex justify-end gap-2.5 pt-2">
+              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={passwordGuard.requestClose}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer text-center"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs shadow-xs"
+                  disabled={isChangingPassword}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs shadow-xs cursor-pointer text-center disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  Update Password
+                  {isChangingPassword ? 'Updating…' : 'Update Password'}
                 </button>
               </div>
             </form>

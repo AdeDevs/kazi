@@ -2,11 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
-  Lock, Mail, User, Phone, MapPin, 
-  ArrowRight, CheckCircle2, AlertCircle, RefreshCw, 
-  Eye, EyeOff, Sparkles, Briefcase, ChevronRight, 
-  Check, Star, Zap, Users
-} from 'lucide-react';
+  Lock, Mail, User, ArrowRight, CheckCircle2, AlertCircle, RefreshCw, 
+  Eye, EyeOff, Briefcase, ChevronRight } from 'lucide-react';
 import { UserCreate } from '../types/auth';
 import { useDocumentMeta } from '../hooks/useDocumentMeta';
 import { TermsAndPrivacyModal } from './ui/TermsAndPrivacyModal';

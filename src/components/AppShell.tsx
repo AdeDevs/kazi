@@ -4,13 +4,14 @@ import { Role, Professional, Booking, Category } from '../types';
 import { Language, t } from '../translations';
 import { 
   Wrench, Home, Calendar, MessageSquare,
-  Moon, Sun, Bell, Settings, Briefcase, LogOut, User,
-  Menu, Search, X, LogIn, ShieldCheck, CheckCircle2, Layers
+  Moon, Sun, Bell, Settings, Briefcase, LogOut, Menu, X, LogIn, Layers
 } from 'lucide-react';
 import { ConfirmationModal } from './ui/ConfirmationModal';
 import { UserAvatar } from './ui/UserAvatar';
 import { useAuth } from '../context/AuthContext';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
+import { useAccountFrozen } from '../hooks/useAccountFrozen';
+import { FrozenBanner } from './ui/FrozenNotice';
 
 interface AppShellProps {
   currentRole: Role;
@@ -56,7 +57,8 @@ export const AppShell: React.FC<AppShellProps> = ({
   currentLanguage = 'English (Nigeria)' as Language,
   children
 }) => {
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
+  const { isFrozen } = useAccountFrozen();
   const navigate = useNavigate();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   useBodyScrollLock(isMobileSidebarOpen);
@@ -67,14 +69,14 @@ export const AppShell: React.FC<AppShellProps> = ({
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
   }, [activeTab]);
 
-  const pendingCount = bookings.filter(b => b.status === 'pending').length;
-  const activeCount = bookings.filter(b => b.status === 'accepted' || b.status === 'in_progress').length;
+  // Bookings waiting on *this* user -- a new request or quote request for an artisan; a quote to
+  // answer or finished work to confirm for a client.
+  const pendingCount = bookings.filter(b => b.status === 'pending' || b.status === 'quote_requested').length;
+  const clientActionCount = bookings.filter(b => b.status === 'quote_sent' || b.status === 'completed_by_artisan').length;
 
   const displayName = user 
     ? `${user.first_name} ${user.last_name}`.trim() || user.email.split('@')[0]
     : (currentRole === 'customer' ? 'Guest Client' : 'Guest Artisan');
-
-  const displayLocation = user?.state ? `${user.state}, Nigeria` : (currentRole === 'customer' ? 'Oyo, Nigeria' : activeProfessional.state);
 
   const handleLogoutAction = () => {
     if (onLogout) onLogout();
@@ -86,7 +88,7 @@ export const AppShell: React.FC<AppShellProps> = ({
       { id: 'jobs', label: t('nav.jobs', currentLanguage), icon: Briefcase, badge: pendingCount > 0 ? pendingCount : undefined },
       { id: 'gigs', label: 'My Gigs', icon: Layers }
     ] : []),
-    ...(currentRole === 'customer' ? [{ id: 'bookings', label: t('nav.bookings', currentLanguage), icon: Calendar }] : []),
+    ...(currentRole === 'customer' ? [{ id: 'bookings', label: t('nav.bookings', currentLanguage), icon: Calendar, badge: clientActionCount > 0 ? clientActionCount : undefined }] : []),
     { id: 'messages', label: t('nav.messages', currentLanguage), icon: MessageSquare, badge: unreadCount > 0 ? unreadCount : undefined },
     { id: 'notifications', label: t('nav.notifications', currentLanguage), icon: Bell, badge: notificationsUnreadCount > 0 ? notificationsUnreadCount : undefined },
     { id: 'settings', label: 'Account Settings', icon: Settings },
@@ -440,6 +442,7 @@ export const AppShell: React.FC<AppShellProps> = ({
 
           {/* Main Feed Content Area */}
           <div className="p-3.5 sm:p-4 pb-4 w-full max-w-none flex-1">
+            {isFrozen && activeTab !== 'settings' && <div className="mb-3.5 sm:mb-4"><FrozenBanner /></div>}
             {children}
           </div>
         </main>

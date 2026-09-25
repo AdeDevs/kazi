@@ -52,6 +52,8 @@ export interface PortfolioItem {
 
 export interface Professional {
   id: string;
+  /** The artisan's user id -- what bookings and conversations reference. Unset on the sample artisans. */
+  user_id?: string;
   name: string;
   profile_picture: string;
   category: Category;
@@ -78,6 +80,10 @@ export interface Professional {
   serviceRadiusKm?: number;
   certifications?: { id: string; name: string; issuer: string; year: string; verified: boolean }[];
   verificationStatus?: 'verified' | 'pending' | 'unverified';
+  /** From the backend profile (free text, e.g. "within 1 hour"); unset when the artisan hasn't given one. */
+  response_time?: string;
+  /** Backend `is_available`: accepting new work (separate from freezing). Unset on sample artisans. */
+  is_available?: boolean;
 }
 
 // Matches the backend's BookingType enum exactly.
@@ -178,15 +184,6 @@ export interface ChatMessage {
   duration?: number; // Voice note duration in seconds
   locationData?: { lat: number; lng: number; address: string; landmark?: string };
   status?: 'sending' | 'sent' | 'delivered' | 'read';
-}
-
-export interface AIDiagnosisResult {
-  summary: string;
-  category: Category;
-  severity: 'Low' | 'Medium' | 'High' | 'Emergency';
-  estimatedCostRange: string;
-  recommendedAction: string;
-  questionsToAsk: string[];
 }
 
 export interface Gig {

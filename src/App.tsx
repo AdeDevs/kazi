@@ -1,24 +1,41 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom';
-import { Role, Professional, Booking, ChatMessage, Category, PortfolioItem, Notification } from './types';
-import { Language } from './translations';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom';
+import { Role, Professional, Booking, ChatMessage, Category, Notification, Gig } from './types';
+import { Language, languageFromStored } from './translations';
 import { INITIAL_PROFESSIONALS, INITIAL_BOOKINGS, INITIAL_MESSAGES } from './mockData';
 import { AppShell } from './components/AppShell';
 import { ProfessionalProfileModal } from './components/ProfessionalProfileModal';
-import { BookingModal } from './components/BookingModal';
+import { BookingModal, BookingRequestInput } from './components/BookingModal';
+import { BuyGigSheet } from './components/BuyGigSheet';
 import { AuthPage } from './components/AuthPage';
 import { RequireAuth } from './components/RequireAuth';
 import { RequireRole } from './components/RequireRole';
 import { NotFound } from './components/NotFound';
 import { useAuth } from './context/AuthContext';
 import { useDocumentMeta } from './hooks/useDocumentMeta';
+import { useAccountFrozen, FROZEN_ACTION_MESSAGE } from './hooks/useAccountFrozen';
+import {
+  BookingResponse, listMyBookings, bookingFromResponse, createFixedBooking, requestQuote, acceptBooking, declineBooking,
+  sendQuote, submitCompletion, acceptQuote, confirmCompletion, disputeBooking, cancelBooking, createReview, buyGig,
+} from './lib/bookingsApi';
+import { NotificationResponse, listNotifications, markNotificationRead, markAllNotificationsRead } from './lib/notificationsApi';
+import { listFavorites, saveFavorite, removeFavorite } from './lib/favoritesApi';
+import {
+  ConversationResponse, MessageResponse, MessageCreate, listConversations, listMessages, startConversation, sendMessage,
+  markConversationRead, uploadChatMedia,
+} from './lib/chatApi';
+import { timeAgo } from './utils';
 import { useVisualViewportHeight } from './hooks/useVisualViewportHeight';
-import { Toaster } from 'sonner';
+import { Toaster, toast } from 'sonner';
 import { CustomerDashboard } from './components/CustomerDashboard';
 import { ProfessionalDashboard } from './components/ProfessionalDashboard';
 import { ProfileView } from './components/ProfileView';
 import { SettingsView } from './components/SettingsView';
 import { ProfessionalNotifications } from './components/ProfessionalNotifications';
+import {
+  listProfiles, getProfileDetail, getMyProfile, saveMyProfile, listMyServices, listMyPortfolio,
+  isBrowsableProfile, profileToProfessional, profileDetailToProfessional, mapService, mapPortfolioItem,
+} from './lib/profilesApi';
 
 // Tiny route-param readers, kept at module scope (not defined inside App()) so they're stable
 // component identities across renders -- defining them inline inside App() would make React treat
@@ -47,14 +64,20 @@ function ProfessionalJobsRoute(props: React.ComponentProps<typeof ProfessionalDa
   return <ProfessionalDashboard {...props} initialBookingId={bookingId} />;
 }
 function ProfessionalGigsNewRoute(props: React.ComponentProps<typeof ProfessionalDashboard>) {
-  return <ProfessionalDashboard {...props} forceGigCreation />;
+  const { view } = useParams();
+  if (view && view !== 'new') return <NotFound />;
+  return <ProfessionalDashboard {...props} forceGigCreation={view === 'new'} />;
 }
 function ProfessionalProfileRoute({
   professionals,
+  onNeedDetail,
   ...rest
-}: { professionals: Professional[] } & Omit<React.ComponentProps<typeof ProfessionalProfileModal>, 'professional' | 'isOpen' | 'onClose'> & { onClose: () => void }) {
+}: { professionals: Professional[]; onNeedDetail: (id: string) => void } & Omit<React.ComponentProps<typeof ProfessionalProfileModal>, 'professional' | 'isOpen' | 'onClose'> & { onClose: () => void }) {
   const { id } = useParams();
   const professional = professionals.find(p => p.id === id) || null;
+  useEffect(() => {
+    if (id) onNeedDetail(id);
+  }, [id, onNeedDetail]);
   useDocumentMeta(
     professional ? professional.name : 'Professional not found',
     professional ? `${professional.name} -- ${professional.category} on KaziHub. ${professional.tagline || ''}`.trim() : 'This professional profile could not be found.'
@@ -63,8 +86,12 @@ function ProfessionalProfileRoute({
   return <ProfessionalProfileModal {...rest} professional={professional} isOpen />;
 }
 
+const errorTextOf = (err: unknown, fallback: string) => (err instanceof Error && err.message ? err.message : fallback);
+
 export default function App() {
-  const { user, logout: authLogout } = useAuth();
+  const { user, logout: authLogout, isDemo } = useAuth();
+  // Frozen accounts can't take state-changing actions; every mutating handler below checks this first.
+  const { isFrozen, blockIfFrozen } = useAccountFrozen();
   const navigate = useNavigate();
   const location = useLocation();
   useVisualViewportHeight();
@@ -76,6 +103,11 @@ export default function App() {
   // as the other role" tool is wanted later, it belongs in a separate dev-only mechanism, not here.
   const currentRole: Role = user?.role === 'artisan' ? 'professional' : 'customer';
 
+  // Set when an overlay route (the artisan profile) was opened over another page, which keeps
+  // rendering underneath -- so scroll bookkeeping and the main <Routes> follow that page instead.
+  const backgroundLocation = (location.state as { backgroundLocation?: ReturnType<typeof useLocation> } | null)?.backgroundLocation;
+  // Keyed by page, not full URL: /jobs and /jobs/:id are the same page with a sheet open.
+  const pageKey = '/' + (backgroundLocation || location).pathname.split('/')[1];
   const pageScrollPositionsRef = useRef<Record<string, number>>({});
   // Set alongside a tab change by any CTA that names a specific section (e.g. "Manage Portfolio")
   // so the target page can scroll straight to that section instead of just landing at its top.
@@ -84,18 +116,18 @@ export default function App() {
   // Continuously record scroll position for the current page
   useEffect(() => {
     const handleScroll = () => {
-      pageScrollPositionsRef.current[location.pathname] = window.scrollY || document.documentElement.scrollTop || 0;
+      pageScrollPositionsRef.current[pageKey] = window.scrollY || document.documentElement.scrollTop || 0;
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
-  }, [location.pathname]);
+  }, [pageKey]);
 
   // Restore or reset scroll position when the route changes
   useEffect(() => {
-    const targetY = pageScrollPositionsRef.current[location.pathname] ?? 0;
+    const targetY = pageScrollPositionsRef.current[pageKey] ?? 0;
 
     // Immediately reset/restore window scroll
     window.scrollTo({ top: targetY, left: 0, behavior: 'instant' });
@@ -113,7 +145,7 @@ export default function App() {
       cancelAnimationFrame(rafId);
       clearTimeout(timerId);
     };
-  }, [location.pathname]);
+  }, [pageKey]);
 
   // Every tab is a clean, resource-oriented URL with no role segment -- the role decides what's
   // *allowed* (see RequireRole in the route tree below), never what the URL looks like. "explore"
@@ -180,7 +212,52 @@ export default function App() {
     return INITIAL_PROFESSIONALS;
   });
 
-  const [bookings, setBookings] = useState<Booking[]>(() => {
+  // Real, signed-up artisans fetched from the backend's public directory (GET /profiles/), merged
+  // alongside the mock roster above so the catalog looks fuller while few real artisans have
+  // signed up. Not persisted to localStorage -- this is server-owned data, refetched each load.
+  const [realProfessionals, setRealProfessionals] = useState<Professional[]>([]);
+  const realProfileIdsRef = useRef<Set<string>>(new Set());
+  const fetchedDetailIdsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    let cancelled = false;
+    // No available_only: the backend reads it as "online right now" (availability_status), not
+    // "accepting work", so it hides every artisan who isn't currently online.
+    listProfiles({ limit: 100 })
+      .then(({ data }) => {
+        if (cancelled) return;
+        const mapped = data.filter(isBrowsableProfile).map(profileToProfessional);
+        realProfileIdsRef.current = new Set(mapped.map(p => p.id));
+        setRealProfessionals(mapped);
+      })
+      .catch((err) => console.warn('Could not load professionals from the server', err));
+    return () => { cancelled = true; };
+  }, []);
+
+  // The directory listing above has no services/portfolio/reviews -- fetched lazily the first time
+  // a real artisan's profile is actually opened (see ProfessionalProfileRoute's onNeedDetail).
+  const loadProfessionalDetail = useCallback((id: string) => {
+    if (!realProfileIdsRef.current.has(id) || fetchedDetailIdsRef.current.has(id)) return;
+    fetchedDetailIdsRef.current.add(id);
+    getProfileDetail(id)
+      .then((detail) => {
+        const enriched = profileDetailToProfessional(detail);
+        setRealProfessionals(prev => prev.map(p => (p.id === id ? enriched : p)));
+      })
+      .catch((err) => {
+        fetchedDetailIdsRef.current.delete(id);
+        console.warn('Could not load professional detail', err);
+      });
+  }, []);
+
+  const allProfessionals = useMemo(
+    () => [...professionals, ...realProfessionals],
+    [professionals, realProfessionals]
+  );
+
+  // Sample bookings for the demo account only (it has no backend session). Real accounts use
+  // serverBookings below, loaded from GET /bookings/me.
+  const [demoBookings, setDemoBookings] = useState<Booking[]>(() => {
     localStorage.removeItem('kazihub_bookings');
     localStorage.removeItem('kazihub_ng_bookings_v2');
     localStorage.removeItem('kazihub_ng_bookings_v5');
@@ -222,8 +299,9 @@ export default function App() {
   }, [savedProIds]);
 
   const toggleSaveProfessional = useCallback((proId: string) => {
+    if (blockIfFrozen()) return;
     setSavedProIds(prev => prev.includes(proId) ? prev.filter(id => id !== proId) : [...prev, proId]);
-  }, []);
+  }, [blockIfFrozen]);
 
   // Modals state -- booking creation stays a plain in-app action, not a URL (it's a transient
   // form flow, not content anyone bookmarks/shares). The professional-profile "modal" and the
@@ -232,7 +310,7 @@ export default function App() {
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<Category | 'All'>('All');
 
   // Currently logged in professional partner view
-  const [activeProId, setActiveProId] = useState<string>('p1');
+  const [activeProId] = useState<string>('p1');
   const rawPro = professionals.find(p => p.id === activeProId) || professionals[0];
 
   const [customerAvatar, setCustomerAvatar] = useState<string>(() => {
@@ -274,27 +352,179 @@ export default function App() {
     }
   }, [customerAvatar, user?.id]);
 
-  // Dynamically compute active professional details from logged-in user when in artisan mode
+  // The logged-in artisan's own backend profile (GET /profiles/me). Services/portfolio edits aren't
+  // wired to their endpoints yet, so those are merged into this state locally (handleUpdateProfile).
+  const isArtisan = user?.role === 'artisan';
+  const artisanFullName = user ? `${user.first_name} ${user.last_name}`.trim() : '';
+  const [myProfessional, setMyProfessional] = useState<Professional | null>(null);
+  useEffect(() => {
+    if (!isArtisan || !user) {
+      setMyProfessional(null);
+      return;
+    }
+    let cancelled = false;
+    Promise.all([
+      getMyProfile(),
+      listMyServices().catch((err) => { console.warn('Could not load your services', err); return []; }),
+      listMyPortfolio().catch((err) => { console.warn('Could not load your portfolio', err); return []; }),
+    ])
+      .then(([profile, services, portfolio]) => {
+        if (cancelled) return;
+        setMyProfessional({
+          ...profileToProfessional(profile),
+          services: services.map(mapService),
+          portfolio: portfolio.map(mapPortfolioItem),
+        });
+        // The public directory's only name field is business_name, and the product has no
+        // business-name concept -- so it carries the artisan's own name. Backfill it for
+        // profiles created before this existed.
+        if (!profile.business_name?.trim() && artisanFullName) {
+          saveMyProfile({ business_name: artisanFullName }).catch((err) => console.warn('Could not sync public name', err));
+        }
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.warn('Could not load your artisan profile', err);
+        setMyProfessional(profileToProfessional({
+          id: user.id, user_id: user.id, category: '', skills: [], years_of_experience: 0,
+          state: user.state, is_available: true, is_verified: false,
+        }));
+      });
+    return () => { cancelled = true; };
+  }, [isArtisan, user?.id]);
+
   const activeProfessional: Professional = React.useMemo(() => {
     if (user && user.role === 'artisan') {
       let userCustomAvatar = user.profile_picture || customerAvatar || localStorage.getItem(`kazihub_avatar_${user.id}`) || '';
       if (userCustomAvatar.includes('images.unsplash.com/photo-1531746020798-e6953c6e8e04')) {
         userCustomAvatar = '';
       }
+      const base = myProfessional ?? profileToProfessional({
+        id: user.id, user_id: user.id, category: '', skills: [], years_of_experience: 0,
+        state: user.state, is_available: true, is_verified: false,
+      });
       return {
-        ...rawPro,
-        id: user.id || rawPro.id,
-        name: `${user.first_name} ${user.last_name}`.trim() || rawPro.name,
-        email: user.email || rawPro.email,
-        phone_number: user.phone_number || rawPro.phone_number,
-        state: user.state ? `${user.state}, Nigeria` : rawPro.state,
-        is_verified: localStorage.getItem(`kazihub_kyc_completed_${user.id}`) === 'true',
-        verificationStatus: localStorage.getItem(`kazihub_kyc_completed_${user.id}`) === 'true' ? 'verified' : 'unverified',
+        ...base,
+        id: user.id,
+        name: artisanFullName || base.name,
+        email: user.email,
+        phone_number: user.phone_number,
+        state: user.state ? `${user.state}, Nigeria` : base.state,
+        // Real accounts: the backend profile's is_verified (set when an admin approves verification).
+        // The demo account keeps its local sample flag.
+        is_verified: isDemo ? localStorage.getItem(`kazihub_kyc_completed_${user.id}`) === 'true' : base.is_verified,
+        verificationStatus: (isDemo ? localStorage.getItem(`kazihub_kyc_completed_${user.id}`) === 'true' : base.is_verified) ? 'verified' : 'unverified',
         profile_picture: userCustomAvatar,
       };
     }
     return rawPro;
-  }, [user, rawPro, customerAvatar]);
+  }, [user, rawPro, customerAvatar, myProfessional, artisanFullName, isDemo]);
+
+  const usesBackendBookings = Boolean(user) && !isDemo;
+  const [serverBookings, setServerBookings] = useState<BookingResponse[]>([]);
+  const reloadBookings = useCallback(async () => {
+    setServerBookings(await listMyBookings());
+  }, []);
+  useEffect(() => {
+    if (!usesBackendBookings) {
+      setServerBookings([]);
+      return;
+    }
+    reloadBookings().catch((err) => console.warn('Could not load your bookings', err));
+  }, [usesBackendBookings, user?.id, reloadBookings]);
+
+  // A booking only carries client_id / artisan_id. The artisan's name comes from the directory;
+  // a client's name isn't available to anyone but that client yet (no endpoint returns it).
+  const bookingNames = (b: { artisan_id: string; client_id: string }) => {
+    const ownArtisanBooking = isArtisan && user?.id === b.artisan_id;
+    const pro = allProfessionals.find(p => p.user_id === b.artisan_id);
+    return {
+      professionalName: ownArtisanBooking ? artisanFullName : pro?.name || 'Artisan',
+      category: ((ownArtisanBooking ? myProfessional?.category : pro?.category) || '') as Category,
+      customerName: user?.id === b.client_id ? artisanFullName || 'You' : 'Client',
+    };
+  };
+  const liveBookings = serverBookings.map(b => bookingFromResponse(b, bookingNames(b)));
+  const bookings = usesBackendBookings ? liveBookings : demoBookings;
+
+  // Notifications for real accounts come from GET /notifications/; the sample lists above are for
+  // the demo account only. (Verified live: the backend doesn't create notifications for booking
+  // events yet, so this stays empty until it does -- but it's the real list, not a stand-in.)
+  const [serverNotifications, setServerNotifications] = useState<NotificationResponse[]>([]);
+  const reloadNotifications = useCallback(async () => {
+    setServerNotifications(await listNotifications());
+  }, []);
+
+  // No push channel yet, so refresh bookings and notifications every 30s and whenever the app
+  // comes back to the foreground -- otherwise a new booking only shows up after a reload.
+  useEffect(() => {
+    if (!usesBackendBookings) {
+      setServerNotifications([]);
+      return;
+    }
+    const refresh = () => {
+      reloadBookings().catch(() => undefined);
+      reloadNotifications().catch(() => undefined);
+    };
+    reloadNotifications().catch((err) => console.warn('Could not load notifications', err));
+    const interval = setInterval(refresh, 30_000);
+    const onVisible = () => { if (document.visibilityState === 'visible') refresh(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [usesBackendBookings, user?.id, reloadBookings, reloadNotifications]);
+
+  const notificationKind = (type: string): Notification['type'] => {
+    const t = type.toLowerCase();
+    if (t.includes('message')) return 'new_message';
+    if (t.includes('cancel') || t.includes('decline')) return 'job_cancelled';
+    if (t.includes('accept')) return 'job_accepted';
+    return 'new_job';
+  };
+  const liveProNotifications: Notification[] = serverNotifications.map(n => ({
+    id: n.id,
+    type: notificationKind(n.type),
+    title: n.title,
+    description: n.message,
+    timestamp: n.created_at,
+    isRead: n.is_read,
+    relatedId: n.booking_id || undefined,
+  }));
+  const liveCustomerNotifications = serverNotifications.map(n => ({
+    id: n.id,
+    title: n.title,
+    desc: n.message,
+    time: timeAgo(n.created_at),
+    read: n.is_read,
+    isRead: n.is_read,
+    type: n.type,
+    relatedTab: n.booking_id ? 'bookings' : undefined,
+  }));
+
+  /** Marks the given notifications read on the backend (read-all when that's every unread one). */
+  const markNotificationsRead = (readIds: string[]) => {
+    const unread = serverNotifications.filter(n => !n.is_read).map(n => n.id);
+    const toMark = readIds.filter(id => unread.includes(id));
+    if (toMark.length === 0) return;
+    setServerNotifications(prev => prev.map(n => (toMark.includes(n.id) ? { ...n, is_read: true } : n)));
+    const request = toMark.length === unread.length && unread.length > 1
+      ? markAllNotificationsRead()
+      : Promise.all(toMark.map(markNotificationRead));
+    request.catch(() => {
+      toast.error('Could not mark that as read. Try again.');
+      reloadNotifications().catch(() => undefined);
+    });
+  };
+  const setLiveProNotifications: React.Dispatch<React.SetStateAction<Notification[]>> = (action) => {
+    const next = typeof action === 'function' ? action(liveProNotifications) : action;
+    markNotificationsRead(next.filter(n => n.isRead).map(n => n.id));
+  };
+  const setLiveCustomerNotifications = (next: { id: string; read?: boolean; isRead?: boolean }[]) => {
+    markNotificationsRead(next.filter(n => n.read || n.isRead).map(n => n.id));
+  };
+
 
   const [notifications, setNotifications] = useState<Notification[]>(() => {
     const saved = localStorage.getItem(`kazihub_notifications_${activeProId}`);
@@ -403,6 +633,46 @@ export default function App() {
     localStorage.setItem(`kazihub_customer_notifications_c1`, JSON.stringify(customerNotifications));
   }, [customerNotifications]);
 
+  const shownProNotifications = usesBackendBookings ? liveProNotifications : notifications;
+
+  // Saved artisans for real accounts live on the backend (keyed by the artisan's user id); the
+  // local list above is the demo account's only.
+  const [favoriteUserIds, setFavoriteUserIds] = useState<string[]>([]);
+  useEffect(() => {
+    if (!usesBackendBookings) {
+      setFavoriteUserIds([]);
+      return;
+    }
+    listFavorites()
+      .then(list => setFavoriteUserIds(list.map(f => f.artisan_id)))
+      .catch((err) => console.warn('Could not load saved artisans', err));
+  }, [usesBackendBookings, user?.id]);
+  const shownSavedProIds = usesBackendBookings
+    ? allProfessionals.filter(p => p.user_id && favoriteUserIds.includes(p.user_id)).map(p => p.id)
+    : savedProIds;
+
+  const handleToggleSavePro = (proId: string) => {
+    if (!usesBackendBookings) {
+      toggleSaveProfessional(proId);
+      return;
+    }
+    if (blockIfFrozen()) return;
+    const artisanUserId = allProfessionals.find(p => p.id === proId)?.user_id;
+    if (!artisanUserId) {
+      toast.error('This is a sample artisan, so it can’t be saved. Real artisans can be.');
+      return;
+    }
+    const wasSaved = favoriteUserIds.includes(artisanUserId);
+    setFavoriteUserIds(prev => (wasSaved ? prev.filter(id => id !== artisanUserId) : [...prev, artisanUserId]));
+    (wasSaved ? removeFavorite(artisanUserId) : saveFavorite(artisanUserId)).catch((err) => {
+      setFavoriteUserIds(prev => (wasSaved ? [...prev, artisanUserId] : prev.filter(id => id !== artisanUserId)));
+      toast.error(errorTextOf(err, wasSaved ? 'Could not remove this artisan. Try again.' : 'Could not save this artisan. Try again.'));
+    });
+  };
+  const updateProNotifications = usesBackendBookings ? setLiveProNotifications : setNotifications;
+  const shownCustomerNotifications = usesBackendBookings ? liveCustomerNotifications : customerNotifications;
+  const updateCustomerNotifications = usesBackendBookings ? setLiveCustomerNotifications : setCustomerNotifications;
+
   useEffect(() => {
     localStorage.setItem(`kazihub_notifications_${activeProId}`, JSON.stringify(notifications));
   }, [notifications, activeProId]);
@@ -416,6 +686,19 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('kazihub_language', currentLanguage);
   }, [currentLanguage]);
+
+  // Theme and language are saved on the account (PUT /auth/me), so a sign-in on another device
+  // must adopt them rather than whatever this browser last had in localStorage.
+  useEffect(() => {
+    if (!user) return;
+    if (user.theme === 'dark' || user.theme === 'light') {
+      setDarkMode(user.theme === 'dark');
+    } else if (user.theme === 'system') {
+      setDarkMode(window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false);
+    }
+    const lang = languageFromStored(user.preferred_language);
+    if (lang) setCurrentLanguage(lang);
+  }, [user?.id, user?.theme, user?.preferred_language]);
 
   // Automatic Availability Management: When logged in as professional, set is_available_now = true. When leaving/unloading/visibility hidden/logout/switch role, set is_available_now = false.
   useEffect(() => {
@@ -465,6 +748,7 @@ export default function App() {
     navigate('/home');
   };
 
+  // Demo only -- for real bookings the backend's own cron does this (auto_completion_deadline).
   // Auto-completion window: completed_by_artisan -> paid_out after 4 days with no customer response
   // (mirrors the backend's auto_completion_deadline). Archiving old paid_out/cancelled bookings out of
   // the default view is a separate, purely client-side concern -- see isBookingArchived in utils.ts.
@@ -473,7 +757,7 @@ export default function App() {
       const now = new Date().getTime();
       const FOUR_DAYS_MS = 4 * 24 * 60 * 60 * 1000;
       let updated = false;
-      const newBookings = bookings.map(b => {
+      const newBookings = demoBookings.map(b => {
         if (b.status === 'completed_by_artisan' && b.completionDetails?.submittedAt) {
           const submittedTime = new Date(b.completionDetails.submittedAt).getTime();
           if (now - submittedTime >= FOUR_DAYS_MS) {
@@ -489,22 +773,22 @@ export default function App() {
         return b;
       });
       if (updated) {
-        setBookings(newBookings);
+        setDemoBookings(newBookings);
       }
     };
 
     checkAutoCompletions();
     const interval = setInterval(checkAutoCompletions, 60 * 1000); // Check every minute
     return () => clearInterval(interval);
-  }, [bookings]);
+  }, [demoBookings]);
 
   useEffect(() => {
     localStorage.setItem('kazihub_ng_professionals_v10', JSON.stringify(professionals));
   }, [professionals]);
 
   useEffect(() => {
-    localStorage.setItem('kazihub_ng_bookings_v12', JSON.stringify(bookings));
-  }, [bookings]);
+    localStorage.setItem('kazihub_ng_bookings_v12', JSON.stringify(demoBookings));
+  }, [demoBookings]);
 
   useEffect(() => {
     localStorage.setItem('kazihub_ng_messages_v10', JSON.stringify(messages));
@@ -520,67 +804,138 @@ export default function App() {
     // Dark mode here is a manual toggle, not the OS's prefers-color-scheme, so the status-bar
     // color (theme-color) has to follow this state directly rather than a media query.
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', darkMode ? '#09090b' : '#fafafa');
+    // Same for native form chrome (autofill, scrollbars, date pickers): left as "light dark", the
+    // browser follows the OS and paints dark autofill onto the light theme.
+    document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', darkMode ? 'dark' : 'light');
   }, [darkMode]);
 
   // Handlers
-  const handleCreateBooking = (bookingData: Omit<Booking, 'id' | 'created_at' | 'status'>) => {
-    const isQuoteRequired = bookingData.servicePricingType === 'quote_required';
-    const newBooking: Booking = {
-      ...bookingData,
-      id: isQuoteRequired ? `req-${Date.now()}` : `b-${Date.now()}`,
-      status: isQuoteRequired ? 'quote_requested' : 'pending',
-      created_at: new Date().toISOString()
-    };
-    setBookings([newBooking, ...bookings]);
+  const errorText = (err: unknown, fallback: string) => (err instanceof Error && err.message ? err.message : fallback);
 
-    // Also add opening chat message
-    const initialMsg: ChatMessage = {
-      id: `m-${Date.now()}`,
-      bookingId: newBooking.id,
-      senderId: 'c1',
-      senderName: bookingData.customerName,
-      senderRole: 'customer',
-      recipientId: bookingData.artisan_id,
-      message: isQuoteRequired
-        ? `Hello! I have submitted a service quote request for "${bookingData.title || bookingData.category}" (Preferred date: ${bookingData.scheduled_date}, ${bookingData.timeSlot}). Scope: ${bookingData.description}. Please review and send a custom quote.`
-        : `Hello! I have booked your service (${bookingData.title || bookingData.category}) for ${bookingData.scheduled_date} (${bookingData.timeSlot}). Issue: ${bookingData.description}`,
-      timestamp: new Date().toISOString()
-    };
-    setMessages(prev => [...prev, initialMsg]);
+  /** Runs a booking action on the backend, then reloads the list either way -- on failure that
+   *  also undoes any optimistic change a dashboard already showed. */
+  const runBookingAction = async (fn: () => Promise<unknown>, success: string, failure: string) => {
+    try {
+      await fn();
+      toast.success(success);
+    } catch (err) {
+      toast.error(errorText(err, failure));
+    } finally {
+      await reloadBookings().catch(() => undefined);
+      reloadNotifications().catch(() => undefined);
+    }
+  };
 
-    // Add notification for professional
-    const newNotif: Notification = {
-      id: `notif-${Date.now()}`,
-      type: 'new_job',
-      title: isQuoteRequired ? 'New Service Quote Request' : 'New Job Booking Request',
-      description: isQuoteRequired
-        ? `${bookingData.customerName} submitted a quote request for "${bookingData.title || bookingData.category}".`
-        : `${bookingData.customerName} requested a ${bookingData.title || bookingData.category} for ${bookingData.scheduled_date} at ${bookingData.timeSlot}.`,
-      timestamp: new Date().toISOString(),
-      isRead: false,
-      relatedId: newBooking.id
+  const handleCreateBooking = async (input: BookingRequestInput): Promise<Booking> => {
+    if (isFrozen) throw new Error(FROZEN_ACTION_MESSAGE);
+    if (!usesBackendBookings) throw new Error('Booking isn’t available on the demo account.');
+    const artisanId = input.professional.user_id;
+    if (!artisanId) throw new Error('This is a sample artisan, so it can’t be booked.');
+    const service = input.service;
+    const request = {
+      artisan_id: artisanId,
+      service_title: service?.name || 'General request',
+      description: input.description.trim(),
+      address: input.address.trim(),
+      // Omitted rather than null when empty: an explicit null crashed /bookings/buy-gig when tested.
+      ...(input.landmark.trim() ? { landmark_hint: input.landmark.trim() } : {}),
     };
-    setNotifications(prev => [newNotif, ...prev]);
+    // Only a fixed-price service is booked at a set amount. "Starting from" and quote-only services
+    // go through a quote request, so the artisan sets the final price.
+    const created = service?.pricing_type === 'fixed' && (service.price ?? 0) > 0
+      ? await createFixedBooking({ ...request, amount: service.price as number })
+      : await requestQuote(request);
+    setServerBookings(prev => [created, ...prev]);
+    return bookingFromResponse(created, bookingNames(created));
   };
 
   const handleUpdateBookingStatus = (bookingId: string, status: Booking['status'], extra?: Partial<Booking>) => {
-    setBookings(prev => prev.map(b => {
-      if (b.id === bookingId) {
+    if (blockIfFrozen()) {
+      if (usesBackendBookings) reloadBookings().catch(() => undefined);
+      return;
+    }
+    if (!usesBackendBookings) {
+      setDemoBookings(prev => prev.map(b => {
+        if (b.id !== bookingId) return b;
         const updateObj: Partial<Booking> = { status, ...(extra || {}) };
         if (status === 'paid_out' && !b.completedAt && !updateObj.completedAt) {
           updateObj.completedAt = new Date().toISOString();
         }
         return { ...b, ...updateObj };
-      }
-      return b;
-    }));
+      }));
+      return;
+    }
+    const current = bookings.find(b => b.id === bookingId);
+    switch (status) {
+      case 'accepted':
+        return runBookingAction(() => acceptBooking(bookingId), 'Booking accepted. The client can now pay into escrow.', 'Could not accept this booking.');
+      case 'quote_sent':
+        return runBookingAction(() => sendQuote(bookingId, extra?.amount ?? 0, extra?.quote_breakdown || undefined), 'Quote sent to the client.', 'Could not send this quote.');
+      case 'cancelled':
+        return current?.status === 'pending'
+          ? runBookingAction(() => declineBooking(bookingId), 'Booking declined.', 'Could not decline this booking.')
+          : runBookingAction(() => cancelBooking(bookingId), 'Request cancelled.', 'Could not cancel this request.');
+      case 'completed_by_artisan':
+        return runBookingAction(() => submitCompletion(bookingId), 'Marked as done. The client has 4 days to confirm.', 'Could not mark this job as done.');
+      case 'paid_out':
+        return runBookingAction(() => confirmCompletion(bookingId), 'Job confirmed. Payment released to the artisan.', 'Could not confirm this job.');
+      default:
+        toast.error('That step isn’t available yet.');
+        reloadBookings().catch(() => undefined);
+    }
+  };
+
+  const handleAcceptQuote = (bookingId: string) => {
+    if (blockIfFrozen()) return;
+    runBookingAction(() => acceptQuote(bookingId), 'Quote accepted.', 'Could not accept this quote.');
+  };
+
+  /** Resolves to the backend's dispute ticket id, or null when it failed (already explained in a toast). */
+  const handleDisputeBooking = async (bookingId: string, reason: string, details: string, evidencePhotos: string[] = []): Promise<string | null> => {
+    if (blockIfFrozen()) return null;
+    if (!usesBackendBookings) {
+      toast.error('Disputes aren’t available on the demo account.');
+      return null;
+    }
+    try {
+      const dispute = await disputeBooking(bookingId, reason, details, evidencePhotos);
+      return dispute?.ticket_id || null;
+    } catch (err) {
+      toast.error(errorText(err, 'Could not open a dispute. Try again.'));
+      return null;
+    } finally {
+      await reloadBookings().catch(() => undefined);
+    }
   };
 
   const handleCancelBooking = (bookingId: string) => {
-    setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status: 'cancelled' as const } : b));
+    if (blockIfFrozen()) return;
+    if (!usesBackendBookings) {
+      setDemoBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status: 'cancelled' as const } : b));
+      return;
+    }
+    runBookingAction(() => cancelBooking(bookingId), 'Booking cancelled.', 'Could not cancel this booking.');
   };
 
   const handleAddReview = (proId: string, rating: number, comment: string) => {
+    if (blockIfFrozen()) return;
+    if (usesBackendBookings) {
+      // Reviews attach to a completed booking (POST /reviews/ needs booking_id).
+      const pro = allProfessionals.find(p => p.id === proId);
+      const completed = pro?.user_id ? bookings.find(b => b.artisan_id === pro.user_id && b.status === 'paid_out') : undefined;
+      if (!completed) {
+        toast.error('You can review an artisan once they’ve completed a booking for you.');
+        return;
+      }
+      createReview(completed.id, rating, comment)
+        .then(() => {
+          toast.success('Thanks, your review is posted.');
+          fetchedDetailIdsRef.current.delete(proId);
+          loadProfessionalDetail(proId);
+        })
+        .catch((err) => toast.error(errorText(err, 'Could not post your review.')));
+      return;
+    }
     const clientFullName = user ? `${user.first_name} ${user.last_name}`.trim() || user.email.split('@')[0] : 'Client';
     setProfessionals(prev => prev.map(pro => {
       if (pro.id !== proId) return pro;
@@ -608,6 +963,10 @@ export default function App() {
       localStorage.setItem(`kazihub_avatar_${user.id}`, updated.profile_picture);
       setCustomerAvatar(updated.profile_picture);
     }
+    if (isArtisan) {
+      setMyProfessional(prev => (prev ? { ...prev, ...updated } : prev));
+      return;
+    }
     setProfessionals(prev => prev.map(p => {
       if (p.id === activeProfessional.id) {
         return { ...p, ...updated };
@@ -616,7 +975,149 @@ export default function App() {
     }));
   };
 
+  // ---- Chat. Real accounts use the backend over REST (its WebSocket isn't documented yet), so it
+  // refreshes every 30s, and every 5s while a conversation is open. The demo keeps sample messages.
+  const [conversations, setConversations] = useState<ConversationResponse[]>([]);
+  const [chatMessages, setChatMessages] = useState<Record<string, MessageResponse[]>>({});
+  const [openChatPeer, setOpenChatPeer] = useState<string | null>(null);
+
+  const loadConversationMessages = useCallback(async (conversationId: string) => {
+    const list = await listMessages(conversationId);
+    setChatMessages(prev => ({ ...prev, [conversationId]: list }));
+  }, []);
+  const reloadChat = useCallback(async () => {
+    const convs = await listConversations();
+    setConversations(convs);
+    await Promise.all(convs.map(c => loadConversationMessages(c.id).catch(() => undefined)));
+  }, [loadConversationMessages]);
+
+  useEffect(() => {
+    if (!usesBackendBookings) {
+      setConversations([]);
+      setChatMessages({});
+      return;
+    }
+    reloadChat().catch((err) => console.warn('Could not load chats', err));
+    const interval = setInterval(() => reloadChat().catch(() => undefined), 30_000);
+    const onVisible = () => { if (document.visibilityState === 'visible') reloadChat().catch(() => undefined); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [usesBackendBookings, user?.id, reloadChat]);
+
+  // The chat screens key a conversation by the other person: the artisan's directory (profile) id on
+  // the client's screen, the client's user id on the artisan's screen.
+  const peerUserIdFor = (peer: string): string | null =>
+    isArtisan ? peer : allProfessionals.find(p => p.id === peer)?.user_id ?? null;
+  const conversationWith = (peerUserId: string) =>
+    conversations.find(c => (isArtisan ? c.client_id : c.artisan_id) === peerUserId);
+
+  const openPeerUserId = openChatPeer ? peerUserIdFor(openChatPeer) : null;
+  const openConversationId = openPeerUserId ? conversationWith(openPeerUserId)?.id ?? null : null;
+  useEffect(() => {
+    if (!usesBackendBookings || !openConversationId) return;
+    const interval = setInterval(() => loadConversationMessages(openConversationId).catch(() => undefined), 5_000);
+    return () => clearInterval(interval);
+  }, [usesBackendBookings, openConversationId, loadConversationMessages]);
+  useEffect(() => {
+    if (!location.pathname.startsWith('/messages')) setOpenChatPeer(null);
+  }, [location.pathname]);
+
+  const utcTimestamp = (v: string) => (/[zZ]|[+-]\d\d:?\d\d$/.test(v) ? v : `${v}Z`);
+  const liveChatMessages: ChatMessage[] = conversations.flatMap(conv => {
+    const artisanPro = allProfessionals.find(p => p.user_id === conv.artisan_id);
+    // No endpoint returns a client's name yet; the job title at least tells an artisan's chats apart.
+    const clientLabel = conv.active_job_title ? `Client · ${conv.active_job_title}` : 'Client';
+    const screenId = (userId: string) => {
+      if (userId === user?.id) return isArtisan ? userId : 'c1';
+      if (userId === conv.artisan_id) return artisanPro?.id ?? userId;
+      return userId;
+    };
+    return (chatMessages[conv.id] || []).map((m): ChatMessage => {
+      const fromClient = m.sender_id === conv.client_id;
+      const kind = m.message_type === 'image' || m.message_type === 'audio' || m.message_type === 'location' ? m.message_type : 'text';
+      const recipient = m.recipient_id || (fromClient ? conv.artisan_id : conv.client_id);
+      const loc = m.location_data;
+      return {
+        id: m.id,
+        bookingId: conv.active_booking_id || undefined,
+        senderId: screenId(m.sender_id),
+        recipientId: screenId(recipient),
+        senderName: fromClient
+          ? (m.sender_id === user?.id ? artisanFullName || 'You' : clientLabel)
+          : (m.sender_id === user?.id ? artisanFullName : artisanPro?.name || 'Artisan'),
+        senderRole: fromClient ? 'customer' : 'professional',
+        message: m.content || (kind === 'image' ? 'Photo' : kind === 'audio' ? 'Voice note' : kind === 'location' ? 'Shared location' : ''),
+        timestamp: utcTimestamp(m.created_at),
+        mediaType: kind,
+        mediaUrl: kind === 'image' ? m.attachments?.[0] : kind === 'audio' ? m.audio_url || undefined : undefined,
+        duration: m.audio_duration ?? undefined,
+        locationData: loc ? { lat: loc.lat, lng: loc.lng, address: loc.address || `${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}`, landmark: loc.landmark } : undefined,
+        status: m.read_at || m.status === 'read' ? 'read' : 'sent',
+      };
+    });
+  });
+  const shownMessages = usesBackendBookings ? liveChatMessages : messages;
+
+  const sendChat = async (peer: string, text: string, media?: Partial<ChatMessage>) => {
+    const peerUserId = peerUserIdFor(peer);
+    if (!peerUserId) {
+      toast.error('This is a sample artisan, so you can’t message them. Real artisans can be messaged.');
+      return;
+    }
+    try {
+      let conv = conversationWith(peerUserId);
+      if (!conv) {
+        // StartConversationSchema only takes artisan_id: conversations are opened by the client.
+        if (isArtisan) throw new Error('This client hasn’t started a conversation with you yet.');
+        const created = await startConversation(peerUserId);
+        setConversations(prev => [created, ...prev]);
+        conv = created;
+      }
+      const kind = media?.mediaType ?? 'text';
+      const body: MessageCreate = { conversation_id: conv.id, content: text, message_type: 'text' };
+      if (kind === 'image' || kind === 'audio') {
+        if (!media?.mediaUrl?.startsWith('data:')) throw new Error('That attachment can’t be sent.');
+        const blob = await (await fetch(media.mediaUrl)).blob();
+        const ext = (blob.type.split('/')[1] || 'bin').split(';')[0];
+        const url = await uploadChatMedia(blob, `${kind}-${Date.now()}.${ext}`);
+        if (kind === 'image') Object.assign(body, { message_type: 'image', media_type: 'image', attachments: [url] });
+        else Object.assign(body, { message_type: 'audio', media_type: 'audio', audio_url: url, ...(media.duration ? { audio_duration: media.duration } : {}) });
+      } else if (kind === 'location' && media?.locationData) {
+        const { lat, lng, address } = media.locationData;
+        Object.assign(body, { message_type: 'location', media_type: 'location', location_data: { lat, lng, address } });
+      } else if (kind !== 'text') {
+        throw new Error('That kind of message can’t be sent yet.');
+      }
+      await sendMessage(body);
+      await loadConversationMessages(conv.id);
+    } catch (err) {
+      toast.error(errorText(err, 'Could not send your message. Try again.'));
+    }
+  };
+
+  const markChatRead = (peer: string) => {
+    setOpenChatPeer(peer);
+    const peerUserId = peerUserIdFor(peer);
+    const conv = peerUserId ? conversationWith(peerUserId) : undefined;
+    if (!conv) return;
+    const unread = (chatMessages[conv.id] || []).some(m => m.sender_id !== user?.id && !m.read_at && m.status !== 'read');
+    if (!unread) return;
+    setChatMessages(prev => ({
+      ...prev,
+      [conv.id]: (prev[conv.id] || []).map(m => (m.sender_id !== user?.id ? { ...m, status: 'read', read_at: m.read_at || new Date().toISOString() } : m)),
+    }));
+    markConversationRead(conv.id).catch(() => undefined);
+  };
+
   const handleProfessionalSendMessage = (customerId: string, text: string, mediaProps?: Partial<ChatMessage>) => {
+    if (blockIfFrozen()) return;
+    if (usesBackendBookings) {
+      sendChat(customerId, text, mediaProps);
+      return;
+    }
     const newMsg: ChatMessage = {
       id: `m-${Date.now()}`,
       senderId: activeProfessional.id,
@@ -632,6 +1133,11 @@ export default function App() {
   };
 
   const handleCustomerSendMessage = (proId: string, text: string, mediaProps?: Partial<ChatMessage>) => {
+    if (blockIfFrozen()) return;
+    if (usesBackendBookings) {
+      sendChat(proId, text, mediaProps);
+      return;
+    }
     const clientFullName = user ? `${user.first_name} ${user.last_name}`.trim() || user.email.split('@')[0] : 'Client';
     const newMsg: ChatMessage = {
       id: `m-${Date.now()}`,
@@ -648,6 +1154,10 @@ export default function App() {
   };
 
   const handleCustomerMarkAsRead = useCallback((proId: string) => {
+    if (usesBackendBookings) {
+      markChatRead(proId);
+      return;
+    }
     setMessages(prev => {
       let changed = false;
       const next = prev.map(m => {
@@ -659,9 +1169,14 @@ export default function App() {
       });
       return changed ? next : prev;
     });
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usesBackendBookings, conversations, chatMessages, allProfessionals, user?.id]);
 
   const handleProfessionalMarkAsRead = useCallback((customerId: string) => {
+    if (usesBackendBookings) {
+      markChatRead(customerId);
+      return;
+    }
     setMessages(prev => {
       let changed = false;
       const next = prev.map(m => {
@@ -673,18 +1188,22 @@ export default function App() {
       });
       return changed ? next : prev;
     });
-  }, [activeProfessional.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeProfessional.id, usesBackendBookings, conversations, chatMessages, user?.id]);
 
-  const roleBookings = bookings.filter(b => currentRole === 'customer' ? b.client_id === 'c1' : b.artisan_id === activeProfessional.id);
+  // GET /bookings/me is already scoped to the signed-in user; the demo's sample data needs filtering.
+  const roleBookings = usesBackendBookings
+    ? bookings
+    : bookings.filter(b => currentRole === 'customer' ? b.client_id === 'c1' : b.artisan_id === activeProfessional.id);
 
   const commonAppShellProps = {
     currentRole,
     currentLanguage,
     onOpenAuthPage: (view?: 'signin' | 'signup') => navigate(view === 'signup' ? '/signup' : '/'),
-    unreadCount: messages.filter(m => m.recipientId === (currentRole === 'customer' ? 'c1' : activeProfessional.id) && m.status !== 'read').length,
+    unreadCount: shownMessages.filter(m => m.recipientId === (currentRole === 'customer' ? 'c1' : activeProfessional.id) && m.status !== 'read').length,
     notificationsUnreadCount: currentRole === 'customer'
-      ? customerNotifications.filter(n => !n.read && !n.isRead).length
-      : notifications.filter(n => !n.isRead).length,
+      ? shownCustomerNotifications.filter(n => !n.read && !n.isRead).length
+      : shownProNotifications.filter(n => !n.isRead).length,
     onOpenChats: () => handleTabChange('messages'),
     darkMode,
     onToggleDarkMode: () => setDarkMode(!darkMode),
@@ -692,7 +1211,7 @@ export default function App() {
     onSelectCategoryFilter: setSelectedCategoryFilter,
     onTabChange: handleTabChange,
     pageSubtitle,
-    professionals,
+    professionals: allProfessionals,
     bookings: roleBookings,
     activeProfessional,
     customerAvatar,
@@ -700,13 +1219,27 @@ export default function App() {
   };
 
   const commonCustomerProps = {
-    professionals,
-    bookings: bookings.filter(b => b.client_id === 'c1'),
-    messages,
+    professionals: allProfessionals,
+    bookings: usesBackendBookings ? bookings : bookings.filter(b => b.client_id === 'c1'),
+    onAcceptQuote: handleAcceptQuote,
+    onDisputeBooking: handleDisputeBooking,
+    messages: shownMessages,
     onSendMessage: handleCustomerSendMessage,
     onMarkAsRead: handleCustomerMarkAsRead,
-    onSelectProForProfile: (pro: Professional) => navigate(`/professionals/${pro.id}`),
-    onOpenBooking: (pro: Professional) => setBookingTargetPro(pro),
+    onSelectProForProfile: (pro: Professional) => navigate(`/professionals/${pro.id}`, { state: { backgroundLocation: location } }),
+    onOpenBooking: (pro: Professional) => {
+      if (blockIfFrozen()) return;
+      if (!usesBackendBookings) {
+        toast.error('Booking isn’t available on the demo account.');
+        return;
+      }
+      if (!pro.user_id) {
+        toast.error('This is a sample artisan, so it can’t be booked. Real artisans can be.');
+        return;
+      }
+      loadProfessionalDetail(pro.id);
+      setBookingTargetPro(allProfessionals.find(p => p.id === pro.id) || pro);
+    },
     onOpenChat: (pro: Professional) => navigate(`/messages/${pro.id}`),
     selectedCategoryFilter,
     onSelectCategoryFilter: setSelectedCategoryFilter,
@@ -717,17 +1250,17 @@ export default function App() {
     onLogout: handleLogout,
     onDeleteAccount: handleDeleteAccount,
     onDeactivateAccount: handleDeactivateAccount,
-    customerNotifications,
-    onUpdateCustomerNotifications: setCustomerNotifications,
-    savedProIds,
-    onToggleSavePro: toggleSaveProfessional,
+    customerNotifications: shownCustomerNotifications,
+    onUpdateCustomerNotifications: updateCustomerNotifications,
+    savedProIds: shownSavedProIds,
+    onToggleSavePro: handleToggleSavePro,
     darkMode,
     onToggleDarkMode: () => setDarkMode(!darkMode),
   };
 
   const commonProfessionalProps = {
     professional: activeProfessional,
-    bookings: bookings.filter(b => b.artisan_id === activeProfessional.id),
+    bookings: usesBackendBookings ? bookings : bookings.filter(b => b.artisan_id === activeProfessional.id),
     onUpdateBookingStatus: handleUpdateBookingStatus,
     onUpdateProfile: handleUpdateProfile,
     onTabChange: handleTabChange,
@@ -735,15 +1268,15 @@ export default function App() {
       setProfileScrollTarget('work-portfolio');
       handleTabChange('profile');
     },
-    unreadCount: messages.filter(m => m.recipientId === activeProfessional.id && m.status !== 'read').length,
-    messages: messages.filter(m => m.recipientId === activeProfessional.id || m.senderId === activeProfessional.id),
+    unreadCount: shownMessages.filter(m => m.recipientId === activeProfessional.id && m.status !== 'read').length,
+    messages: shownMessages.filter(m => m.recipientId === activeProfessional.id || m.senderId === activeProfessional.id),
     onSendMessage: handleProfessionalSendMessage,
     onMarkAsRead: handleProfessionalMarkAsRead,
     onLogout: handleLogout,
     darkMode,
     onToggleDarkMode: () => setDarkMode(!darkMode),
-    notifications,
-    onUpdateNotifications: setNotifications,
+    notifications: shownProNotifications,
+    onUpdateNotifications: updateProNotifications,
     onPageSubtitleChange: setPageSubtitle,
   };
 
@@ -756,8 +1289,43 @@ export default function App() {
     navigate(from || '/home', { replace: true });
   };
 
+  const [buyGigTarget, setBuyGigTarget] = useState<{ gig: Gig; artisanName: string } | null>(null);
+  const handleBuyGig = async (gig: Gig, address: string, landmark: string): Promise<boolean> => {
+    if (blockIfFrozen()) return false;
+    const pro = allProfessionals.find(p => p.id === gig.professional_id);
+    if (!usesBackendBookings || !pro?.user_id) {
+      toast.error('This gig can’t be bought from this account.');
+      return false;
+    }
+    try {
+      await buyGig({
+        artisan_id: pro.user_id,
+        gig_id: gig.id,
+        item_title: gig.title,
+        delivery_address: address,
+        // Omitted when empty: an explicit null crashes this endpoint (verified live).
+        ...(landmark ? { landmark_hint: landmark } : {}),
+      });
+      toast.success('Gig bought. You’ll find it under Bookings.');
+      reloadBookings().catch(() => undefined);
+      return true;
+    } catch (err) {
+      toast.error(errorText(err, 'Could not buy this gig. Try again.'));
+      return false;
+    }
+  };
+
   const profileModalProps = {
-    onOpenBooking: (pro: Professional) => setBookingTargetPro(pro),
+    // Same checks as every other Book button (frozen, demo, sample artisans).
+    onOpenBooking: (pro: Professional) => commonCustomerProps.onOpenBooking(pro),
+    onBuyGig: (gig: Gig, pro: Professional) => {
+      if (blockIfFrozen()) return;
+      if (isArtisan) {
+        toast.error('Gigs are bought from a client account.');
+        return;
+      }
+      setBuyGigTarget({ gig, artisanName: pro.name });
+    },
     onOpenChat: (pro: Professional) => navigate(`/messages/${pro.id}`),
     onAddReview: handleAddReview,
     onClose: () => navigate(-1),
@@ -766,7 +1334,7 @@ export default function App() {
   return (
     <>
       <Toaster richColors theme={darkMode ? 'dark' : 'light'} />
-      <Routes>
+      <Routes location={backgroundLocation || location}>
         {/* Public / pre-auth -- AuthPage renders regardless of auth state (matches the previous
             showFullAuthPage behavior, which let an already-signed-in user reach it manually too),
             and syncs its own internal view state with these 5 real URLs (see AuthPage.tsx). */}
@@ -789,14 +1357,10 @@ export default function App() {
                 : <CustomerDashboard {...commonCustomerProps} activeTab="explore" />}
             </AppShell>
           } />
-          <Route path="/messages" element={
-            <AppShell {...commonAppShellProps} activeTab="messages">
-              {currentRole === 'professional'
-                ? <ProfessionalDashboard {...commonProfessionalProps} activeTab="messages" />
-                : <CustomerDashboard {...commonCustomerProps} activeTab="messages" />}
-            </AppShell>
-          } />
-          <Route path="/messages/:contactId" element={
+          {/* One route per screen, with optional segments: /messages vs /messages/:id (and /jobs,
+              /gigs below) would otherwise be two different routes, so React would tear the whole
+              page down and rebuild it -- mid-animation for any sheet that was opening. */}
+          <Route path="/messages/:contactId?" element={
             <AppShell {...commonAppShellProps} activeTab="messages">
               <MessagesRoute
                 currentRole={currentRole}
@@ -809,9 +1373,9 @@ export default function App() {
             <AppShell {...commonAppShellProps} activeTab="notifications">
               {currentRole === 'professional' ? (
                 <ProfessionalNotifications
-                  notifications={notifications}
+                  notifications={shownProNotifications}
                   onNotificationClick={(notification) => {
-                    setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, isRead: true } : n));
+                    updateProNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, isRead: true } : n));
                     if (notification.relatedId === 'messages') {
                       handleTabChange('messages');
                     } else if (notification.relatedId) {
@@ -819,10 +1383,10 @@ export default function App() {
                     }
                   }}
                   onMarkAllAsRead={() => {
-                    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+                    updateProNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
                   }}
                   onMarkAsRead={(id) => {
-                    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+                    updateProNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
                   }}
                 />
               ) : (
@@ -855,22 +1419,12 @@ export default function App() {
               cancel-a-booking) with no customer equivalent, so these stay distinct routes -- just
               without a role prefix. A signed-in customer hitting these is redirected to /home. */}
           <Route element={<RequireRole allow={['professional']} />}>
-            <Route path="/jobs" element={
-              <AppShell {...commonAppShellProps} activeTab="jobs">
-                <ProfessionalDashboard {...commonProfessionalProps} activeTab="jobs" />
-              </AppShell>
-            } />
-            <Route path="/jobs/:bookingId" element={
+            <Route path="/jobs/:bookingId?" element={
               <AppShell {...commonAppShellProps} activeTab="jobs">
                 <ProfessionalJobsRoute {...commonProfessionalProps} activeTab="jobs" />
               </AppShell>
             } />
-            <Route path="/gigs" element={
-              <AppShell {...commonAppShellProps} activeTab="gigs">
-                <ProfessionalDashboard {...commonProfessionalProps} activeTab="gigs" />
-              </AppShell>
-            } />
-            <Route path="/gigs/new" element={
+            <Route path="/gigs/:view?" element={
               <AppShell {...commonAppShellProps} activeTab="gigs">
                 <ProfessionalGigsNewRoute {...commonProfessionalProps} activeTab="gigs" />
               </AppShell>
@@ -883,8 +1437,8 @@ export default function App() {
                 currentRole={currentRole}
                 activeProfessional={activeProfessional}
                 bookings={roleBookings}
-                professionals={professionals}
-                savedProIds={savedProIds}
+                professionals={allProfessionals}
+                savedProIds={shownSavedProIds}
                 customerAvatar={customerAvatar}
                 onUpdateCustomerAvatar={setCustomerAvatar}
                 onUpdateProfile={handleUpdateProfile}
@@ -927,12 +1481,12 @@ export default function App() {
             </AppShell>
           } />
 
-          {/* Public artisan profile -- was a modal with no URL, now a real, directly-loadable
-              route. Rendered inside the same AppShell chrome it always appeared over, so it looks
-              identical to today; closing it (X button) uses real browser history (navigate(-1)). */}
+          {/* Public artisan profile, loaded directly (shared link / refresh): there's no page to
+              show underneath, so it renders inside the shell. Opened from within the app it's drawn
+              over the page it came from instead -- see the second <Routes> below. */}
           <Route path="/professionals/:id" element={
             <AppShell {...commonAppShellProps} activeTab="explore">
-              <ProfessionalProfileRoute professionals={professionals} {...profileModalProps} />
+              <ProfessionalProfileRoute professionals={allProfessionals} onNeedDetail={loadProfessionalDetail} {...profileModalProps} />
             </AppShell>
           } />
         </Route>
@@ -940,11 +1494,24 @@ export default function App() {
         <Route path="*" element={<NotFound />} />
       </Routes>
 
+      {backgroundLocation && (
+        <Routes>
+          <Route element={<RequireAuth />}>
+            <Route path="/professionals/:id" element={
+              <ProfessionalProfileRoute professionals={allProfessionals} onNeedDetail={loadProfessionalDetail} {...profileModalProps} />
+            } />
+          </Route>
+        </Routes>
+      )}
+
+      <BuyGigSheet target={buyGigTarget} onClose={() => setBuyGigTarget(null)} onBuy={handleBuyGig} />
+
       <BookingModal
         professional={bookingTargetPro}
         isOpen={!!bookingTargetPro}
         onClose={() => setBookingTargetPro(null)}
         onSubmitBooking={handleCreateBooking}
+        onViewBookings={() => navigate('/bookings')}
         onOpenChatWithPro={(pro) => {
           setBookingTargetPro(null);
           navigate(`/messages/${pro.id}`);

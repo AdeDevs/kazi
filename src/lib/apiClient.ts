@@ -99,6 +99,7 @@ interface RequestOptions {
   body?: RequestBody;
   auth?: boolean; // attach the Authorization header (default true)
   signal?: AbortSignal;
+  headers?: Record<string, string>;
 }
 
 let refreshInFlight: Promise<boolean> | null = null;
@@ -167,13 +168,15 @@ function buildRequestInit(body: RequestBody | undefined, accessToken: string | n
  * attempts one silent token refresh and retries the request exactly once before giving up.
  */
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, auth = true, signal } = options;
+  const { method = 'GET', body, auth = true, signal, headers: extraHeaders } = options;
   const url = `${API_BASE_URL}${path}`;
 
   const doFetch = () => {
     const accessToken = auth ? getAccessToken() : null;
     const init = buildRequestInit(body, accessToken, auth);
-    return fetch(url, { method, signal, ...init });
+    // The same headers go on the retry after a token refresh, so an Idempotency-Key stays stable.
+    const headers = { ...(init.headers as Record<string, string>), ...(extraHeaders || {}) };
+    return fetch(url, { method, signal, ...init, headers });
   };
 
   let response = await doFetch();

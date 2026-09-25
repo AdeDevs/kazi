@@ -10,6 +10,7 @@ import {
   ResetPasswordSchema,
 } from '../types/auth';
 import * as authApi from '../lib/authApi';
+import { getMyProfile } from '../lib/profilesApi';
 import { getAccessToken, clearTokens, setOnSessionExpired } from '../lib/apiClient';
 
 const USER_KEY = 'kazihub_auth_user';
@@ -48,6 +49,10 @@ export interface AuthContextType {
   updateUser: (payload: UserUpdate) => Promise<AuthUser>;
   uploadProfilePicture: (file: File | Blob) => Promise<AuthUser>;
   deleteAccount: () => Promise<void>;
+  /** Re-reads the account from GET /auth/me, for changes made through other endpoints. */
+  refreshUser: () => Promise<AuthUser | null>;
+  /** Demo sessions have no backend token, so real account actions aren't available in them. */
+  isDemo: boolean;
   logout: () => void;
   loginAsDemo: (role: 'client' | 'artisan' | 'customer') => void;
 }
@@ -126,6 +131,24 @@ function clearSession(): void {
   clearTokens();
 }
 
+// GET /auth/me never reports a freeze (is_paused stays false even right after /auth/freeze-me,
+// verified against the live API). For artisans the profile's is_paused does, so merge it in here;
+// clients have no server-side signal at all. Remove once /auth/me reports is_paused itself.
+async function withFrozenState(user: AuthUser): Promise<AuthUser> {
+  if (user.is_paused || user.role !== 'artisan') return user;
+  try {
+    const profile = await getMyProfile();
+    return profile.is_paused ? { ...user, is_paused: true } : user;
+  } catch {
+    return user;
+  }
+}
+
+/** PUT /auth/me and the picture upload also return is_paused=false, so carry the known state over. */
+function keepFrozenState(updated: AuthUser, previous: AuthUser | null): AuthUser {
+  return previous?.is_paused && !updated.is_paused ? { ...updated, is_paused: true } : updated;
+}
+
 function extractErrorMessage(err: unknown, fallback: string): string {
   return err instanceof Error && err.message ? err.message : fallback;
 }
@@ -153,6 +176,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (isDemoSession() || !getAccessToken()) return;
     authApi
       .getMe()
+      .then(withFrozenState)
       .then((freshUser) => {
         setUser(freshUser);
         persistUser(freshUser);
@@ -192,7 +216,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // ignore
       }
       const pair = await authApi.login(credentials);
-      const authedUser = await authApi.getMe();
+      const authedUser = await withFrozenState(await authApi.getMe());
       persistUser(authedUser);
       setUser(authedUser);
       setToken(pair.access_token);
@@ -298,7 +322,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(updated);
         return updated;
       }
-      const updated = await authApi.updateMe(payload);
+      const updated = keepFrozenState(await authApi.updateMe(payload), user);
       persistUser(updated);
       setUser(updated);
       return updated;
@@ -328,7 +352,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(updated);
         return updated;
       }
-      const updated = await authApi.uploadProfilePicture(file);
+      const updated = keepFrozenState(await authApi.uploadProfilePicture(file), user);
       persistUser(updated);
       setUser(updated);
       return updated;
@@ -357,6 +381,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsDeleteAccountLoading(false);
     }
   };
+
+  const refreshUser = useCallback(async (): Promise<AuthUser | null> => {
+    if (isDemoSession() || !getAccessToken()) return null;
+    const fresh = await withFrozenState(await authApi.getMe());
+    persistUser(fresh);
+    setUser(fresh);
+    return fresh;
+  }, []);
 
   const logout = useCallback(() => {
     if (!isDemoSession()) {
@@ -410,6 +442,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateUser,
         uploadProfilePicture,
         deleteAccount,
+        refreshUser,
+        isDemo: Boolean(user) && isDemoSession(),
         logout,
         loginAsDemo,
       }}

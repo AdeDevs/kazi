@@ -8,6 +8,8 @@ interface UserAvatarProps {
   sizeClassName?: string;
   textClassName?: string;
   roundedClassName?: string;
+  /** Set false when a parent frame already draws the border and clips the avatar. */
+  bordered?: boolean;
   alt?: string;
 }
 
@@ -41,6 +43,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
   sizeClassName = 'w-8 h-8',
   textClassName = 'text-xs font-bold',
   roundedClassName = 'rounded-lg',
+  bordered = true,
   alt
 }) => {
   const [hasError, setHasError] = useState(false);
@@ -49,7 +52,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
 
   return (
     <div className={`relative shrink-0 ${sizeClassName} ${className}`}>
-      <div className={`w-full h-full ${roundedClassName} overflow-hidden flex items-center justify-center border border-zinc-200 dark:border-zinc-700/80 select-none ${
+      <div className={`w-full h-full ${roundedClassName} overflow-hidden flex items-center justify-center ${bordered ? 'border border-zinc-200 dark:border-zinc-700/80' : ''} select-none ${
         hasValidSrc ? 'bg-zinc-100 dark:bg-zinc-800' : getAvatarColor(name)
       }`}>
         {hasValidSrc ? (

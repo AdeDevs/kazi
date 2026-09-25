@@ -1,37 +1,37 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { CustomDropdown } from './CustomDropdown';
+import React, { useState, useEffect } from 'react';
 import { VerifiedBadge } from './ui/VerifiedBadge';
-import { SheetDragHandle } from './ui/SheetDragHandle';
 import { UnsavedChangesModal } from './ui/UnsavedChangesModal';
 import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import { formatCurrency, formatServicePrice } from '../utils';
-import { 
-  X, Calendar, Clock, MapPin, FileText, CheckCircle2, 
-  Upload, Navigation, Sparkles, 
-  ShieldCheck, Camera, Phone, Wrench, AlertCircle, Trash2, Edit3, ArrowLeft, ArrowRight
+import {
+  X, MapPin, FileText, CheckCircle2, ShieldCheck, Wrench, AlertCircle, ArrowLeft, ArrowRight, MessageSquare, Info,
 } from 'lucide-react';
-import { Professional, Booking, ServiceItem, ServicePricingType } from '../types';
+import { Professional, Booking, ServiceItem } from '../types';
+
+/** What the form collects -- exactly what POST /bookings/fixed and /bookings/quote-request accept. */
+export interface BookingRequestInput {
+  professional: Professional;
+  service: ServiceItem | null;
+  description: string;
+  address: string;
+  landmark: string;
+}
 
 interface BookingModalProps {
   professional: Professional | null;
   isOpen: boolean;
   onClose: () => void;
-  onSubmitBooking: (bookingData: Omit<Booking, 'id' | 'created_at' | 'status'>) => void;
+  /** Creates the booking on the backend; rejects with a user-facing message on failure. */
+  onSubmitBooking: (input: BookingRequestInput) => Promise<Booking>;
   onOpenChatWithPro?: (pro: Professional) => void;
+  onViewBookings?: () => void;
   preselectedService?: string;
 }
 
-const SAMPLE_PROBLEM_PHOTOS = [
-  { name: 'Pipe Leak', url: 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=600&auto=format&fit=crop&q=80' },
-  { name: 'Wiring Issue', url: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600&auto=format&fit=crop&q=80' },
-  { name: 'AC Unit', url: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=600&auto=format&fit=crop&q=80' }
-];
-
-const SAMPLE_LANDMARK_PHOTOS = [
-  { name: 'Estate Gate', url: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&auto=format&fit=crop&q=80' },
-  { name: 'Street Landmark', url: 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600&auto=format&fit=crop&q=80' }
-];
+// A fixed-price service is booked at its set price; everything else ("starting from", quote-only,
+// or an artisan with no services listed) becomes a quote request the artisan prices.
+const isFixedPrice = (svc: ServiceItem | null) => svc?.pricing_type === 'fixed' && (svc.price ?? 0) > 0;
 
 export const BookingModal: React.FC<BookingModalProps> = ({
   professional: professionalProp,
@@ -39,248 +39,102 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   onClose,
   onSubmitBooking,
   onOpenChatWithPro,
-  preselectedService
+  onViewBookings,
+  preselectedService,
 }) => {
-  // Steps: 'form' (input) -> 'review' (summary before submit) -> 'confirmed' (post submit)
   const [step, setStep] = useState<'form' | 'review' | 'confirmed'>('form');
-
-  // Available services catalog for this specific professional
-  const servicesList: ServiceItem[] = professionalProp?.services && professionalProp.services.length > 0
-    ? professionalProp.services
-    : professionalProp
-      ? [{
-          id: `custom-srv-${professionalProp.id}`,
-          name: `${professionalProp.category} Standard Service`,
-          category: professionalProp.category,
-          description: professionalProp.tagline || professionalProp.bio,
-          pricing_type: professionalProp.pricing_type || 'starting',
-          price: professionalProp.base_price,
-          duration_estimate: '1-2 hrs'
-        }]
-      : [];
-
-  // Form State
-  const [selectedServiceItem, setSelectedServiceItem] = useState<ServiceItem | null>(null);
-  const [issueDescription, setIssueDescription] = useState<string>('');
-  const [problemImages, setProblemImages] = useState<string[]>([]);
-  const [landmarkImages, setLandmarkImages] = useState<string[]>([]);
-  const [landmark, setLandmark] = useState<string>('');
-  const [address, setAddress] = useState<string>('');
-  const [date, setDate] = useState<string>('');
-  const dateInputRef = useRef<HTMLInputElement>(null);
-  const [timeSlot, setTimeSlot] = useState<string>('09:00 AM - 11:00 AM');
-  const [customerName, setCustomerName] = useState<string>('Nneka Okonkwo');
-  const [customerPhone, setCustomerPhone] = useState<string>('+234 803 123 4567');
-  const [isLocating, setIsLocating] = useState<boolean>(false);
-  const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number; addressName?: string } | null>(null);
+  const [selectedService, setSelectedService] = useState<ServiceItem | null>(null);
+  const [description, setDescription] = useState('');
+  const [address, setAddress] = useState('');
+  const [landmark, setLandmark] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [created, setCreated] = useState<Booking | null>(null);
 
-  // Confirmed State
-  const [confirmedBooking, setConfirmedBooking] = useState<Booking | null>(null);
-  const [bookingRefId, setBookingRefId] = useState<string>('');
+  const services: ServiceItem[] = professionalProp?.services || [];
 
-  // Default initial service selection on opening
   useEffect(() => {
-    if (professionalProp) {
-      const list = professionalProp.services && professionalProp.services.length > 0
-        ? professionalProp.services
-        : [{
-            id: `custom-srv-${professionalProp.id}`,
-            name: `${professionalProp.category} Standard Service`,
-            category: professionalProp.category,
-            description: professionalProp.tagline || professionalProp.bio,
-            pricing_type: professionalProp.pricing_type || 'starting',
-            price: professionalProp.base_price,
-            duration_estimate: '1-2 hrs'
-          }];
-
-      if (preselectedService) {
-        const found = list.find(s => s.name.toLowerCase() === preselectedService.toLowerCase());
-        if (found) {
-          setSelectedServiceItem(found);
-        } else if (list.length > 0) {
-          setSelectedServiceItem(list[0]);
-        }
-      } else if (list.length > 0) {
-        setSelectedServiceItem(list[0]);
-      }
-
-      setAddress(`${professionalProp.neighborhood}, Oyo State`);
-      // Default date to tomorrow
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      setDate(tomorrow.toISOString().split('T')[0]);
-    }
+    if (!professionalProp) return;
+    const list = professionalProp.services || [];
+    const preselected = preselectedService
+      ? list.find(s => s.name.toLowerCase() === preselectedService.toLowerCase())
+      : undefined;
+    setSelectedService(preselected || list[0] || null);
   }, [professionalProp, isOpen, preselectedService]);
 
-  // Keeps the last real professional around while closing, same reasoning as
-  // ProfessionalProfileModal: the parent typically clears its selected-professional state in the
-  // same tick it flips isOpen to false, but this sheet stays mounted a little longer to play its
-  // exit animation and needs real content to render during that window.
+  // Keeps the last real professional while the sheet plays its exit animation (the parent clears
+  // its selected professional in the same tick it closes the sheet).
   const [cachedProfessional, setCachedProfessional] = useState(professionalProp);
   useEffect(() => {
     if (professionalProp) setCachedProfessional(professionalProp);
   }, [professionalProp]);
 
-  const handleResetModal = () => {
+  const handleReset = () => {
     setStep('form');
-    setIssueDescription('');
-    setProblemImages([]);
-    setLandmarkImages([]);
+    setDescription('');
+    setAddress('');
     setLandmark('');
-    setGpsCoords(null);
-    setConfirmedBooking(null);
     setValidationError(null);
+    setSubmitError(null);
+    setCreated(null);
     onClose();
   };
 
-  // Nothing typed/uploaded yet is worth warning about, and once the booking is actually
-  // submitted (step 'confirmed') there's nothing left to lose either way.
-  const isBookingFormDirty =
-    step !== 'confirmed' &&
-    Boolean(issueDescription.trim() || problemImages.length > 0 || landmarkImages.length > 0 || landmark.trim());
-  const closeGuard = useUnsavedChangesGuard(isBookingFormDirty, handleResetModal);
-
+  const isDirty = step !== 'confirmed' && Boolean(description.trim() || address.trim() || landmark.trim());
+  const closeGuard = useUnsavedChangesGuard(isDirty, handleReset);
   const sheet = useSlideUpSheet(isOpen, closeGuard.requestClose);
 
   if (!sheet.shouldRender || !cachedProfessional) return null;
   const professional = cachedProfessional;
+  const firstName = professional.name.split(' ')[0] || professional.name;
+  const fixed = isFixedPrice(selectedService);
+  const serviceTitle = selectedService?.name || 'General request';
 
-  const currentPricingType: ServicePricingType = selectedServiceItem?.pricing_type || professional.pricing_type || 'starting';
-  const isQuoteService = currentPricingType === 'quote_required';
-
-  // Image Upload Handlers
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, target: 'problem' | 'landmark') => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    Array.from(files).forEach((file: File) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          const resultStr = event.target.result as string;
-          if (target === 'problem') {
-            setProblemImages(prev => [...prev, resultStr]);
-          } else {
-            setLandmarkImages(prev => [...prev, resultStr]);
-          }
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const addSampleImage = (url: string, target: 'problem' | 'landmark') => {
-    if (target === 'problem') {
-      if (!problemImages.includes(url)) setProblemImages([...problemImages, url]);
-    } else {
-      if (!landmarkImages.includes(url)) setLandmarkImages([...landmarkImages, url]);
-    }
-  };
-
-  const removeImage = (index: number, target: 'problem' | 'landmark') => {
-    if (target === 'problem') {
-      setProblemImages(problemImages.filter((_, i) => i !== index));
-    } else {
-      setLandmarkImages(landmarkImages.filter((_, i) => i !== index));
-    }
-  };
-
-  // Live Location Trigger
-  const handleGetLiveLocation = () => {
-    setIsLocating(true);
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-          setGpsCoords({ lat, lng, addressName: `Live GPS (${lat.toFixed(4)}, ${lng.toFixed(4)})` });
-          setAddress(`Live Location: ${professional.neighborhood}, Ibadan, Oyo State (GPS: ${lat.toFixed(4)}, ${lng.toFixed(4)})`);
-          setIsLocating(false);
-        },
-        () => {
-          const mockLat = 7.3775;
-          const mockLng = 3.9470;
-          setGpsCoords({ lat: mockLat, lng: mockLng, addressName: 'Live GPS Pin (Ibadan, Oyo State)' });
-          setAddress(`Live GPS: ${professional.neighborhood}, Ibadan, Oyo State (7.3775, 3.9470)`);
-          setIsLocating(false);
-        },
-        { timeout: 6000 }
-      );
-    } else {
-      setGpsCoords({ lat: 7.3775, lng: 3.9470, addressName: 'Live GPS Pin (Ibadan, Oyo State)' });
-      setAddress(`Live GPS: ${professional.neighborhood}, Ibadan, Oyo State (7.3775, 3.9470)`);
-      setIsLocating(false);
-    }
-  };
-
-  // Proceed to Request Summary review before submission
   const handleProceedToReview = (e: React.FormEvent) => {
     e.preventDefault();
     setValidationError(null);
-
-    if (!issueDescription.trim()) {
-      setValidationError('Please describe the problem or scope of work required.');
+    if (!description.trim()) {
+      setValidationError('Describe the problem or the work you need done.');
       return;
     }
     if (!address.trim()) {
-      setValidationError('Please specify your address or location.');
+      setValidationError('Enter the address where the work will happen.');
       return;
     }
-    if (!date) {
-      setValidationError('Please select a preferred date for the service.');
-      return;
-    }
-
+    setSubmitError(null);
     setStep('review');
   };
 
-  // Final submission of the request or booking
-  const handleFinalSubmit = () => {
-    const svcPricingType: ServicePricingType = selectedServiceItem?.pricing_type || professional.pricing_type || 'starting';
-    const svcBasePrice = selectedServiceItem?.price ?? professional.base_price ?? 0;
-    const calculatedPrice = svcPricingType === 'fixed' 
-      ? svcBasePrice 
-      : svcPricingType === 'quote_required' 
-        ? 0 
-        : svcBasePrice;
-
-    const refPrefix = svcPricingType === 'quote_required' ? 'REQ' : 'KAZI';
-    const refId = `${refPrefix}-${Math.floor(100000 + Math.random() * 900000)}`;
-
-    const bookingPayload: Omit<Booking, 'id' | 'created_at' | 'status'> = {
-      client_id: 'c1',
-      customerName,
-      customerPhone,
-      artisan_id: professional.id,
-      professionalName: professional.name,
-      category: professional.category,
-      title: selectedServiceItem?.name || 'General Technical Work',
-      servicePricingType: svcPricingType,
-      description: issueDescription,
-      problemImages,
-      problemImageUrl: problemImages[0] || undefined,
-      scheduled_date: date,
-      timeSlot,
-      address,
-      landmark_hint: landmark,
-      landmarkImages,
-      coordinates: gpsCoords || undefined,
-      amount: calculatedPrice
-    };
-
-    onSubmitBooking(bookingPayload);
-
-    // Set summary view state
-    setConfirmedBooking({
-      ...bookingPayload,
-      id: refId,
-      status: svcPricingType === 'quote_required' ? 'quote_requested' : 'pending',
-      created_at: new Date().toISOString()
-    });
-    setBookingRefId(refId);
-    setStep('confirmed');
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      const booking = await onSubmitBooking({ professional, service: selectedService, description, address, landmark });
+      setCreated(booking);
+      setStep('confirmed');
+    } catch (err: any) {
+      setSubmitError(err?.message || 'Could not send this request. Try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  const priceLine = (
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 dark:text-slate-400">
+        <ShieldCheck className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400 shrink-0" />
+        <span>{fixed ? 'Fixed price · paid into escrow after the artisan accepts' : `${firstName} will send you a price`}</span>
+      </div>
+      {fixed ? (
+        <span className="text-base font-black text-slate-900 dark:text-white shrink-0">{formatCurrency(selectedService?.price ?? 0)}</span>
+      ) : (
+        <span className="text-xs font-black text-navy-800 dark:text-navy-400 bg-navy-50 dark:bg-navy-950 px-2.5 py-1 rounded-lg border border-navy-200 dark:border-navy-800 shrink-0">
+          Quote to come
+        </span>
+      )}
+    </div>
+  );
 
   return (
     <div
@@ -292,78 +146,37 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         style={sheet.dragStyle}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Modal Sticky Header -- the mobile drag handle lives in the same sticky container as a
-            top row, rather than as a separate stacked sticky element, so there's no pixel-offset
-            math between the two to keep in sync. */}
+        {/* Header -- drag handle and artisan row share one sticky container. */}
         <div className="sticky top-0 z-20 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md">
-          <div
-            className="sm:hidden pt-3 pb-1.5 cursor-grab active:cursor-grabbing touch-none"
-            {...sheet.dragHandleProps}
-          >
+          <div className="sm:hidden pt-3 pb-1.5 cursor-grab active:cursor-grabbing touch-none" {...sheet.dragHandleProps}>
             <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto" aria-hidden="true" />
           </div>
           <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
-          <div className="flex items-center gap-2.5 sm:gap-3">
-            <div className="relative shrink-0">
-              <img src={professional.profile_picture} alt={professional.name} className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl object-cover shadow-xs border border-navy-800/30" />
-            </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                <h3 className="font-extrabold text-slate-900 dark:text-slate-100 text-sm sm:text-base">{professional.name}</h3>
-                {professional.is_verified && <VerifiedBadge />}
-                <span className="px-2 py-0.5 rounded-full bg-navy-800/10 text-navy-800 dark:text-navy-400 font-bold text-[10px] border border-navy-800/20">
-                  ★ {professional.rating_average} ({professional.review_count})
-                </span>
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+              <img src={professional.profile_picture} alt={professional.name} className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl object-cover shadow-xs border border-navy-800/30 shrink-0" />
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                  <h3 className="font-extrabold text-slate-900 dark:text-slate-100 text-sm sm:text-base truncate">{professional.name}</h3>
+                  {professional.is_verified && <VerifiedBadge />}
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate">
+                  {professional.category}{professional.neighborhood ? ` • ${professional.neighborhood}` : ''}
+                </p>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                {professional.category} • <span className="font-bold text-navy-800 dark:text-navy-400">{professional.neighborhood}</span>
-              </p>
             </div>
-          </div>
-
-          <button
-            onClick={closeGuard.requestClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
-          >
-            <X className="w-5 h-5" />
-          </button>
+            <button
+              onClick={closeGuard.requestClose}
+              aria-label="Close"
+              className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
         </div>
 
-        {/* ========================================================= */}
-        {/* STEP 1: FORM INPUTS & SCOPE DETAILS                       */}
-        {/* ========================================================= */}
+        {/* STEP 1: FORM */}
         {step === 'form' && (
           <form onSubmit={handleProceedToReview} className="p-3.5 sm:p-4 space-y-4">
-            
-            {/* Quote-Based Service Explicit Notice Banner */}
-            {isQuoteService ? (
-              <div className="p-4 rounded-2xl bg-navy-50 dark:bg-navy-950/70 border border-navy-200 dark:border-navy-800 space-y-2">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-navy-800 dark:text-navy-400 shrink-0" />
-                  <h4 className="text-xs sm:text-sm font-extrabold text-navy-950 dark:text-navy-200">
-                    Quote-Based Custom Service
-                  </h4>
-                  <span className="text-[10px] font-bold text-navy-800 dark:text-navy-400 bg-navy-100 dark:bg-navy-900 px-2 py-0.5 rounded-full border border-navy-200 dark:border-navy-800">
-                    Request a quote
-                  </span>
-                </div>
-                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                  <strong>The final price will be provided by {professional.name.split(' ')[0]}.</strong> Describe your requirements, attach photos if available, and choose your preferred date. The professional will review your scope and provide a custom quote.
-                </p>
-                <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 pt-0.5">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>No payment required now • Free request submission</span>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center px-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-600 dark:text-slate-400">
-                <span className="flex items-center gap-2 text-navy-800 dark:text-navy-400">
-                  <Wrench className="w-4 h-4" /> Professional Job Scope & Schedule
-                </span>
-              </div>
-            )}
-
             {validationError && (
               <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-bold flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
@@ -371,691 +184,221 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               </div>
             )}
 
-            {/* 1. CHOOSE SERVICE REQUIREMENT */}
             <div className="space-y-2">
-              <label className="block text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center justify-between">
-                <span>1. Select Service Requirement</span>
-                <span className="text-[10px] font-semibold text-navy-800 dark:text-navy-400">Required</span>
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {servicesList.map((svc, idx) => {
-                  const isSelected = selectedServiceItem?.id === svc.id || selectedServiceItem?.name === svc.name;
-                  const priceInfo = formatServicePrice(svc.pricing_type, svc.price);
-
-                  return (
-                    <button
-                      type="button"
-                      key={svc.id || idx}
-                      onClick={() => setSelectedServiceItem(svc)}
-                      className={`p-3 rounded-2xl border text-left text-xs transition-all cursor-pointer flex flex-col justify-between gap-1.5 ${
-                        isSelected
-                          ? 'bg-navy-800/10 border-navy-800 text-navy-950 dark:text-navy-200 shadow-xs ring-1 ring-navy-800/20'
-                          : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 hover:border-navy-800/50'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="font-bold">{svc.name}</span>
-                        {isSelected && <CheckCircle2 className="w-4 h-4 text-navy-800 dark:text-navy-400 shrink-0" />}
-                      </div>
-                      
-                      <div className="flex items-center gap-1.5 pt-0.5">
-                        {priceInfo.type === 'fixed' && (
-                          <>
-                            <span className="font-black text-slate-900 dark:text-slate-100">{priceInfo.primaryText}</span>
-                            <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/80 px-1.5 py-0.2 rounded border border-emerald-200/60">
-                              Fixed price
-                            </span>
-                          </>
-                        )}
-                        {priceInfo.type === 'quote_required' && (
-                          <span className="text-[11px] font-bold text-navy-800 dark:text-navy-400 bg-navy-50 dark:bg-navy-950 px-2 py-0.5 rounded border border-navy-200/60 dark:border-navy-800">
-                            Request a quote
-                          </span>
-                        )}
-                        {priceInfo.type === 'starting' && (
-                          <>
-                            <span className="font-black text-slate-900 dark:text-slate-100">{priceInfo.primaryText}</span>
-                            <span className="text-[10px] font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.2 rounded">
-                              Starting
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+              <span className="block text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">1. Service</span>
+              {services.length === 0 ? (
+                <p className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400">
+                  {firstName} hasn’t listed services yet. Describe what you need and they’ll send you a quote.
+                </p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {services.map((svc) => {
+                    const isSelected = selectedService?.id === svc.id;
+                    const priceInfo = formatServicePrice(svc.pricing_type, svc.price);
+                    return (
+                      <button
+                        type="button"
+                        key={svc.id}
+                        onClick={() => setSelectedService(svc)}
+                        aria-pressed={isSelected}
+                        className={`p-3 rounded-2xl border text-left text-xs transition-all cursor-pointer flex flex-col justify-between gap-1.5 ${
+                          isSelected
+                            ? 'bg-navy-800/10 border-navy-800 text-navy-950 dark:text-navy-200 shadow-xs ring-1 ring-navy-800/20'
+                            : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 hover:border-navy-800/50'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="font-bold">{svc.name}</span>
+                          {isSelected && <CheckCircle2 className="w-4 h-4 text-navy-800 dark:text-navy-400 shrink-0" />}
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-black text-slate-900 dark:text-slate-100">{priceInfo.primaryText}</span>
+                          {priceInfo.badgeLabel && <span className="text-[10px] font-medium text-slate-500">{priceInfo.badgeLabel}</span>}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
-            {/* 2. DESCRIBE ISSUE OR WORK REQUIRED */}
             <div className="space-y-2">
-              <label className="block text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center justify-between">
-                <span>2. Describe Problem / Work Required</span>
-                <span className="text-[10px] font-semibold text-navy-800 dark:text-navy-400">Required</span>
+              <label htmlFor="booking-description" className="block text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                2. What do you need done?
               </label>
               <textarea
+                id="booking-description"
                 rows={3}
-                value={issueDescription}
-                onChange={(e) => setIssueDescription(e.target.value)}
-                placeholder={
-                  isQuoteService
-                    ? "Describe the job requirements, dimensions, specifications, or materials needed for your custom quote..."
-                    : "Explain the problem in detail (e.g., Water leaking under bathroom sink, fuse box tripping continuously, AC leaking water, etc.)..."
-                }
-                required
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder={fixed
+                  ? 'Explain the problem, e.g. water leaking under the bathroom sink.'
+                  : 'Describe the job: what, where, sizes or materials, so the artisan can price it.'}
                 className="w-full p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-navy-800 transition-colors"
               />
             </div>
 
-            {/* 3. UPLOAD PROBLEM / SPECIFICATION PHOTOS */}
-            <div className="space-y-2.5">
-              <label className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex flex-col sm:flex-row sm:items-center justify-between gap-0.5 sm:gap-2">
-                <span>3. Attach Photos & References (Optional)</span>
-                <span className="text-[10px] text-slate-400">Helps artisan prepare an accurate estimate</span>
+            <div className="space-y-2">
+              <label htmlFor="booking-address" className="block text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                3. Address
               </label>
-
-              <div className="flex flex-wrap items-center gap-3">
-                {/* File Upload Button */}
-                <label className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-navy-800/10 hover:bg-navy-800/20 text-navy-800 dark:text-navy-400 border border-navy-800/30 font-bold text-xs cursor-pointer transition-colors">
-                  <Upload className="w-4 h-4" />
-                  <span>Upload Photos</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={(e) => handleFileUpload(e, 'problem')}
-                    className="hidden"
-                  />
-                </label>
-
-                {/* Quick Preset Buttons */}
-                <span className="text-[11px] text-slate-400 font-medium">Quick add sample:</span>
-                {SAMPLE_PROBLEM_PHOTOS.map((sample, idx) => (
-                  <button
-                    type="button"
-                    key={idx}
-                    onClick={() => addSampleImage(sample.url, 'problem')}
-                    className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-navy-800/20 text-slate-700 dark:text-slate-300 text-[11px] font-semibold transition-colors cursor-pointer border border-slate-200 dark:border-slate-700"
-                  >
-                    + {sample.name}
-                  </button>
-                ))}
-              </div>
-
-              {/* Uploaded Thumbnails Preview */}
-              {problemImages.length > 0 && (
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 pt-2">
-                  {problemImages.map((imgUrl, idx) => (
-                    <div key={idx} className="relative group rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 aspect-square">
-                      <img src={imgUrl} alt="Attached Problem" className="w-full h-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => removeImage(idx, 'problem')}
-                        className="absolute top-1 right-1 p-1 rounded-full bg-slate-900/80 text-white hover:bg-red-600 transition-colors cursor-pointer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* 4. CHOOSE LOCATION & LANDMARK */}
-            <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800">
-              <div className="flex items-center justify-between">
-                <label className="block text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                  4. Location & Landmark
-                </label>
-                <button
-                  type="button"
-                  onClick={handleGetLiveLocation}
-                  disabled={isLocating}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-navy-800/10 hover:bg-navy-800/20 text-navy-800 dark:text-navy-300 border border-navy-800/30 text-xs font-bold transition-all cursor-pointer"
-                >
-                  <Navigation className={`w-3.5 h-3.5 ${isLocating ? 'animate-spin' : ''}`} />
-                  <span>{isLocating ? 'Locating...' : 'Use Phone GPS'}</span>
-                </button>
-              </div>
-
               <div className="relative">
                 <MapPin className="absolute left-3.5 top-3.5 w-4 h-4 text-navy-800 dark:text-navy-400" />
                 <input
+                  id="booking-address"
                   type="text"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Street address, house/apt number, area..."
-                  required
+                  placeholder="Street, house number, area, city"
+                  autoComplete="street-address"
                   className="w-full pl-10 pr-3.5 py-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-navy-800"
                 />
               </div>
-
-              {gpsCoords && (
-                <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between text-xs text-emerald-700 dark:text-emerald-400">
-                  <span className="font-semibold flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> GPS Pin: {gpsCoords.lat.toFixed(4)}, {gpsCoords.lng.toFixed(4)}
-                  </span>
-                  <span className="text-[10px] font-bold uppercase tracking-wide">Captured</span>
-                </div>
-              )}
-
-              {/* Landmark Input & Photos */}
-              <div className="space-y-2 pt-1">
-                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Landmark Hint & Photo (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={landmark}
-                  onChange={(e) => setLandmark(e.target.value)}
-                  placeholder="e.g. Opposite Total Filling Station, black gate next to pharmacy..."
-                  className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-navy-800"
-                />
-
-                <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-semibold cursor-pointer transition-colors">
-                    <Camera className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400" />
-                    <span>Attach Landmark Photo</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleFileUpload(e, 'landmark')}
-                      className="hidden"
-                    />
-                  </label>
-
-                  {SAMPLE_LANDMARK_PHOTOS.map((lm, idx) => (
-                    <button
-                      type="button"
-                      key={idx}
-                      onClick={() => addSampleImage(lm.url, 'landmark')}
-                      className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-navy-800/20 text-slate-600 dark:text-slate-300 text-[10px] font-medium transition-colors cursor-pointer"
-                    >
-                      + {lm.name}
-                    </button>
-                  ))}
-                </div>
-
-                {landmarkImages.length > 0 && (
-                  <div className="grid grid-cols-4 gap-2 pt-1">
-                    {landmarkImages.map((imgUrl, idx) => (
-                      <div key={idx} className="relative group rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 aspect-square">
-                        <img src={imgUrl} alt="Landmark" className="w-full h-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => removeImage(idx, 'landmark')}
-                          className="absolute top-1 right-1 p-1 rounded-full bg-slate-900/80 text-white hover:bg-red-600 transition-colors cursor-pointer"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <input
+                aria-label="Landmark (optional)"
+                type="text"
+                value={landmark}
+                onChange={(e) => setLandmark(e.target.value)}
+                placeholder="Landmark (optional), e.g. opposite the filling station, black gate"
+                className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-navy-800"
+              />
             </div>
 
-            {/* 5. PREFERRED DATE & TIME */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
-              <div className="space-y-1.5">
-                <label className="block text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                  5. Preferred Date
-                </label>
-                <div className="relative">
-                  {/* Real picker trigger, not decoration: input type="date" already supports typing
-                      the date directly, but its native picker affordance is easy to miss (and on
-                      some browsers doesn't render at all) -- showPicker() gives it an explicit,
-                      always-visible calendar button alongside manual entry, not instead of it. */}
-                  <button
-                    type="button"
-                    onClick={() => dateInputRef.current?.showPicker?.()}
-                    className="absolute left-3.5 top-3 text-slate-400 hover:text-navy-800 dark:hover:text-navy-400 transition-colors cursor-pointer"
-                    title="Open calendar"
-                    aria-label="Open calendar picker"
-                  >
-                    <Calendar className="w-4 h-4" />
-                  </button>
-                  <input
-                    ref={dateInputRef}
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    required
-                    className="w-full pl-10 pr-3.5 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-navy-800"
-                  />
-                </div>
-              </div>
+            <p className="flex items-start gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+              <Info className="w-3.5 h-3.5 shrink-0 mt-px" />
+              <span>Choosing a date and time, and attaching photos, are coming soon. Agree the timing with {firstName} in messages for now.</span>
+            </p>
 
-              <div className="space-y-1.5">
-                <label className="block text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                  6. Preferred Time Slot
-                </label>
-                <CustomDropdown
-                  value={timeSlot}
-                  onChange={(val) => setTimeSlot(val)}
-                  icon={<Clock className="w-4 h-4 text-slate-400" />}
-                  options={[
-                    { value: '08:00 AM - 10:00 AM', label: '08:00 AM - 10:00 AM' },
-                    { value: '10:00 AM - 12:00 PM', label: '10:00 AM - 12:00 PM' },
-                    { value: '01:00 PM - 03:00 PM', label: '01:00 PM - 03:00 PM' },
-                    { value: '03:00 PM - 05:00 PM', label: '03:00 PM - 05:00 PM' },
-                    { value: '05:00 PM - 07:00 PM', label: '05:00 PM - 07:00 PM' }
-                  ]}
-                  className="w-full"
-                  buttonClassName="bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 hover:border-navy-500/50 dark:hover:border-navy-400/50"
-                />
-              </div>
-            </div>
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800">{priceLine}</div>
 
-            {/* CUSTOMER CONTACT DETAILS */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
-              <div className="space-y-1">
-                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Your Full Name</label>
-                <input
-                  type="text"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  required
-                  className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-navy-800"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Phone (for Artisan SMS / Calls)</label>
-                <input
-                  type="text"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  required
-                  className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-navy-800"
-                />
-              </div>
-            </div>
-
-            {/* Pricing Summary */}
-            {(() => {
-              const svcPrice = selectedServiceItem?.price ?? professional.base_price ?? 0;
-              const priceInfo = formatServicePrice(currentPricingType, svcPrice, professional.base_price);
-
-              return (
-                <div className="flex items-center gap-2 px-1">
-                  <ShieldCheck className="w-4 h-4 text-navy-800 dark:text-navy-400 shrink-0" />
-                  <span className="font-extrabold text-navy-800 dark:text-navy-300 text-sm">
-                    {priceInfo.primaryText}
-                  </span>
-                  <span className="text-xs font-bold text-slate-400">
-                    {priceInfo.badgeLabel}
-                  </span>
-                </div>
-              );
-            })()}
-
-            {/* FORM FOOTER ACTIONS */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-2 border-t border-slate-200 dark:border-slate-800">
               <button
                 type="button"
                 onClick={closeGuard.requestClose}
-                className="w-full sm:w-auto px-5 py-3 border border-rose-200 dark:border-rose-900 rounded-2xl text-rose-600 dark:text-rose-400 text-xs font-bold hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-rose-600 dark:text-rose-400 text-xs font-bold hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer text-center"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="w-full sm:w-auto px-7 py-3 bg-navy-800 hover:bg-navy-900 text-white rounded-2xl text-xs font-extrabold shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-[0.98]"
+                className="w-full sm:w-auto px-5 py-2.5 bg-navy-800 hover:bg-navy-900 text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-[0.98]"
               >
-                <span>{isQuoteService ? 'Review Quote Request' : 'Review Booking Summary'}</span>
+                <span>Review {fixed ? 'Booking' : 'Request'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
-
           </form>
         )}
 
-        {/* ========================================================= */}
-        {/* STEP 2: REQUEST / BOOKING SUMMARY BEFORE SUBMISSION       */}
-        {/* ========================================================= */}
+        {/* STEP 2: REVIEW */}
         {step === 'review' && (
-          <div className="p-3.5 sm:p-4 space-y-4 animate-in fade-in duration-200">
-            
-            {/* Header review banner */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-navy-800 text-white space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-navy-200 uppercase tracking-wider">
-                  Step 2 of 2: Pre-Submission Review
-                </span>
-                <span className="text-[10px] font-extrabold bg-white/20 px-2.5 py-0.5 rounded-full">
-                  {isQuoteService ? 'Quote Request' : 'Fixed Booking'}
-                </span>
-              </div>
-              <h2 className="text-lg font-black text-white">
-                {isQuoteService ? 'Review Your Quote Request' : 'Review Booking Details'}
-              </h2>
-              <p className="text-xs text-navy-100">
-                {isQuoteService
-                  ? 'Please review your job scope and requirements before submitting your request to the artisan.'
-                  : 'Please double-check your booking information and schedule before final confirmation.'}
+          <div className="p-3.5 sm:p-4 space-y-4">
+            <div className="space-y-1">
+              <h2 className="text-lg font-black text-slate-900 dark:text-slate-100">{fixed ? 'Check your booking' : 'Check your quote request'}</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {fixed
+                  ? `${firstName} will be asked to accept this booking at the price below.`
+                  : `${firstName} will review this and send you a price. Nothing is charged until you accept a quote.`}
               </p>
             </div>
 
-            {/* Explanation box for quote service -- neutral navy, not amber: this is routine
-                information about how the quote flow works, not a warning, so it shouldn't borrow
-                the color reserved for actual warning states. */}
-            {isQuoteService && (
-              <div className="p-3.5 rounded-2xl bg-navy-800/10 border border-navy-800/20 flex items-start gap-2.5 text-xs text-navy-900 dark:text-navy-200">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-navy-800 dark:text-navy-400" />
-                <p className="leading-snug">
-                  <strong>Notice:</strong> This is a <strong>quote-based service</strong>. Submitting this form sends a request to the professional. The professional will evaluate your specifications and reply with a custom price quote.
-                </p>
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3 text-xs">
+              <div>
+                <span className="text-slate-400 font-bold block mb-0.5">Service</span>
+                <p className="font-extrabold text-slate-900 dark:text-slate-100 text-sm">{serviceTitle}</p>
+              </div>
+              <div>
+                <span className="text-slate-400 font-bold block mb-0.5">What you need</span>
+                <p className="text-slate-800 dark:text-slate-200 whitespace-pre-wrap">{description.trim()}</p>
+              </div>
+              <div>
+                <span className="text-slate-400 font-bold block mb-0.5">Address</span>
+                <p className="font-bold text-slate-900 dark:text-slate-100">{address.trim()}</p>
+                {landmark.trim() && <p className="text-[11px] text-slate-500 mt-0.5">Landmark: {landmark.trim()}</p>}
+              </div>
+              <div className="pt-3 border-t border-slate-200 dark:border-slate-800">{priceLine}</div>
+            </div>
+
+            {submitError && (
+              <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-bold flex items-center gap-2" role="alert">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{submitError}</span>
               </div>
             )}
 
-            {/* Summary Details Grid */}
-            <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-4 text-xs">
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
-                <div>
-                  <span className="text-slate-400 font-bold block mb-1">Selected Service</span>
-                  <p className="font-extrabold text-slate-900 dark:text-slate-100 text-sm">
-                    {selectedServiceItem?.name || 'General Technical Work'}
-                  </p>
-                  <p className="text-navy-800 dark:text-navy-400 font-semibold">{professional.category}</p>
-                </div>
-
-                <div>
-                  <span className="text-slate-400 font-bold block mb-1">Assigned Professional</span>
-                  <div className="flex items-center gap-2">
-                    <img src={professional.profile_picture} alt={professional.name} className="w-8 h-8 rounded-xl object-cover" />
-                    <div>
-                      <p className="font-bold text-slate-900 dark:text-slate-100">{professional.name}</p>
-                      <p className="text-[11px] text-slate-500">{professional.phone_number}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
-                <div>
-                  <span className="text-slate-400 font-bold block mb-1">Preferred Date & Time</span>
-                  <p className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400" /> {date}
-                  </p>
-                  <p className="text-slate-600 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
-                    <Clock className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400" /> {timeSlot}
-                  </p>
-                </div>
-
-                <div>
-                  <span className="text-slate-400 font-bold block mb-1">Location & Landmark</span>
-                  <p className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400 shrink-0" />
-                    <span className="truncate">{address}</span>
-                  </p>
-                  {landmark && (
-                    <p className="text-[11px] text-slate-500 mt-0.5">Landmark: {landmark}</p>
-                  )}
-                  {gpsCoords && (
-                    <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">
-                      ✓ GPS Pin coordinates verified
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Work Scope / Description */}
-              <div className="space-y-1.5">
-                <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px] block">
-                  Problem / Job Scope
-                </span>
-                <p className="text-xs text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
-                  {issueDescription}
-                </p>
-              </div>
-
-              {/* Attached Photos */}
-              {(problemImages.length > 0 || landmarkImages.length > 0) && (
-                <div className="space-y-1.5 pt-2">
-                  <span className="text-slate-400 font-bold text-[11px] block">
-                    Attached Photos ({problemImages.length + landmarkImages.length}):
-                  </span>
-                  <div className="flex flex-wrap gap-2">
-                    {problemImages.map((img, i) => (
-                      <img key={i} src={img} alt="Problem Reference" className="w-14 h-14 rounded-xl object-cover border border-slate-200 dark:border-slate-700" />
-                    ))}
-                    {landmarkImages.map((img, i) => (
-                      <img key={i} src={img} alt="Landmark Reference" className="w-14 h-14 rounded-xl object-cover border border-navy-800/40" />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Pricing summary -- one line, not three: a "Pricing Model" label, a separate
-                  escrow sentence, and the price itself used to each make the same claim
-                  separately. The shield icon plus one short caption now carries that meaning. */}
-              <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                  <ShieldCheck className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400 shrink-0" />
-                  <span>{isQuoteService ? 'Reviewed & quoted by artisan' : 'Fixed price · Escrow protected'}</span>
-                </div>
-                <div className="text-right shrink-0">
-                  {isQuoteService ? (
-                    <span className="text-xs sm:text-sm font-black text-navy-800 dark:text-navy-400 bg-navy-50 dark:bg-navy-950 px-2.5 py-1 rounded-lg border border-navy-200 dark:border-navy-800 inline-block">
-                      Quote to be provided
-                    </span>
-                  ) : (
-                    <span className="text-base font-black text-slate-900 dark:text-white">
-                      ₦{(selectedServiceItem?.price || professional.base_price || 0).toLocaleString()}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-            </div>
-
-            {/* Review actions buttons */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-2 border-t border-slate-200 dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => setStep('form')}
-                className="px-5 py-3 border border-slate-300 dark:border-slate-700 rounded-2xl text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer flex items-center justify-center gap-2"
+                disabled={isSubmitting}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 <ArrowLeft className="w-4 h-4" />
                 <span>Edit Details</span>
               </button>
-
               <button
                 type="button"
-                onClick={handleFinalSubmit}
-                className="px-7 py-3 bg-navy-800 hover:bg-navy-900 text-white rounded-2xl text-xs font-extrabold shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-[0.98]"
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                className="w-full sm:w-auto px-5 py-2.5 bg-navy-800 hover:bg-navy-900 text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-wait"
               >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>{isQuoteService ? 'Submit Quote Request' : 'Confirm & Book Service'}</span>
+                {isSubmitting ? (
+                  <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <CheckCircle2 className="w-4 h-4" />
+                )}
+                <span>{isSubmitting ? 'Sending…' : fixed ? 'Send Booking' : 'Send Quote Request'}</span>
               </button>
             </div>
-
           </div>
         )}
 
-        {/* ========================================================= */}
-        {/* STEP 3: SUBMISSION SUCCESS CONFIRMATION                   */}
-        {/* ========================================================= */}
-        {step === 'confirmed' && (
-          <div className="p-3.5 sm:p-4 space-y-4 animate-in zoom-in-95 duration-300">
-            
-            {/* Header Banner - Differentiated for Quote vs Fixed */}
-            {isQuoteService ? (
-              <div className="p-4 rounded-2xl bg-navy-50 dark:bg-navy-950/80 border border-navy-200 dark:border-navy-800 text-center space-y-2">
-                <div className="w-14 h-14 bg-navy-800 text-white rounded-2xl flex items-center justify-center mx-auto shadow-xs">
-                  <FileText className="w-8 h-8 text-brand-orange-400" />
-                </div>
-                <h2 className="text-xl font-black text-slate-900 dark:text-slate-100">Quote Request Submitted!</h2>
-                <p className="text-xs text-slate-600 dark:text-slate-400 max-w-md mx-auto">
-                  Your request has been dispatched to <span className="font-bold text-slate-900 dark:text-slate-100">{professional.name}</span>. The professional will evaluate your specifications and send you a custom quote.
-                </p>
-                <div className="pt-2 flex items-center justify-center gap-2">
-                  <span className="px-4 py-1.5 rounded-full bg-navy-800 text-white font-mono text-xs font-black shadow-xs">
-                    REF: #{bookingRefId}
-                  </span>
-                  <span className="px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-bold">
-                    Awaiting quote
-                  </span>
-                </div>
+        {/* STEP 3: SENT */}
+        {step === 'confirmed' && created && (
+          <div className="p-3.5 sm:p-4 space-y-4">
+            <div className="p-4 rounded-2xl bg-navy-50 dark:bg-navy-950/70 border border-navy-200 dark:border-navy-800 text-center space-y-2">
+              <div className="w-12 h-12 bg-navy-800 text-white rounded-2xl flex items-center justify-center mx-auto">
+                {fixed ? <Wrench className="w-6 h-6" /> : <FileText className="w-6 h-6" />}
               </div>
-            ) : (
-              <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-center space-y-2">
-                <div className="w-14 h-14 bg-emerald-600 text-white rounded-2xl flex items-center justify-center mx-auto shadow-xs">
-                  <CheckCircle2 className="w-8 h-8" />
-                </div>
-                <h2 className="text-xl font-black text-emerald-900 dark:text-emerald-300">Booking Confirmed!</h2>
-                <p className="text-xs text-emerald-700 dark:text-emerald-400 max-w-md mx-auto">
-                  Your booking request has been dispatched to <span className="font-bold">{professional.name}</span>. You will receive an SMS and in-app updates as soon as they accept.
-                </p>
-                <div className="pt-2">
-                  <span className="inline-block px-4 py-1.5 rounded-full bg-navy-800 text-white font-mono text-xs font-black shadow-xs">
-                    REF: #{bookingRefId}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Detailed Booking / Request Summary Details Grid */}
-            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
-              <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 pb-2">
-                {isQuoteService ? 'Request Summary Details' : 'Booking Summary Details'}
-              </h3>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                
-                <div>
-                  <span className="text-slate-400 font-bold block mb-1">Service & Trade</span>
-                  <p className="font-extrabold text-slate-900 dark:text-slate-100 text-sm">
-                    {confirmedBooking?.title || selectedServiceItem?.name || 'General Service'}
-                  </p>
-                  <p className="text-navy-800 dark:text-navy-400 font-semibold">{professional.category}</p>
-                </div>
-
-                <div>
-                  <span className="text-slate-400 font-bold block mb-1">Assigned Artisan</span>
-                  <div className="flex items-center gap-2">
-                    <img src={professional.profile_picture} alt={professional.name} className="w-8 h-8 rounded-xl object-cover" />
-                    <div>
-                      <p className="font-bold text-slate-900 dark:text-slate-100">{professional.name}</p>
-                      <p className="text-[11px] text-slate-500">{professional.phone_number}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <span className="text-slate-400 font-bold block mb-1">Preferred Date & Time Slot</span>
-                  <p className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400" /> {date}
-                  </p>
-                  <p className="text-slate-600 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
-                    <Clock className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400" /> {timeSlot}
-                  </p>
-                </div>
-
-                <div>
-                  <span className="text-slate-400 font-bold block mb-1">Location & Landmark</span>
-                  <p className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400 shrink-0" /> <span className="truncate">{address}</span>
-                  </p>
-                  {landmark && (
-                    <p className="text-[11px] text-slate-500 mt-0.5">Landmark: {landmark}</p>
-                  )}
-                </div>
-
-              </div>
-
-              {/* Description & Uploaded Images */}
-              <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
-                <span className="text-slate-400 font-bold text-xs uppercase tracking-wider block">Job Description</span>
-                <p className="text-xs text-slate-700 dark:text-slate-300 italic bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200 dark:border-slate-800">
-                  "{issueDescription}"
-                </p>
-
-                {(problemImages.length > 0 || landmarkImages.length > 0) && (
-                  <div className="space-y-2 pt-2">
-                    <span className="text-slate-400 font-bold text-[11px] block">Attached Photos ({problemImages.length + landmarkImages.length}):</span>
-                    <div className="flex flex-wrap gap-2">
-                      {problemImages.map((img, i) => (
-                        <img key={i} src={img} alt="Attached Problem" className="w-14 h-14 rounded-xl object-cover border border-slate-200 dark:border-slate-800" />
-                      ))}
-                      {landmarkImages.map((img, i) => (
-                        <img key={i} src={img} alt="Attached Landmark" className="w-14 h-14 rounded-xl object-cover border border-navy-800/40" />
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Pricing Escrow / Quote Status Summary */}
-              <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
-                <div>
-                  <span className="text-slate-400 font-bold block">Status</span>
-                  <p className="font-extrabold text-navy-800 dark:text-navy-300">
-                    {isQuoteService ? 'Request Under Review by Artisan' : 'Escrow Held Safely'}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <span className="text-slate-400 font-bold block">
-                    {isQuoteService ? 'Pricing Status' : 'Total Price'}
-                  </span>
-                  {isQuoteService ? (
-                    <span className="text-xs sm:text-sm font-black text-navy-800 dark:text-navy-400 bg-navy-50 dark:bg-navy-950 px-2 py-0.5 rounded border border-navy-200 dark:border-navy-800 inline-block mt-0.5">
-                      Awaiting quote
-                    </span>
-                  ) : (
-                    <span className="text-lg font-black text-navy-800 dark:text-navy-400">
-                      ₦{confirmedBooking?.amount?.toLocaleString() || '0'}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Policy Disclaimer */}
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 bg-navy-800/10 border border-navy-800/20 p-2.5 rounded-xl">
-                <span className="font-bold text-navy-800 dark:text-navy-400">
-                  {isQuoteService ? 'Quote Process:' : 'Cancellation Policy:'}
-                </span>{' '}
-                {isQuoteService
-                  ? 'The professional will evaluate your request and provide a price quote in your messages / requests tab. You can accept or decline without obligation.'
-                  : 'Free cancellation is available up to 45 minutes prior to your scheduled appointment time.'}
+              <h2 className="text-lg font-black text-slate-900 dark:text-slate-100">{fixed ? 'Booking sent' : 'Quote request sent'}</h2>
+              <p className="text-xs text-slate-600 dark:text-slate-400 max-w-md mx-auto">
+                {fixed
+                  ? `Waiting for ${firstName} to accept. Once they do, you’ll pay the ${formatCurrency(created.amount ?? 0)} into escrow. It’s held until you confirm the job is done.`
+                  : `${firstName} will send you a price. You’ll find it under Bookings, where you can accept it.`}
               </p>
-
+              <p className="text-[11px] font-mono font-bold text-slate-500 dark:text-slate-400">
+                Reference {created.reference_code || created.id}
+              </p>
             </div>
 
-            {/* Actions */}
-            <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-2">
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-2">
               {onOpenChatWithPro && (
                 <button
                   type="button"
-                  onClick={() => {
-                    handleResetModal();
-                    onOpenChatWithPro(professional);
-                  }}
-                  className="w-full sm:w-auto px-6 py-3 border border-slate-300 dark:border-slate-700 rounded-2xl text-slate-800 dark:text-slate-200 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer flex items-center justify-center gap-2"
+                  onClick={() => { handleReset(); onOpenChatWithPro(professional); }}
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-slate-800 dark:text-slate-200 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer flex items-center justify-center gap-2"
                 >
-                  <Phone className="w-4 h-4 text-navy-800 dark:text-navy-400" />
-                  <span>Start Live Chat with {professional.name.split(' ')[0]}</span>
+                  <MessageSquare className="w-4 h-4 text-navy-800 dark:text-navy-400" />
+                  <span>Message {firstName}</span>
                 </button>
               )}
-              
-              <button
-                type="button"
-                onClick={handleResetModal}
-                className="w-full sm:w-auto px-8 py-3 bg-navy-800 hover:bg-navy-900 text-white rounded-2xl text-xs font-extrabold shadow-xs transition-colors cursor-pointer"
-              >
-                Done
-              </button>
+              {onViewBookings && (
+                <button
+                  type="button"
+                  onClick={() => { handleReset(); onViewBookings(); }}
+                  className="w-full sm:w-auto px-5 py-2.5 bg-navy-800 hover:bg-navy-900 text-white rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer text-center"
+                >
+                  View My Bookings
+                </button>
+              )}
             </div>
-
           </div>
         )}
-
       </div>
 
       <UnsavedChangesModal
         guard={closeGuard}
-        description="You haven't submitted this booking request yet. Closing now will discard what you've entered."
+        description="You haven't sent this request yet. Closing now will discard what you've entered."
       />
     </div>
   );

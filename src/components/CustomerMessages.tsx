@@ -1,16 +1,17 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Professional, Booking, ChatMessage, Category } from '../types';
+import { useAccountFrozen } from '../hooks/useAccountFrozen';
+import { FrozenComposerNotice } from './ui/FrozenNotice';
+import { Professional, Booking, ChatMessage } from '../types';
 import { formatCurrency, isBookingArchived } from '../utils';
 import { 
   Search, SendHorizontal, Image as ImageIcon, ArrowLeft, 
-  CheckCheck, Check, Clock, User, MessageSquare,
-  X, Paperclip, Mic, Play, Pause, MapPin, Navigation, 
-  Video, ExternalLink, Square, Star,
-  Calendar, Briefcase, Phone, AlertCircle, Volume2,
-  Trash2
+  CheckCheck, Check, MessageSquare,
+  X, MapPin, ExternalLink, Star,
+  Calendar, AlertCircle, Trash2
 } from 'lucide-react';
 import { DecibelAudioPlayer } from './DecibelAudioPlayer';
+import { ChatComposer } from './ChatComposer';
 import { VerifiedBadge } from './ui/VerifiedBadge';
 
 interface CustomerMessagesProps {
@@ -39,11 +40,6 @@ const QUICK_REPLIES = [
   "Thank you, see you at the scheduled time."
 ];
 
-const SAMPLE_JOB_PHOTOS = [
-  { name: 'Electrical Box', url: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600&auto=format&fit=crop&q=80' },
-  { name: 'Plumbing Pipe', url: 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=600&auto=format&fit=crop&q=80' },
-  { name: 'AC Compressor', url: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=600&auto=format&fit=crop&q=80' }
-];
 
 // Shared by the desktop sidebar's search header and the chat pane's header so their bottom edges
 // align in one continuous line across both panes, instead of each sizing to its own content.
@@ -118,17 +114,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
 
   const [isLocating, setIsLocating] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // Auto-resize textarea height
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.style.height = 'auto';
-      const newHeight = Math.min(Math.max(40, textarea.scrollHeight), 120);
-      textarea.style.height = `${newHeight}px`;
-    }
-  }, [inputText]);
 
   // Clean up recording and audio playback resources on unmount
   useEffect(() => {
@@ -332,7 +318,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
         const unreadCount = proMsgs.filter(m => m.senderId === pro.id && m.recipientId === 'c1' && m.status !== 'read').length;
 
         const relatedBooking = bookings
-          .filter(b => b.artisan_id === pro.id)
+          .filter(b => b.artisan_id === pro.id || b.artisan_id === pro.user_id)
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
 
         return {
@@ -388,7 +374,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
     if (found) return found;
     if (activePro) {
       const relatedBooking = bookings
-        .filter(b => b.artisan_id === activePro.id)
+        .filter(b => b.artisan_id === activePro.id || b.artisan_id === activePro.user_id)
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
       return {
         proId: activePro.id,
@@ -453,15 +439,6 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
     });
   };
 
-  const handleSendSampleImage = (url: string) => {
-    if (!selectedProId || !onSendMessage) return;
-    onSendMessage(selectedProId, 'Photo attachment', {
-      mediaType: 'image',
-      mediaUrl: url,
-      status: 'sent'
-    });
-    setShowAttachmentMenu(false);
-  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -482,23 +459,33 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
     reader.readAsDataURL(file);
   };
 
+  // Shares the phone's real position. No fallback pin: a made-up location would send the artisan
+  // to the wrong place.
   const handleShareLocation = () => {
     if (!selectedProId || !onSendMessage) return;
+    if (!('geolocation' in navigator)) {
+      setRecordingError('This device can’t share its location.');
+      return;
+    }
     setIsLocating(true);
-    setTimeout(() => {
-      setIsLocating(false);
-      onSendMessage(selectedProId, 'Shared current service address', {
-        mediaType: 'location',
-        locationData: {
-          lat: 7.4243,
-          lng: 3.9056,
-          address: 'Bodija Market Road, Old Bodija, Ibadan',
-          landmark: 'Opposite Total Energy Station'
-        },
-        status: 'sent'
-      });
-      setShowAttachmentMenu(false);
-    }, 600);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setIsLocating(false);
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        onSendMessage(selectedProId, 'Shared my location', {
+          mediaType: 'location',
+          locationData: { lat, lng, address: `${lat.toFixed(5)}, ${lng.toFixed(5)}` },
+          status: 'sent'
+        });
+        setShowAttachmentMenu(false);
+      },
+      () => {
+        setIsLocating(false);
+        setRecordingError('Couldn’t get your location. Allow location access and try again.');
+      },
+      { timeout: 10000, enableHighAccuracy: true }
+    );
   };
 
   const formatMessageTime = (isoString: string) => {
@@ -521,9 +508,6 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
   const totalUnreadCount = useMemo(() => {
     return conversations.reduce((acc, c) => acc + c.unreadCount, 0);
   }, [conversations]);
-
-  // Decibel waveform sample heights for WhatsApp style full-width wave
-  const waveformBars = [8, 14, 22, 12, 28, 18, 10, 24, 30, 16, 26, 12, 20, 28, 14, 8, 22, 16, 24, 10, 14, 26, 18, 30, 12, 20, 28, 14, 22, 16, 24, 12, 18, 26, 10, 22, 14, 28, 16, 20];
 
   // Chat header -- shared between the mobile full-screen chat and the desktop pane, except the
   // leading control: mobile gets a back arrow (there's a separate list page to return to), desktop
@@ -729,27 +713,13 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
     </div>
   );
 
-  // Quick replies -- identical between mobile and desktop chat views.
-  const quickRepliesBody = !inputText.trim() ? (
-    <div className="px-3.5 py-1.5 bg-white dark:bg-slate-900 border-t border-slate-200/70 dark:border-slate-800 flex items-center gap-2 overflow-x-auto no-scrollbar shrink-0 animate-in fade-in duration-150">
-      {QUICK_REPLIES.map((reply, idx) => (
-        <button
-          key={idx}
-          type="button"
-          onClick={() => handleSendQuickReply(reply)}
-          className="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap transition-colors cursor-pointer shrink-0 border border-slate-200/60 dark:border-slate-700/60"
-        >
-          {reply}
-        </button>
-      ))}
-    </div>
-  ) : null;
 
   // Composer / attachment menu / voice recorder -- identical between mobile and desktop chat views.
   // Bottom padding adds the home-indicator safe-area inset on top of the normal spacing (0px on
   // desktop/non-notched phones, so this is a no-op everywhere except a notched phone in portrait).
+  const { isFrozen } = useAccountFrozen();
   const composerBody = (
-    <div className="pt-3 sm:pt-3.5 px-3 sm:px-3.5 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] sm:pb-[calc(0.875rem+env(safe-area-inset-bottom,0px))] bg-white dark:bg-slate-900 border-t border-slate-200/90 dark:border-slate-800 shrink-0 relative">
+    <div className="bg-white dark:bg-slate-900 shrink-0 relative">
             {renderAttachmentMenu && (
               <div className={`absolute bottom-full left-3.5 mb-2 p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl space-y-3 z-20 w-72 origin-bottom-left transition-all duration-150 ease-out ${
                 showAttachmentMenu ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
@@ -778,28 +748,12 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
                   </button>
                 </div>
 
-                <div className="space-y-1.5 pt-1">
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Sample Issue Photos</p>
-                  <div className="flex gap-2">
-                    {SAMPLE_JOB_PHOTOS.map((sample, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => handleSendSampleImage(sample.url)}
-                        className="flex-1 p-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-slate-400 transition-colors cursor-pointer text-center"
-                      >
-                        <img src={sample.url} alt={sample.name} className="w-full h-10 object-cover rounded-md mb-1" />
-                        <span className="text-[10px] font-medium text-slate-600 dark:text-slate-400 truncate block">{sample.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
               </div>
             )}
 
             {/* Voice Recording Error Alert if blocked */}
             {recordingError && (
-              <div className="mb-2 p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 flex items-center justify-between text-xs text-rose-700 dark:text-rose-300">
+              <div className="mx-3 sm:mx-4 mt-2.5 p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 flex items-center justify-between text-xs text-rose-700 dark:text-rose-300">
                 <div className="flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
                   <span>{recordingError}</span>
@@ -812,6 +766,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
 
             {/* Voice Recording Bar with Real-Time Audio Decibel Waveform */}
             {isRecording ? (
+              <div className="px-3 sm:px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] border-t border-slate-200/90 dark:border-slate-800">
               <div className="flex items-center justify-between gap-2 sm:gap-3 p-2 sm:p-2.5 bg-slate-50 dark:bg-slate-800/90 rounded-xl border border-emerald-300 dark:border-emerald-700/60 shadow-xs animate-in fade-in duration-150">
                 {/* Live Recording Indicator & Timer */}
                 <div className="flex items-center gap-2 shrink-0 pl-1">
@@ -858,68 +813,20 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
                   </button>
                 </div>
               </div>
+              </div>
             ) : (
-              /* Vertically Aligned Single Baseline Composer Controls */
-              <form onSubmit={handleSendText} className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
-                  className={`w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl border flex items-center justify-center transition-colors cursor-pointer shrink-0 ${
-                    showAttachmentMenu
-                      ? 'bg-navy-900 text-white border-navy-900'
-                      : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
-                  }`}
-                  title="Attach Photo or Location"
-                >
-                  <Paperclip className="w-4 h-4" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={startRecording}
-                  className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-navy-50 hover:text-navy-700 dark:hover:bg-navy-950/40 dark:hover:text-navy-400 transition-colors cursor-pointer shrink-0 flex items-center justify-center"
-                  title="Record Live Voice Note"
-                >
-                  <Mic className="w-4 h-4" />
-                </button>
-
-                <div className="flex-1 relative flex items-center">
-                  <textarea
-                    ref={textareaRef}
-                    rows={1}
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    onFocus={() => {
-                      // The chat container just shrunk to make room for the keyboard (see
-                      // useVisualViewportHeight) -- re-scroll so the latest message isn't left
-                      // above the new, shorter fold. Delayed to land after the keyboard's own
-                      // open animation, not mid-resize.
-                      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 300);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendText();
-                      }
-                    }}
-                    placeholder={activeConversation ? `Message ${activeConversation.professional.name.length > 14 ? activeConversation.professional.name.slice(0, 12) + '...' : activeConversation.professional.name}...` : 'Type your message...'}
-                    className="w-full pl-3.5 pr-3.5 py-2.5 min-h-[40px] max-h-[120px] rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-800 dark:focus:ring-brand-orange-500/40 resize-none leading-snug"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={!inputText.trim()}
-                  className={`w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center active:scale-[0.97] transition-all duration-[120ms] ease-out cursor-pointer shrink-0 ${
-                    inputText.trim()
-                      ? 'bg-navy-900 hover:bg-navy-950 text-white shadow-xs'
-                      : 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
-                  }`}
-                  title="Send message"
-                >
-                  <SendHorizontal className="w-4 h-4" />
-                </button>
-              </form>
+              <ChatComposer
+                value={inputText}
+                onChange={setInputText}
+                onSend={() => handleSendText()}
+                placeholder={activeConversation ? `Message ${activeConversation.professional.name.length > 14 ? activeConversation.professional.name.slice(0, 12) + '…' : activeConversation.professional.name}…` : 'Type your message…'}
+                quickReplies={QUICK_REPLIES}
+                onQuickReply={handleSendQuickReply}
+                onAttach={() => setShowAttachmentMenu(!showAttachmentMenu)}
+                attachActive={showAttachmentMenu}
+                onMic={startRecording}
+                onFocus={() => setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 300)}
+              />
             )}
     </div>
   );
@@ -1249,8 +1156,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
             {renderChatHeader(true)}
             {jobContextStripBody}
             {messagesFeedBody}
-            {quickRepliesBody}
-            {composerBody}
+            {isFrozen ? <FrozenComposerNotice /> : composerBody}
           </div>
         ) : mobileConversationListBody}
       </div>
@@ -1329,8 +1235,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
               {renderChatHeader(false)}
               {jobContextStripBody}
               {messagesFeedBody}
-              {quickRepliesBody}
-              {composerBody}
+                {isFrozen ? <FrozenComposerNotice /> : composerBody}
             </>
           ) : emptyStateBody}
         </div>

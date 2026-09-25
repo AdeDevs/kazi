@@ -8,6 +8,26 @@ export const SUPPORTED_LANGUAGES: Language[] = [
   'French (Français)'
 ];
 
+// What the account stores in preferred_language. The backend defaults to 'en' and accepts any
+// string, and older accounts hold the display label itself -- both are read back by languageFromStored.
+const LANGUAGE_CODES: Record<Language, string> = {
+  'English (Nigeria)': 'en',
+  'Yorùbá (Yoruba)': 'yo',
+  'Igbo': 'ig',
+  'Hausa': 'ha',
+  'French (Français)': 'fr',
+};
+
+export function languageCode(lang: Language): string {
+  return LANGUAGE_CODES[lang];
+}
+
+export function languageFromStored(value?: string | null): Language | null {
+  if (!value) return null;
+  const byCode = SUPPORTED_LANGUAGES.find(l => LANGUAGE_CODES[l] === value.toLowerCase());
+  return byCode || SUPPORTED_LANGUAGES.find(l => l === value) || null;
+}
+
 export const TRANSLATIONS: Record<Language, Record<string, string>> = {
   'English (Nigeria)': {
     // Navigation & AppShell

@@ -17,6 +17,8 @@ interface CustomDropdownProps<T extends string | number> {
   buttonClassName?: string;
   dropdownWidth?: string;
   align?: 'left' | 'right' | 'auto';
+  /** Match the text inputs it sits beside in a form: bold, and 16px on touch screens like them. */
+  asFormField?: boolean;
 }
 
 export function CustomDropdown<T extends string | number>({
@@ -28,7 +30,8 @@ export function CustomDropdown<T extends string | number>({
   className = '',
   buttonClassName = '',
   dropdownWidth = 'w-full',
-  align = 'auto'
+  align = 'auto',
+  asFormField = false
 }: CustomDropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const [alignRight, setAlignRight] = useState(align === 'right');
@@ -74,7 +77,7 @@ export function CustomDropdown<T extends string | number>({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full flex items-center justify-between gap-2.5 sm:gap-3 px-3.5 sm:px-4 py-2.5 rounded-xl border text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-navy-500/50 dark:focus:ring-navy-400/50 transition-all cursor-pointer shadow-xs ${
+        className={`w-full flex items-center justify-between gap-2.5 sm:gap-3 px-3.5 sm:px-4 py-2.5 rounded-xl border text-xs ${asFormField ? 'font-bold form-field-text' : 'font-semibold'} focus:outline-none focus:ring-2 focus:ring-navy-500/50 dark:focus:ring-navy-400/50 transition-all cursor-pointer shadow-xs ${
           buttonClassName || 'border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 hover:border-navy-500/50 dark:hover:border-navy-400/50'
         }`}
       >

@@ -10,7 +10,9 @@ import { UserAvatar, getInitials, getAvatarColor } from './ui/UserAvatar';
 import { VerifiedBadge } from './ui/VerifiedBadge';
 import { Card, CardHeader } from './ui/Card';
 import { ProProfileManagement } from './ProProfileManagement';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useAccountFrozen } from '../hooks/useAccountFrozen';
 import { toast } from 'sonner';
 
 interface ProfileViewProps {
@@ -53,6 +55,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onScrollToSectionHandled
 }) => {
   const { user, updateUser, uploadProfilePicture } = useAuth();
+  const navigate = useNavigate();
+  const { blockIfFrozen } = useAccountFrozen();
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [heroPhotoFailed, setHeroPhotoFailed] = useState(false);
@@ -101,6 +105,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     draftLocation !== customerLocation;
 
   const startEditing = () => {
+    if (blockIfFrozen()) return;
     setDraftFirstName(customerFirstName);
     setDraftLastName(customerLastName);
     setDraftPhone(customerPhone);
@@ -121,6 +126,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (blockIfFrozen()) return;
     const files = e.target.files;
     if (!files || files.length === 0) return;
     const file = files[0];
@@ -161,6 +167,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   };
 
   const handleSaveCustomerInfo = async (e: React.FormEvent) => {
+    if (blockIfFrozen()) return;
     e.preventDefault();
     setIsSavingProfile(true);
     try {
@@ -294,7 +301,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploadingAvatar}
-                className="relative shrink-0 cursor-pointer rounded-2xl border-4 border-white dark:border-slate-900 shadow-lg"
+                className="relative shrink-0 cursor-pointer rounded-2xl overflow-hidden border-4 border-white dark:border-slate-900 shadow-lg"
                 title="Tap to change your photo"
                 aria-label="Change profile photo"
               >
@@ -303,10 +310,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   name={customerName}
                   sizeClassName="w-24 h-24"
                   textClassName="text-3xl font-black"
-                  roundedClassName="rounded-2xl"
+                  roundedClassName="rounded-none"
+                  bordered={false}
                 />
                 {isUploadingAvatar && (
-                  <div className="absolute inset-0 rounded-2xl bg-slate-950/50 flex items-center justify-center">
+                  <div className="absolute inset-0 bg-slate-950/50 flex items-center justify-center">
                     <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   </div>
                 )}
@@ -399,10 +407,20 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   value={draftEmail}
                   disabled
                   readOnly
-                  title="Email addresses can't be changed"
+                  title="Change your email in Account Settings"
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400 cursor-not-allowed"
                 />
-                <p className="mt-1 text-[11px] text-slate-400">Email addresses can't be changed.</p>
+                <p className="mt-1 text-[11px] text-slate-400">
+                  Change your email in{' '}
+                  <button
+                    type="button"
+                    onClick={() => navigate('/settings#email')}
+                    className="font-bold text-navy-800 dark:text-navy-400 hover:underline cursor-pointer"
+                  >
+                    Account Settings
+                  </button>
+                  .
+                </p>
               </div>
 
               <div>

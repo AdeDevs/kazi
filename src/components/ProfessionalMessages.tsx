@@ -1,12 +1,25 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { useAccountFrozen } from '../hooks/useAccountFrozen';
+import { DecibelAudioPlayer } from './DecibelAudioPlayer';
+import { ChatComposer } from './ChatComposer';
+import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
+
+const ARTISAN_QUICK_REPLIES = [
+  'Thanks, I’ve received your request.',
+  'What time works best for you?',
+  'Can you send a photo of the problem?',
+  'I’m on my way.',
+  'The job is done. Please check and confirm.',
+];
+import { FrozenComposerNotice } from './ui/FrozenNotice';
 import { Professional, Booking, ChatMessage } from '../types';
 import { 
-  Search, Send, Image as ImageIcon, ArrowLeft, 
-  CheckCheck, Check, Clock, User, MessageSquare,
-  X, Paperclip, Mic, Play, Pause, MapPin, Navigation, 
-  Video, ExternalLink, Square
-} from 'lucide-react';
+  Search, Image as ImageIcon, ArrowLeft, 
+  CheckCheck, Check, MessageSquare,
+  X, MapPin, Navigation, 
+  ExternalLink } from 'lucide-react';
 
 interface ProfessionalMessagesProps {
   professional: Professional;
@@ -25,13 +38,7 @@ interface Conversation {
   relatedBooking?: Booking;
 }
 
-const SAMPLE_IMAGES = [
-  { name: 'Pipe Repair', url: 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=600&auto=format&fit=crop&q=80' },
-  { name: 'Breaker Box', url: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600&auto=format&fit=crop&q=80' },
-  { name: 'Compressor', url: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=600&auto=format&fit=crop&q=80' }
-];
 
-const SAMPLE_VIDEO_URL = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4";
 
 // Shared by the desktop sidebar's search header and the chat pane's header so their bottom edges
 // align in one continuous line across both panes, instead of each sizing to its own content.
@@ -66,22 +73,7 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [inputText, setInputText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-
-  // Auto-resize textarea height as content changes
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.style.height = 'auto';
-      const newHeight = Math.min(Math.max(36, textarea.scrollHeight), 120);
-      textarea.style.height = `${newHeight}px`;
-    }
-  }, [inputText]);
-
-  // Expanded Rich Attachments State
-  const [isRecording, setIsRecording] = useState<boolean>(false);
-  const [recordingSeconds, setRecordingSeconds] = useState<number>(0);
-  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const recorder = useVoiceRecorder();
 
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
   const [showAttachmentMenu, setShowAttachmentMenu] = useState<boolean>(false);
@@ -178,25 +170,9 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedCustomerId]);
 
-  // Recording Timer
-  useEffect(() => {
-    if (isRecording) {
-      recordingTimerRef.current = setInterval(() => {
-        setRecordingSeconds(prev => prev + 1);
-      }, 1000);
-    } else {
-      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
-      setRecordingSeconds(0);
-    }
-    return () => {
-      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
-    };
-  }, [isRecording]);
-
-  const handleSend = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSend = () => {
     if (!inputText.trim() || !selectedCustomerId || !onSendMessage) return;
-    
+
     onSendMessage(selectedCustomerId, inputText.trim(), {
       mediaType: 'text',
       status: 'sent'
@@ -224,148 +200,45 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
     reader.readAsDataURL(file);
   };
 
-  const handleSendSampleImage = (url: string) => {
-    if (!selectedCustomerId || !onSendMessage) return;
-    onSendMessage(selectedCustomerId, 'Sent photo', {
-      mediaType: 'image',
-      mediaUrl: url,
-      status: 'sent'
-    });
-    setShowAttachmentMenu(false);
-  };
 
-  const handleSendVideo = (videoUrl: string = SAMPLE_VIDEO_URL) => {
-    if (!selectedCustomerId || !onSendMessage) return;
-    onSendMessage(selectedCustomerId, 'Sent a video clip', {
-      mediaType: 'video',
-      mediaUrl: videoUrl,
-      status: 'sent'
-    });
-    setShowAttachmentMenu(false);
-  };
 
-  const handleStopAndSendVoiceNote = () => {
-    if (!selectedCustomerId || !onSendMessage) return;
-    setIsRecording(false);
-    const duration = recordingSeconds || 4;
-
-    onSendMessage(selectedCustomerId, 'Voice Note', {
+  const handleStopAndSendVoiceNote = async () => {
+    const note = await recorder.stop();
+    if (!note || !selectedCustomerId || !onSendMessage) return;
+    onSendMessage(selectedCustomerId, 'Voice note', {
       mediaType: 'audio',
-      mediaUrl: 'simulated_audio_stream',
-      duration,
+      mediaUrl: note.dataUrl,
+      duration: note.durationSeconds,
       status: 'sent'
     });
   };
 
+  // Shares the phone's real position -- no fallback pin, which would point the client somewhere wrong.
   const handleShareLiveLocation = () => {
     if (!selectedCustomerId || !onSendMessage) return;
+    if (!('geolocation' in navigator)) {
+      toast.error('This device can’t share its location.');
+      return;
+    }
     setIsLocating(true);
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setIsLocating(false);
-          const lat = pos.coords.latitude;
-          const lng = pos.coords.longitude;
-          onSendMessage(selectedCustomerId, 'Shared Live Location', {
-            mediaType: 'location',
-            locationData: {
-              lat,
-              lng,
-              address: `${professional.neighborhood || 'Bodija'}, Oyo State`,
-              landmark: 'Partner Real-Time GPS'
-            },
-            status: 'sent'
-          });
-          setShowAttachmentMenu(false);
-        },
-        () => {
-          setIsLocating(false);
-          onSendMessage(selectedCustomerId, 'Shared Live Location', {
-            mediaType: 'location',
-            locationData: {
-              lat: 7.3775,
-              lng: 3.9470,
-              address: `${professional.neighborhood || 'Bodija'}, Oyo State`,
-              landmark: 'Partner Station'
-            },
-            status: 'sent'
-          });
-          setShowAttachmentMenu(false);
-        }
-      );
-    } else {
-      setIsLocating(false);
-      onSendMessage(selectedCustomerId, 'Shared Live Location', {
-        mediaType: 'location',
-        locationData: {
-          lat: 7.3775,
-          lng: 3.9470,
-          address: `${professional.neighborhood || 'Bodija'}, Oyo State`,
-          landmark: 'GPS Pin'
-        },
-        status: 'sent'
-      });
-      setShowAttachmentMenu(false);
-    }
-  };
-
-  const activeAudioRef = useRef<HTMLAudioElement | null>(null);
-
-  const togglePlayAudio = (msgId: string, mediaUrl?: string, msgText?: string) => {
-    if (playingAudioId === msgId) {
-      if (activeAudioRef.current) {
-        activeAudioRef.current.pause();
-        activeAudioRef.current = null;
-      }
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
-      setPlayingAudioId(null);
-    } else {
-      if (activeAudioRef.current) {
-        activeAudioRef.current.pause();
-        activeAudioRef.current = null;
-      }
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
-
-      setPlayingAudioId(msgId);
-
-      if (mediaUrl && (mediaUrl.startsWith('blob:') || mediaUrl.startsWith('data:audio') || mediaUrl.startsWith('http'))) {
-        const audio = new Audio(mediaUrl);
-        activeAudioRef.current = audio;
-        audio.play().catch(() => {
-          speakFallbackText(msgText);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setIsLocating(false);
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        onSendMessage(selectedCustomerId, 'Shared my location', {
+          mediaType: 'location',
+          locationData: { lat, lng, address: `${lat.toFixed(5)}, ${lng.toFixed(5)}` },
+          status: 'sent'
         });
-        audio.onended = () => {
-          setPlayingAudioId(null);
-          activeAudioRef.current = null;
-        };
-        audio.onerror = () => {
-          speakFallbackText(msgText);
-        };
-      } else {
-        speakFallbackText(msgText);
-      }
-    }
-  };
-
-  const speakFallbackText = (msgText?: string) => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const textToSpeak = msgText && msgText !== 'Voice Note'
-        ? msgText
-        : "Voice message: Hello, I have reviewed your request and will arrive shortly.";
-      const utterance = new SpeechSynthesisUtterance(textToSpeak);
-      utterance.rate = 1.0;
-      utterance.pitch = 1.0;
-      utterance.onend = () => setPlayingAudioId(null);
-      utterance.onerror = () => setPlayingAudioId(null);
-      window.speechSynthesis.speak(utterance);
-    } else {
-      setTimeout(() => setPlayingAudioId(null), 3500);
-    }
+        setShowAttachmentMenu(false);
+      },
+      () => {
+        setIsLocating(false);
+        toast.error('Couldn’t get your location. Allow location access and try again.');
+      },
+      { timeout: 10000, enableHighAccuracy: true }
+    );
   };
 
   const formatTime = (isoString: string) => {
@@ -540,36 +413,17 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
                           </div>
                         )}
 
-                        {/* Render Audio / Voice Note */}
+                        {/* Render Audio / Voice Note -- the real recording, via the same player as the client's chat */}
                         {msg.mediaType === 'audio' && (
-                          <div className="mt-2 p-3 rounded-2xl bg-black/15 dark:bg-white/10 flex items-center gap-3 min-w-[200px]">
-                            <button
-                              onClick={() => togglePlayAudio(msg.id, msg.mediaUrl, msg.message)}
-                              className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors cursor-pointer shrink-0 ${
-                                isMe ? 'bg-white text-navy-800' : 'bg-navy-800 text-white'
-                              }`}
-                            >
-                              {playingAudioId === msg.id ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
-                            </button>
-
-                            <div className="flex-1 space-y-1">
-                              {/* Waveform Bars */}
-                              <div className="flex items-center gap-0.5 h-6">
-                                {[40, 70, 30, 90, 60, 100, 50, 80, 40, 60, 90, 30, 70, 50, 80].map((h, i) => (
-                                  <div
-                                    key={i}
-                                    className={`flex-1 rounded-full transition-all ${
-                                      playingAudioId === msg.id ? 'animate-pulse' : ''
-                                    } ${isMe ? 'bg-white/70' : 'bg-navy-850/70 dark:bg-white/40'}`}
-                                    style={{ height: `${playingAudioId === msg.id ? Math.max(20, (h * Math.random()) + 20) : h}%` }}
-                                  />
-                                ))}
-                              </div>
-                              <div className={`flex items-center justify-between text-[10px] ${isMe ? 'text-slate-200' : 'text-slate-400'}`}>
-                                <span>{playingAudioId === msg.id ? 'Playing...' : 'Voice Note'}</span>
-                                <span>0:0{msg.duration || 5}</span>
-                              </div>
-                            </div>
+                          <div className="mt-2">
+                            <DecibelAudioPlayer
+                              msgId={msg.id}
+                              mediaUrl={msg.mediaUrl}
+                              duration={msg.duration || 5}
+                              isCustomer={isMe}
+                              activePlayingId={playingAudioId}
+                              onPlayStateChange={(id) => setPlayingAudioId(id)}
+                            />
                           </div>
                         )}
 
@@ -640,23 +494,13 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
                   </button>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   {/* Photo Upload */}
                   <label className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center gap-1.5 cursor-pointer hover:border-navy-800 transition-all shadow-xs">
                     <ImageIcon className="w-5 h-5 text-navy-800 dark:text-navy-400" />
                     <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Upload Photo</span>
                     <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
                   </label>
-
-                  {/* Video Clip */}
-                  <button
-                    type="button"
-                    onClick={() => handleSendVideo()}
-                    className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center gap-1.5 cursor-pointer hover:border-navy-800 transition-all shadow-xs"
-                  >
-                    <Video className="w-5 h-5 text-navy-800 dark:text-navy-400" />
-                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Video Clip</span>
-                  </button>
 
                   {/* GPS Location Pin */}
                   <button
@@ -669,20 +513,6 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
                     <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{isLocating ? 'Locating...' : 'Live GPS Pin'}</span>
                   </button>
 
-                  {/* Sample presets */}
-                  <div className="flex flex-col gap-1 justify-center">
-                    <span className="text-[10px] font-bold text-slate-400 block mb-0.5">Sample Presets:</span>
-                    {SAMPLE_IMAGES.slice(0, 2).map((img, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => handleSendSampleImage(img.url)}
-                        className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-[10px] font-bold text-slate-700 dark:text-slate-300 truncate hover:bg-navy-800/10 cursor-pointer text-left"
-                      >
-                        + {img.name}
-                      </button>
-                    ))}
-                  </div>
                 </div>
               </div>
     )
@@ -691,100 +521,55 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
   // Composer / voice recorder -- identical between mobile and desktop chat views. Bottom padding
   // adds the home-indicator safe-area inset on top of the normal spacing (0px on desktop/
   // non-notched phones, so this is a no-op everywhere except a notched phone in portrait).
-  const composerBody = (
-    isRecording ? (
-              <div className="pt-3 sm:pt-4 px-3 sm:px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] sm:pb-[calc(1rem+env(safe-area-inset-bottom,0px))] bg-red-500/5 dark:bg-rose-950/10 border-t border-red-500/20 flex items-center justify-between gap-2 sm:gap-4 animate-pulse">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-ping shrink-0"></span>
-                  <span className="font-mono font-bold text-red-600 dark:text-red-400 text-xs sm:text-sm truncate">
-                    Rec: 0:{recordingSeconds < 10 ? `0${recordingSeconds}` : recordingSeconds}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setIsRecording(false)}
-                    className="px-2.5 sm:px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-950/60 text-rose-600 dark:text-rose-400 text-[10px] sm:text-xs font-bold transition-colors cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleStopAndSendVoiceNote}
-                    className="px-3 sm:px-5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-[10px] sm:text-xs font-extrabold shadow-xs transition-colors flex items-center gap-1 sm:gap-1.5 cursor-pointer"
-                  >
-                    <Square className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current shrink-0" />
-                    <span>Send Note</span>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="pt-2 sm:pt-4 px-2 sm:px-4 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] sm:pb-[calc(1rem+env(safe-area-inset-bottom,0px))] border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-                <form onSubmit={handleSend} className="flex items-end gap-1.5 sm:gap-3">
-                  
-                  {/* Attach Paperclip button */}
-                  <button
-                    type="button"
-                    onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
-                    className={`p-2 sm:p-2.5 rounded-xl transition-all cursor-pointer shrink-0 mb-0.5 ${
-                      showAttachmentMenu
-                        ? 'bg-navy-800 text-white shadow-xs'
-                        : 'text-slate-400 hover:text-navy-800 dark:hover:text-navy-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                    }`}
-                    title="Attach File / Photo / Location" aria-label="Attach File / Photo / Location"
-                  >
-                    <Paperclip className="w-4 h-4 sm:w-5 sm:h-5" />
-                  </button>
-
-                  {/* Mic button */}
-                  <button
-                    type="button"
-                    onClick={() => setIsRecording(true)}
-                    className="p-2 sm:p-2.5 text-slate-400 hover:text-red-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all shrink-0 cursor-pointer mb-0.5"
-                    title="Record Voice Note" aria-label="Record Voice Note"
-                  >
-                    <Mic className="w-4 h-4 sm:w-5 sm:h-5" />
-                  </button>
-
-                  {/* Main Input Textarea */}
-                  <div className="flex-1 bg-slate-100 dark:bg-slate-800 rounded-2xl border border-transparent focus-within:border-brand-orange-500 focus-within:ring-2 focus-within:ring-brand-orange-500/50 overflow-hidden">
-                    <textarea
-                      ref={textareaRef}
-                      value={inputText}
-                      onChange={(e) => setInputText(e.target.value)}
-                      onFocus={() => {
-                        // The chat container just shrunk to make room for the keyboard (see
-                        // useVisualViewportHeight) -- re-scroll so the latest message isn't left
-                        // above the new, shorter fold. Delayed to land after the keyboard's own
-                        // open animation, not mid-resize.
-                        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 300);
-                      }}
-                      placeholder="Type your message..."
-                      className="w-full bg-transparent px-3 py-2 sm:py-2.5 text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:outline-none resize-none min-h-[36px] max-h-[100px] overflow-y-auto leading-normal"
-                      style={{ height: '36px' }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          if (inputText.trim()) {
-                            handleSend(e);
-                          }
-                        }
-                      }}
-                    />
-                  </div>
-
-                  {/* Submit Send Button */}
-                  <button
-                    type="submit"
-                    disabled={!inputText.trim()}
-                    className="p-2.5 sm:p-3.5 bg-navy-800 text-white rounded-xl hover:bg-navy-900 active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed transition-[background-color,scale] duration-[120ms] ease-out shrink-0 cursor-pointer mb-0.5"
-                  >
-                    <Send className="w-4 h-4 sm:w-5 sm:h-5" />
-                  </button>
-                </form>
-              </div>
-    )
+  const { isFrozen } = useAccountFrozen();
+  const composerBody = recorder.isRecording ? (
+    <div className="px-3 sm:px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] border-t border-rose-500/20 bg-rose-500/5 dark:bg-rose-950/10 flex items-center gap-3">
+      <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-pulse shrink-0" aria-hidden="true" />
+      <span className="font-mono text-xs font-bold text-rose-600 dark:text-rose-400 tabular-nums shrink-0">
+        {Math.floor(recorder.seconds / 60)}:{String(recorder.seconds % 60).padStart(2, '0')}
+      </span>
+      <div className="flex-1 min-w-0 flex items-center gap-[2px] h-7 overflow-hidden" aria-hidden="true">
+        {recorder.waveform.map((h, i) => (
+          <span key={i} className="w-[3px] shrink-0 rounded-full bg-rose-500/70" style={{ height: h }} />
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={recorder.cancel}
+        className="px-3 h-11 rounded-xl text-rose-600 dark:text-rose-400 text-xs font-bold hover:bg-rose-100/60 dark:hover:bg-rose-950/40 cursor-pointer shrink-0"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        onClick={handleStopAndSendVoiceNote}
+        className="px-4 h-11 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold cursor-pointer shrink-0 active:scale-[0.97] transition-transform"
+      >
+        Send
+      </button>
+    </div>
+  ) : (
+    <>
+      {recorder.error && (
+        <p className="px-4 py-2 text-[11px] font-bold text-rose-600 dark:text-rose-400 border-t border-slate-200/90 dark:border-slate-800" role="alert">
+          {recorder.error}
+        </p>
+      )}
+      <ChatComposer
+        value={inputText}
+        onChange={setInputText}
+        onSend={handleSend}
+        placeholder={activeConversation ? `Message ${activeConversation.customerName.split(' · ')[0]}…` : 'Type your message…'}
+        quickReplies={ARTISAN_QUICK_REPLIES}
+        onQuickReply={(text) => {
+          if (selectedCustomerId && onSendMessage) onSendMessage(selectedCustomerId, text, { mediaType: 'text', status: 'sent' });
+        }}
+        onAttach={() => setShowAttachmentMenu(!showAttachmentMenu)}
+        attachActive={showAttachmentMenu}
+        onMic={() => { recorder.clearError(); recorder.start(); }}
+        onFocus={() => setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 300)}
+      />
+    </>
   );
 
   const emptyStateBody = (
@@ -817,7 +602,7 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
             {renderChatHeader(true)}
             {messagesFeedBody}
             {attachmentMenuBody}
-            {composerBody}
+            {isFrozen ? <FrozenComposerNotice /> : composerBody}
           </div>
         ) : (
           // Conversation list page -- normal page flow (the page itself scrolls), matching the
@@ -891,7 +676,7 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
               {renderChatHeader(false)}
               {messagesFeedBody}
               {attachmentMenuBody}
-              {composerBody}
+              {isFrozen ? <FrozenComposerNotice /> : composerBody}
             </>
           ) : emptyStateBody}
         </div>

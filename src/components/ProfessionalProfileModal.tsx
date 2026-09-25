@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { X, Star, MapPin, Briefcase, Award, Phone, Mail, CheckCircle2, MessageSquare, Calendar, AlertCircle, ShieldAlert, Check, Tag, Clock } from 'lucide-react';
+import { X, Star, MapPin, Briefcase, Award, MessageSquare, Calendar, Clock } from 'lucide-react';
 import { Professional, ServiceItem, ServicePricingType, Gig } from '../types';
 import { VerifiedBadge } from './ui/VerifiedBadge';
 import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
-import { SheetDragHandle } from './ui/SheetDragHandle';
 import { getGigsByProfessional } from '../lib/mockGigsStore';
+import { listPublicGigs, gigFromResponse } from '../lib/gigsApi';
 import { formatCurrency } from '../utils';
 
 
@@ -14,6 +14,8 @@ interface ProfessionalProfileModalProps {
   onClose: () => void;
   onOpenBooking: (pro: Professional, preselectedService?: string) => void;
   onOpenChat: (pro: Professional) => void;
+  /** Starts buying one of this artisan's gigs (real artisans only). */
+  onBuyGig?: (gig: Gig, pro: Professional) => void;
   onAddReview?: (proId: string, rating: number, comment: string) => void;
 }
 
@@ -23,6 +25,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
   onClose,
   onOpenBooking,
   onOpenChat,
+  onBuyGig,
   onAddReview
 }) => {
   const [activeTab, setActiveTab] = useState<'about' | 'gigs' | 'reviews'>('about');
@@ -35,11 +38,6 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [reviewSuccessMsg, setReviewSuccessMsg] = useState<string | null>(null);
 
-  // Complaint modal state
-  const [showComplaintModal, setShowComplaintModal] = useState(false);
-  const [complaintReason, setComplaintReason] = useState('Unpunctual / Delayed Arrival (Lateness)');
-  const [complaintDetails, setComplaintDetails] = useState('');
-  const [complaintSubmittedTicket, setComplaintSubmittedTicket] = useState<{ id: string; reason: string } | null>(null);
 
   // Keeps the last real professional around while closing -- the parent typically clears its
   // `professional` state in the same tick it flips `isOpen` to false, but this component stays
@@ -50,20 +48,27 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
     if (professionalProp) setCachedProfessional(professionalProp);
   }, [professionalProp]);
 
+  // Real artisans' gigs come from the public GET /gigs/ (it can't filter by artisan, so filter here);
+  // the sample artisans keep their locally stored sample gigs.
   useEffect(() => {
-    if (professionalProp) setGigs(getGigsByProfessional(professionalProp.id));
+    if (!professionalProp) return;
+    if (!professionalProp.user_id) {
+      setGigs(getGigsByProfessional(professionalProp.id));
+      return;
+    }
+    let cancelled = false;
+    listPublicGigs()
+      .then(list => {
+        if (!cancelled) setGigs(list.filter(g => g.artisan_profile_id === professionalProp.id && g.is_active).map(gigFromResponse));
+      })
+      .catch(() => { if (!cancelled) setGigs([]); });
+    return () => { cancelled = true; };
   }, [professionalProp]);
 
   const sheet = useSlideUpSheet(isOpen, onClose);
-  const complaintSheet = useSlideUpSheet(showComplaintModal, () => setShowComplaintModal(false));
 
   if (!sheet.shouldRender || !cachedProfessional) return null;
   const professional = cachedProfessional;
-
-  const handleOpenRateForm = () => {
-    setActiveTab('reviews');
-    setShowWriteReview(true);
-  };
 
   return (
     <div
@@ -264,7 +269,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                 <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">{professional.bio}</p>
               </div>
 
-              <div className="grid grid-cols-3 gap-3 sm:gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+              <div className={`grid ${professional.response_time ? 'grid-cols-3' : 'grid-cols-2'} gap-3 sm:gap-4 pt-4 border-t border-slate-100 dark:border-slate-800`}>
                 <div className="bg-slate-50 dark:bg-slate-800/40 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200/60 dark:border-slate-800">
                   <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium">Experience</p>
                   <p className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 mt-0.5">{professional.years_of_experience} Years</p>
@@ -273,10 +278,13 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                   <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium">Category</p>
                   <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 truncate mt-1">{professional.category}</p>
                 </div>
-                <div className="bg-slate-50 dark:bg-slate-800/40 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200/60 dark:border-slate-800">
-                  <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium">Response Time</p>
-                  <p className="text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-1">~15 mins</p>
-                </div>
+                {/* Only the artisan's own stated response time -- it used to be a hard-coded "~15 mins". */}
+                {professional.response_time && (
+                  <div className="bg-slate-50 dark:bg-slate-800/40 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200/60 dark:border-slate-800 min-w-0">
+                    <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium">Response Time</p>
+                    <p className="text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-1 truncate">{professional.response_time}</p>
+                  </div>
+                )}
               </div>
 
               {/* Service Areas */}
@@ -406,14 +414,25 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                       <p className="text-xs font-bold text-slate-900 dark:text-white">{gig.delivery_time_days} Days</p>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => onOpenChat(professional)}
-                    className="mt-3 w-full py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-                  >
-                    <MessageSquare className="w-3.5 h-3.5" />
-                    <span>Enquire About This Gig</span>
-                  </button>
+                  <div className={`mt-3 grid gap-2 ${onBuyGig && professional.user_id ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                    <button
+                      type="button"
+                      onClick={() => onOpenChat(professional)}
+                      className="min-h-10 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-[background-color,transform] duration-150 active:scale-[0.97] cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5 shrink-0" />
+                      <span>Enquire</span>
+                    </button>
+                    {onBuyGig && professional.user_id && (
+                      <button
+                        type="button"
+                        onClick={() => onBuyGig(gig, professional)}
+                        className="min-h-10 py-2 rounded-xl bg-navy-800 hover:bg-navy-900 text-white text-xs font-bold transition-[background-color,transform] duration-150 active:scale-[0.97] cursor-pointer shadow-xs whitespace-nowrap"
+                      >
+                        Buy This Gig
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -606,128 +625,6 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
           </div>
         </div>
 
-        {/* Complaint / Dispute Modal -- backed by the same useSlideUpSheet every other modal in
-            the app uses, instead of a plain animate-in with no matching exit. It now leaves the
-            way it arrived (slide-down on mobile, zoom-out on desktop) rather than vanishing. */}
-        {complaintSheet.shouldRender && (
-          <div
-            className={`fixed inset-0 z-60 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md ${complaintSheet.backdropAnimationClasses}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowComplaintModal(false);
-            }}
-          >
-            <div
-              className={`bg-white dark:bg-slate-900 w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl p-4 sm:p-5 space-y-5 border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[90vh] overflow-y-auto ${complaintSheet.sheetAnimationClasses}`}
-              style={complaintSheet.dragStyle}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <SheetDragHandle dragHandleProps={complaintSheet.dragHandleProps} className="sm:hidden -mx-4 -mt-4 mb-1 px-4 pt-4 pb-3 cursor-grab active:cursor-grabbing touch-none" />
-
-              <button
-                onClick={() => setShowComplaintModal(false)}
-                className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-
-              {complaintSubmittedTicket ? (
-                <div className="text-center space-y-4">
-                  <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center mx-auto">
-                    <CheckCircle2 className="w-8 h-8" />
-                  </div>
-                  <h2 className="text-xl font-black text-slate-900 dark:text-slate-100">Dispute Ticket Logged</h2>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Ticket <strong>#{complaintSubmittedTicket.id}</strong> regarding <strong>{professional.name}</strong> has been logged with KaziHub Trust & Safety.
-                  </p>
-                  <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-800 text-xs text-slate-700 dark:text-slate-300 text-left space-y-2">
-                    <div className="font-bold text-slate-900 dark:text-slate-100">Report Summary:</div>
-                    <p>• <strong>Reason:</strong> {complaintSubmittedTicket.reason}</p>
-                    <p>• <strong>Status:</strong> Escrow frozen / Under 2-hour Priority Review</p>
-                  </div>
-                  <button
-                    onClick={() => setShowComplaintModal(false)}
-                    className="w-full py-3 rounded-2xl bg-navy-800 text-white font-extrabold text-xs cursor-pointer"
-                  >
-                    Close
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div className="text-center space-y-2">
-                    <div className="w-14 h-14 rounded-full bg-rose-500/10 text-rose-600 flex items-center justify-center mx-auto">
-                      <ShieldAlert className="w-7 h-7" />
-                    </div>
-                    <h2 className="text-xl font-black text-slate-900 dark:text-slate-100">Report / File Complaint</h2>
-                    <p className="text-xs text-slate-500">
-                      Report an issue with <strong>{professional.name}</strong> ({professional.category})
-                    </p>
-                  </div>
-
-                  {/* Reasons */}
-                  <div className="space-y-2">
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Nature of Concern</label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {[
-                        'Unpunctual / Delayed Arrival (Lateness)',
-                        'Poor Quality Workmanship',
-                        'Incomplete Job / Abandoned Work',
-                        'Overcharging / Unexpected Fees',
-                        'Unprofessional Conduct',
-                        'Property Concern'
-                      ].map((r) => (
-                        <button
-                          key={r}
-                          type="button"
-                          onClick={() => setComplaintReason(r)}
-                          className={`p-3 rounded-xl border text-left text-xs font-semibold transition-all cursor-pointer ${
-                            complaintReason === r
-                              ? 'border-rose-500 bg-rose-500/10 text-rose-700 dark:text-rose-300'
-                              : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'
-                          }`}
-                        >
-                          {r}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Details */}
-                  <div className="space-y-2">
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Incident Details</label>
-                    <textarea
-                      rows={3}
-                      value={complaintDetails}
-                      onChange={(e) => setComplaintDetails(e.target.value)}
-                      placeholder="Describe what happened (e.g., artisan arrived 3 hours late, work was left half-done)..."
-                      className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-xs text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-rose-500 outline-hidden"
-                    />
-                  </div>
-
-                  <div className="flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setShowComplaintModal(false)}
-                      className="flex-1 py-3 rounded-2xl border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 font-bold text-xs hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const ticketId = `KAZI-DISPUTE-${Math.floor(1000 + Math.random() * 9000)}`;
-                        setComplaintSubmittedTicket({ id: ticketId, reason: complaintReason });
-                      }}
-                      className="flex-1 py-3 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
-                    >
-                      <AlertCircle className="w-4 h-4" /> Submit Complaint
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        )}
 
       </div>
 

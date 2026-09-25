@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit3, Trash2, Layers, Loader2 } from 'lucide-react';
-import { getGigsByProfessional, deleteGig } from '../lib/mockGigsStore';
+import { Plus, Trash2, Layers, Loader2 } from 'lucide-react';
+import { getGigsByProfessional, deleteGig as deleteDemoGig } from '../lib/mockGigsStore';
+import { listMyGigs, deleteGig, gigFromResponse } from '../lib/gigsApi';
+import { useAuth } from '../context/AuthContext';
+import { toast } from 'sonner';
 import { Gig } from '../types';
 import { GigCreationForm } from './GigCreationForm';
 import { ConfirmationModal } from './ui/ConfirmationModal';
@@ -32,10 +35,14 @@ export const ProfessionalGigs: React.FC<ProfessionalGigsProps> = ({ professional
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isCreating]);
 
-  const fetchGigs = () => {
+  // Real accounts read their gigs from GET /gigs/my-gigs; only the demo account keeps local sample gigs.
+  const { isDemo } = useAuth();
+  const fetchGigs = async () => {
     setLoading(true);
     try {
-      setGigs(getGigsByProfessional(professionalId));
+      setGigs(isDemo ? getGigsByProfessional(professionalId) : (await listMyGigs()).map(gigFromResponse));
+    } catch (err: any) {
+      toast.error(err?.message || 'Could not load your gigs.');
     } finally {
       setLoading(false);
     }
@@ -46,12 +53,16 @@ export const ProfessionalGigs: React.FC<ProfessionalGigsProps> = ({ professional
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [professionalId]);
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!gigToDelete) return;
     setIsDeleting(true);
     try {
-      deleteGig(gigToDelete);
+      if (isDemo) deleteDemoGig(gigToDelete);
+      else await deleteGig(gigToDelete);
       setGigs(prev => prev.filter(g => g.id !== gigToDelete));
+      toast.success('Gig deleted.');
+    } catch (err: any) {
+      toast.error(err?.message || 'Could not delete this gig. Try again.');
     } finally {
       setIsDeleting(false);
       setGigToDelete(null);
@@ -113,7 +124,8 @@ export const ProfessionalGigs: React.FC<ProfessionalGigsProps> = ({ professional
                 </span>
                 <button
                   onClick={() => setGigToDelete(gig.id)}
-                  className="p-1.5 text-slate-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 opacity-0 group-hover:opacity-100 focus:opacity-100"
+                  aria-label="Delete gig"
+                  className="p-1.5 text-slate-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 opacity-100 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 focus:opacity-100"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>

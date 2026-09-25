@@ -1,24 +1,36 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   X, ShieldCheck, Camera, Upload, CheckCircle2,
-  AlertCircle, RefreshCw, Lock, Sparkles, ChevronRight,
-  CreditCard, UserCheck, Eye, Accessibility, HelpCircle
-} from 'lucide-react';
+  RefreshCw, Lock, ChevronRight,
+  Accessibility } from 'lucide-react';
 import { SheetDragHandle } from './SheetDragHandle';
 import { useSlideUpSheet } from '../../hooks/useSlideUpSheet';
+
+export interface VerificationSubmission {
+  docType: string;
+  docNumber: string;
+  /** data: URLs of the ID photo and the selfie, uploaded privately by the handler. */
+  docImage: string;
+  selfie: string;
+}
 
 interface KYCVerificationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
   initialStep?: 'doc' | 'camera' | 'review';
+  /** Real accounts: uploads both photos and submits them for admin review (status becomes pending). */
+  onSubmit?: (submission: VerificationSubmission) => Promise<void>;
 }
 
 export const KYCVerificationModal: React.FC<KYCVerificationModalProps> = ({
   isOpen,
   onClose,
-  onSuccess
+  onSuccess,
+  onSubmit
 }) => {
+  const [consent, setConsent] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [step, setStep] = useState<'intro' | 'document' | 'liveness' | 'verifying' | 'completed'>('intro');
   const [docType, setDocType] = useState<'nin' | 'drivers_license' | 'voters_card' | 'passport'>('nin');
   const [docNumber, setDocNumber] = useState('');
@@ -175,13 +187,25 @@ export const KYCVerificationModal: React.FC<KYCVerificationModalProps> = ({
     }
   };
 
-  const handleSubmitForVerification = () => {
+  const handleSubmitForVerification = async () => {
+    if (!onSubmit) {
+      // Demo account only: there's no backend to send documents to.
+      setStep('verifying');
+      setTimeout(() => setStep('completed'), 1200);
+      return;
+    }
+    if (!docImage || !livenessImage) return;
+    setSubmitError(null);
     setStep('verifying');
-    setLiveAnnouncement('Cross-referencing government document security and biometric face verification.');
-    setTimeout(() => {
+    setLiveAnnouncement('Uploading your ID and selfie securely.');
+    try {
+      await onSubmit({ docType, docNumber: docNumber.trim(), docImage, selfie: livenessImage });
       setStep('completed');
-      setLiveAnnouncement('Verification completed successfully! Your Verified Account badge is now active.');
-    }, 2800);
+      setLiveAnnouncement('Submitted for review.');
+    } catch (err: any) {
+      setSubmitError(err?.message || 'Could not submit your documents. Try again.');
+      setStep('liveness');
+    }
   };
 
   const sheet = useSlideUpSheet(isOpen, onClose);
@@ -238,7 +262,7 @@ export const KYCVerificationModal: React.FC<KYCVerificationModalProps> = ({
                   Identity & Liveness Verification
                 </h2>
                 <p id="kyc-modal-desc" className="text-xs text-slate-500">
-                  Government ID check & instant face liveness verification.
+                  An ID photo and a selfie, reviewed by our team.
                 </p>
               </div>
             </div>
@@ -269,8 +293,8 @@ export const KYCVerificationModal: React.FC<KYCVerificationModalProps> = ({
                   ✓
                 </div>
                 <div>
-                  <p className="font-extrabold text-slate-900 dark:text-slate-100">Instant Verified Artisan Badge</p>
-                  <p className="text-slate-500 text-[11px]">Higher visibility, 3x client trust, and priority job recommendations.</p>
+                  <p className="font-extrabold text-slate-900 dark:text-slate-100">Verified Badge After Review</p>
+                  <p className="text-slate-500 text-[11px]">Once approved, clients see a Verified badge on your profile.</p>
                 </div>
               </div>
             </div>
@@ -631,6 +655,15 @@ export const KYCVerificationModal: React.FC<KYCVerificationModalProps> = ({
               </div>
             )}
 
+            <label className="flex items-start gap-2.5 text-[11px] text-slate-600 dark:text-slate-400 cursor-pointer">
+              <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 w-4 h-4 accent-navy-800 shrink-0" />
+              <span>I agree to KaziHub using my ID photo and selfie to check my identity. They’re stored privately and only seen by the review team.</span>
+            </label>
+
+            {submitError && (
+              <p className="text-xs font-bold text-rose-600 dark:text-rose-400" role="alert">{submitError}</p>
+            )}
+
             <div className="flex justify-between items-center gap-2.5 pt-2">
               <button
                 type="button"
@@ -644,13 +677,9 @@ export const KYCVerificationModal: React.FC<KYCVerificationModalProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  if (!livenessImage) {
-                    setLivenessImage('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600');
-                  }
-                  handleSubmitForVerification();
-                }}
-                className="px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs shadow-xs cursor-pointer flex items-center gap-2 focus:ring-2 focus:ring-navy-400"
+                disabled={!livenessImage || !consent}
+                onClick={handleSubmitForVerification}
+                className="disabled:opacity-50 disabled:cursor-not-allowed px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs shadow-xs cursor-pointer flex items-center gap-2 focus:ring-2 focus:ring-navy-400"
               >
                 <span>Submit for Verification</span>
                 <ShieldCheck className="w-4 h-4" />
@@ -670,10 +699,10 @@ export const KYCVerificationModal: React.FC<KYCVerificationModalProps> = ({
             </div>
             <div className="space-y-1">
               <h2 id="kyc-modal-title" className="text-lg font-black text-slate-900 dark:text-slate-100">
-                Cross-Referencing Biometrics
+                Submitting…
               </h2>
               <p id="kyc-modal-desc" className="text-xs text-slate-500 max-w-xs mx-auto">
-                Validating government document security watermark and 3D facial liveness match...
+                Uploading your ID and selfie securely.
               </p>
             </div>
           </div>
@@ -688,20 +717,12 @@ export const KYCVerificationModal: React.FC<KYCVerificationModalProps> = ({
 
             <div className="space-y-1">
               <h2 id="kyc-modal-title" className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
-                Verification Successful!
+                {onSubmit ? 'Submitted for review' : 'Demo verification complete'}
               </h2>
               <p id="kyc-modal-desc" className="text-xs text-slate-600 dark:text-slate-400 max-w-xs mx-auto">
-                Your identity and facial liveness have been verified. The <strong>Verified Account</strong> badge is now active on your public profile.
-              </p>
-            </div>
-
-            <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 text-xs text-left space-y-1 text-emerald-900 dark:text-emerald-200">
-              <div className="flex items-center gap-1.5 font-extrabold">
-                <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                <span>Verified Artisan Account</span>
-              </div>
-              <p className="text-[11px] text-emerald-700 dark:text-emerald-300 leading-snug">
-                You now qualify for priority matching, direct customer calls, and high-value project inquiries across your location.
+                {onSubmit
+                  ? 'Our team checks your ID and selfie. Your Verified badge appears once they approve it, and you can see the status on your profile.'
+                  : 'This is the demo account, so nothing was sent.'}
               </p>
             </div>
 
@@ -713,7 +734,7 @@ export const KYCVerificationModal: React.FC<KYCVerificationModalProps> = ({
               }}
               className="w-full py-3 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs shadow-xs cursor-pointer focus:ring-2 focus:ring-navy-600"
             >
-              Done & View Profile
+              Done
             </button>
           </div>
         )}

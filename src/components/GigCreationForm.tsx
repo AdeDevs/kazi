@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
-import { Loader2, X } from 'lucide-react';
-import { createGig } from '../lib/mockGigsStore';
+import { ImagePlus, Loader2, X } from 'lucide-react';
+import { createGig as createDemoGig } from '../lib/mockGigsStore';
+import { createGig, uploadGigImage } from '../lib/gigsApi';
+import { useAuth } from '../context/AuthContext';
 import { GigInput } from '../types';
 import { CATEGORIES } from '../mockData';
+import { formatAmount } from '../utils';
 import { CustomDropdown } from './CustomDropdown';
 import { UnsavedChangesModal } from './ui/UnsavedChangesModal';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
+import { useAccountFrozen } from '../hooks/useAccountFrozen';
 
 interface GigCreationFormProps {
   professionalId: string;
@@ -16,6 +20,27 @@ interface GigCreationFormProps {
 export const GigCreationForm: React.FC<GigCreationFormProps> = ({ professionalId, onCancel, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { blockIfFrozen } = useAccountFrozen();
+  const { isDemo } = useAuth();
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+
+  const handlePhotosSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []).filter(f => f.type.startsWith('image/'));
+    e.target.value = '';
+    if (files.length === 0) return;
+    setIsUploadingPhoto(true);
+    setError(null);
+    try {
+      for (const file of files) {
+        const url = await uploadGigImage(file);
+        setFormData(prev => ({ ...prev, images: [...(prev.images || []), url] }));
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Could not upload that photo. Try again.');
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
   
   const [formData, setFormData] = useState<GigInput>({
     title: '',
@@ -73,10 +98,17 @@ export const GigCreationForm: React.FC<GigCreationFormProps> = ({ professionalId
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (blockIfFrozen()) return;
     setLoading(true);
     setError(null);
     try {
-      createGig(formData, professionalId);
+      // Real accounts save to POST /gigs/; only the demo account keeps local sample gigs.
+      if (isDemo) {
+        createDemoGig(formData, professionalId);
+      } else {
+        const { title, description, category, price, delivery_time_days, tags, images } = formData;
+        await createGig({ title: title.trim(), description: description.trim(), category, price, delivery_time_days, tags, images });
+      }
       onSuccess();
     } catch (err: any) {
       setError(err.message || 'Failed to create gig');
@@ -149,7 +181,7 @@ export const GigCreationForm: React.FC<GigCreationFormProps> = ({ professionalId
                 inputMode="numeric"
                 name="price"
                 placeholder="e.g., 15,000"
-                value={formData.price ? formData.price.toLocaleString() : ''}
+                value={formData.price ? formatAmount(formData.price) : ''}
                 onChange={handleDigitsChange('price')}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 focus:border-navy-500 focus:ring-2 focus:ring-navy-500/20 transition-all text-slate-900 dark:text-white font-medium"
               />
@@ -197,6 +229,32 @@ export const GigCreationForm: React.FC<GigCreationFormProps> = ({ professionalId
           </div>
         </div>
 
+        {!isDemo && (
+          <div>
+            <span className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Photos (Optional)</span>
+            <div className="flex flex-wrap gap-3">
+              {(formData.images || []).map((url) => (
+                <div key={url} className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
+                  <img src={url} alt="" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, images: (prev.images || []).filter(u => u !== url) }))}
+                    aria-label="Remove photo"
+                    className="absolute top-1 right-1 p-1 rounded-full bg-slate-950/70 text-white cursor-pointer"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+              <label className={`w-20 h-20 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex flex-col items-center justify-center gap-1 text-[11px] font-bold text-slate-500 ${isUploadingPhoto ? 'cursor-wait' : 'cursor-pointer'}`}>
+                {isUploadingPhoto ? <Loader2 className="w-5 h-5 animate-spin" /> : <ImagePlus className="w-5 h-5" />}
+                <span>{isUploadingPhoto ? 'Uploading' : 'Add photo'}</span>
+                <input type="file" accept="image/*" multiple className="sr-only" onChange={handlePhotosSelected} disabled={isUploadingPhoto} />
+              </label>
+            </div>
+          </div>
+        )}
+
         <div className="pt-2 flex items-center justify-end gap-3">
           <button
             type="button"
@@ -208,7 +266,7 @@ export const GigCreationForm: React.FC<GigCreationFormProps> = ({ professionalId
           </button>
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || isUploadingPhoto}
             className="px-8 py-3 rounded-xl font-bold text-sm bg-navy-800 hover:bg-navy-900 text-white shadow-md flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}

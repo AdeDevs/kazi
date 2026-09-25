@@ -15,11 +15,11 @@ const FAQS = [
   },
   {
     q: 'What happens if an artisan does not arrive?',
-    a: 'You can cancel with zero penalty or reassign the request to another verified pro nearby. Our support team is also available 24/7 to help sort out any issues.'
+    a: 'You can cancel the booking from your Bookings page and book another artisan. If you’d already paid into escrow, the cancellation records a refund. You can also contact our support team for help.'
   },
   {
     q: 'How are artisans verified?',
-    a: 'All KaziHub artisans undergo National Identity verification, trade certification audit, and local neighborhood endorsement checks before receiving a Verified Pro badge.'
+    a: 'Artisans submit a government ID (such as a NIN slip, driver’s licence or voter’s card) and a live selfie. Our team reviews both before the artisan gets a Verified badge.'
   },
   {
     q: 'Can I change my service address?',

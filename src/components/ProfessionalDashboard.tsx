@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Professional, Booking, ChatMessage, Notification } from '../types';
-import { formatCurrency } from '../utils';
+import { bookingWhen, customerLabel, formatCurrency } from '../utils';
+import { SendQuoteSheet } from './SendQuoteSheet';
 import { ProfessionalMessages } from './ProfessionalMessages';
 import { ProfessionalNotifications } from './ProfessionalNotifications';
 import { ProfessionalGigs } from './ProfessionalGigs';
@@ -11,9 +12,8 @@ import { UnsavedChangesModal } from './ui/UnsavedChangesModal';
 import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import {
-  Briefcase, DollarSign, Star, CheckCircle2, Clock, Plus, Trash2,
-  MapPin, User, Settings, Image as ImageIcon, Calendar, Layers,
-  MessageSquare, ClipboardList, ArrowRight, ArrowLeft, Eye, X, Check, AlertCircle
+  Briefcase, Star, CheckCircle2, Clock, MapPin, Image as ImageIcon, Calendar, Layers,
+  MessageSquare, ClipboardList, ArrowRight, ArrowLeft, Eye, X, AlertCircle
 } from 'lucide-react';
 
 interface ProfessionalDashboardProps {
@@ -96,6 +96,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
 
   // Job completion modal state -- same caching reasoning as above.
   const [completingJob, setCompletingJob] = useState<Booking | null>(null);
+  const [quotingJob, setQuotingJob] = useState<Booking | null>(null);
   const [cachedCompletingJob, setCachedCompletingJob] = useState<Booking | null>(null);
   useEffect(() => {
     if (completingJob) setCachedCompletingJob(completingJob);
@@ -189,10 +190,11 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
   };
 
   const myBookings = localBookings.filter(b => b.artisan_id === professional.id);
-  const pendingRequests = myBookings.filter(b => b.status === 'pending' || b.status === 'quote_requested');
+  const pendingRequests = myBookings.filter(b => b.status === 'pending' || b.status === 'quote_requested' || b.status === 'quote_sent');
 
   const activeJobs = myBookings.filter(b => 
     b.status === 'accepted' || 
+    b.status === 'escrow_funded' || 
     b.status === 'in_progress' || 
     (b.status === 'completed_by_artisan' && !isJobAutoCompleted(b)) || 
     b.status === 'disputed'
@@ -342,6 +344,11 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
         {/* Requests Tab Content */}
         {jobsSubTab === 'requests' && (
           <div className="space-y-4">
+            <SendQuoteSheet
+              job={quotingJob}
+              onClose={() => setQuotingJob(null)}
+              onSend={(job, amount, breakdown) => handleOptimisticUpdateStatus(job.id, 'quote_sent', { amount, quote_breakdown: breakdown || null })}
+            />
             {pendingRequests.length === 0 ? (
               <div className="text-center py-20 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-8 shadow-xs">
                 <ClipboardList className="w-12 h-12 text-slate-400 mx-auto mb-3" />
@@ -351,7 +358,8 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
             ) : (
               <div className="space-y-4">
                 {pendingRequests.map((job) => {
-                  const isQuote = job.status === 'quote_requested' || job.servicePricingType === 'quote_required';
+                  const isQuote = job.status === 'quote_requested' || job.status === 'quote_sent' || (job.servicePricingType === 'quote_required' && job.status === 'pending');
+                  const quoteSent = job.status === 'quote_sent';
                   return (
                   <div key={job.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3.5 sm:p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="space-y-2">
@@ -361,9 +369,9 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                             ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20 dark:text-amber-400'
                             : 'bg-brand-orange-500/10 text-brand-orange-600 border border-brand-orange-500/20 dark:text-brand-orange-400'
                         }`}>
-                          {isQuote ? 'Awaiting Quote' : 'Pending Booking'}
+                          {quoteSent ? 'Quote Sent' : isQuote ? 'Awaiting Quote' : 'Pending Booking'}
                         </span>
-                        <span className="text-xs text-slate-400 font-semibold truncate">Customer: {job.customerName} ({job.customerPhone})</span>
+                        <span className="text-xs text-slate-400 font-semibold truncate">Customer: {customerLabel(job)}</span>
                       </div>
 
                       <h4 className="text-base font-bold text-slate-900 dark:text-slate-100">
@@ -374,7 +382,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                       </p>
 
                       <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 dark:text-slate-400 pt-1">
-                        <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400" /> {job.scheduled_date} ({job.timeSlot})</span>
+                        <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400" /> {bookingWhen(job)}</span>
                         <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-slate-400" /> {job.address}</span>
                       </div>
                     </div>
@@ -406,12 +414,25 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                         Decline
                       </button>
 
-                      <button
-                        onClick={() => handleOptimisticUpdateStatus(job.id, 'accepted')}
-                        className="px-4 py-2.5 bg-navy-800 hover:bg-navy-900 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer w-full sm:w-auto shadow-xs"
-                      >
-                        Accept
-                      </button>
+                      {quoteSent ? (
+                        <span className="px-4 py-2.5 rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs font-bold w-full sm:w-auto text-center">
+                          Waiting for the client
+                        </span>
+                      ) : job.status === 'quote_requested' ? (
+                        <button
+                          onClick={() => setQuotingJob(job)}
+                          className="px-4 py-2.5 bg-navy-800 hover:bg-navy-900 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer w-full sm:w-auto shadow-xs"
+                        >
+                          Send Quote
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleOptimisticUpdateStatus(job.id, 'accepted')}
+                          className="px-4 py-2.5 bg-navy-800 hover:bg-navy-900 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer w-full sm:w-auto shadow-xs"
+                        >
+                          Accept
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -495,6 +516,10 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                   const timeRem = getTimeRemainingForCustomerResponse(job.completionDetails?.submittedAt);
                   const isSubmitted = job.status === 'completed_by_artisan' && !isJobAutoCompleted(job);
                   const isIssue = job.status === 'disputed';
+                  const awaitingPayment = job.status === 'accepted';
+                  // The artisan's own payout is what's left after fees -- only known once the backend
+                  // has priced the escrow. Until then, the honest figure is the job's price.
+                  const hasPayout = (job.artisan_earnings ?? 0) > 0;
 
                   return (
                     <div key={job.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3.5 sm:p-4 shadow-xs space-y-3">
@@ -507,19 +532,19 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                                 ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
                                 : isIssue
                                 ? 'bg-rose-600 text-white font-extrabold shadow-xs'
-                                : job.status === 'accepted'
+                                : job.status === 'accepted' || job.status === 'escrow_funded'
                                 ? 'bg-emerald-500/10 text-emerald-600'
                                 : 'bg-navy-800/10 text-navy-800 dark:text-navy-400'
                             }`}>
                               {isSubmitted && <Clock className="w-3.5 h-3.5" />}
                               {isIssue && <AlertCircle className="w-3.5 h-3.5" />}
                               <span>
-                                {isSubmitted ? 'Completion Submitted' : isIssue ? 'Issue Reported' : job.status === 'accepted' ? 'Accepted' : 'In Progress'}
+                                {isSubmitted ? 'Completion Submitted' : isIssue ? 'Issue Reported' : job.status === 'accepted' ? 'Accepted' : job.status === 'escrow_funded' ? 'Paid into Escrow' : 'In Progress'}
                               </span>
                             </span>
 
                             <span className="text-xs text-slate-400 font-semibold truncate">
-                              Customer: <strong className="text-slate-700 dark:text-slate-300">{job.customerName}</strong> ({job.customerPhone})
+                              Customer: <strong className="text-slate-700 dark:text-slate-300">{job.customerName}</strong>{job.customerPhone ? ` (${job.customerPhone})` : ''}
                             </span>
                           </div>
 
@@ -532,9 +557,9 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                         </div>
 
                         <div className="text-left md:text-right shrink-0">
-                          <p className="text-xs text-slate-400">Total Payout</p>
-                          <p className="text-lg font-black text-slate-900 dark:text-white">
-                            {formatCurrency(job.amount || 0)}
+                          <p className="text-xs text-slate-400">{hasPayout ? 'Your Payout' : 'Job Price'}</p>
+                          <p className="text-lg font-black text-slate-900 dark:text-white tabular-nums">
+                            {formatCurrency(hasPayout ? job.artisan_earnings ?? 0 : job.amount || 0)}
                           </p>
                         </div>
                       </div>
@@ -597,7 +622,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                       {/* Clear Next Action Indicator */}
                       <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-1">
                         <span className="text-[10px] font-black uppercase tracking-wider text-navy-800 dark:text-navy-400 block">
-                          Next Action Required:
+                          {awaitingPayment || isSubmitted ? 'Next Step' : 'Next Action Required'}
                         </span>
                         <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
                           {isSubmitted ? (
@@ -605,26 +630,27 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                           ) : isIssue ? (
                             "Contact customer via direct message below to resolve reported details, clarify work performed, or arrange a follow-up fix."
                           ) : job.status === 'accepted' ? (
-                            "Head to customer location at the scheduled time and click 'Start Job'."
+                            "Accepted. The client pays into escrow next. Agree the time and place with them in messages."
                           ) : (
                             "Perform the repair work, then click 'Complete Job' to submit work completion proof photos."
                           )}
                         </p>
                       </div>
 
-                      {/* Footer Metadata & Action Buttons */}
-                      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
-                        <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
-                          <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400" /> {job.scheduled_date} ({job.timeSlot})</span>
-                          <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-slate-400" /> {job.address}</span>
+                      {/* Footer: when/where, then actions. On a phone the actions are an equal-width grid
+                          of 44px targets whose labels never wrap; a status isn't dressed up as a button. */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                        <div className="grid gap-1.5 sm:flex sm:flex-wrap sm:items-center sm:gap-4 text-xs text-slate-500 dark:text-slate-400 min-w-0">
+                          <span className="flex items-center gap-1.5 min-w-0"><Calendar className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400 shrink-0" /> <span className="truncate">{bookingWhen(job)}</span></span>
+                          <span className="flex items-center gap-1.5 min-w-0"><MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" /> <span className="truncate">{job.address}</span></span>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+                        <div className="grid grid-cols-2 gap-2 w-full sm:flex sm:w-auto sm:shrink-0">
                           <button
                             onClick={() => openBookingDetails(job)}
-                            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-xl transition-colors cursor-pointer flex-1 sm:flex-none flex items-center justify-center gap-1.5"
+                            className="min-h-11 sm:min-h-0 px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-xl transition-[background-color,transform] duration-150 active:scale-[0.97] cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap"
                           >
-                            <Eye className="w-3.5 h-3.5" />
+                            <Eye className="w-3.5 h-3.5 shrink-0" />
                             <span>Details</span>
                           </button>
 
@@ -634,24 +660,16 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                                 onTabChange('messages', job.client_id);
                               }
                             }}
-                            className={`px-4 py-2 text-xs font-bold rounded-xl transition-colors cursor-pointer flex-1 sm:flex-none flex items-center justify-center gap-1.5 ${
+                            aria-label="Message customer"
+                            className={`min-h-11 sm:min-h-0 px-4 py-2 text-xs font-bold rounded-xl transition-[background-color,transform] duration-150 active:scale-[0.97] cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap ${
                               isIssue
                                 ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-xs'
                                 : 'bg-navy-800/10 hover:bg-navy-800/20 text-navy-800 dark:text-navy-300'
                             }`}
                           >
-                            <MessageSquare className="w-3.5 h-3.5" />
-                            <span>Message Customer</span>
+                            <MessageSquare className="w-3.5 h-3.5 shrink-0" />
+                            <span>Message</span>
                           </button>
-
-                          {job.status === 'accepted' && (
-                            <button
-                              onClick={() => handleOptimisticUpdateStatus(job.id, 'in_progress')}
-                              className="px-4 py-2 bg-navy-800 hover:bg-navy-900 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex-1 sm:flex-none shadow-xs"
-                            >
-                              Start Job
-                            </button>
-                          )}
 
                           {job.status === 'in_progress' && (
                             <button
@@ -662,9 +680,9 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                                 setCompletionPhoto2('');
                                 setCompletionVideoUrl('');
                               }}
-                              className="px-4 py-2 bg-navy-800 hover:bg-navy-900 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex-1 sm:flex-none shadow-xs flex items-center justify-center gap-1.5"
+                              className="col-span-2 min-h-11 sm:min-h-0 px-4 py-2 bg-navy-800 hover:bg-navy-900 text-white text-xs font-bold rounded-xl transition-[background-color,transform] duration-150 active:scale-[0.97] cursor-pointer shadow-xs flex items-center justify-center gap-1.5 whitespace-nowrap"
                             >
-                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                               <span>Complete Job</span>
                             </button>
                           )}
@@ -744,7 +762,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
 
                       <div className="flex items-center justify-between pt-1">
                         <span className="flex items-center gap-1 text-xs text-slate-500">
-                          <Calendar className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400" /> Scheduled/Completed Date: {job.scheduled_date}
+                          <Calendar className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400" /> Scheduled/Completed Date: {job.scheduled_date || 'Not set'}
                         </span>
 
                         <button
@@ -799,11 +817,11 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                 </div>
                 <div className="flex justify-between">
                   <span className="font-semibold text-slate-500">Phone:</span>
-                  <span className="font-bold text-slate-900 dark:text-white">{booking.customerPhone}</span>
+                  <span className="font-bold text-slate-900 dark:text-white">{booking.customerPhone || 'Not shared'}</span>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5 sm:gap-2">
                   <span className="font-semibold text-slate-500">Scheduled Date:</span>
-                  <span className="font-bold text-slate-900 dark:text-white">{booking.scheduled_date} ({booking.timeSlot})</span>
+                  <span className="font-bold text-slate-900 dark:text-white">{bookingWhen(booking)}</span>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5 sm:gap-2">
                   <span className="font-semibold text-slate-500">Location / Address:</span>
@@ -1220,13 +1238,13 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                       }`}>
                         {job.status}
                       </span>
-                      <span className="text-xs text-slate-400 font-semibold sm:truncate">Customer: {job.customerName} ({job.customerPhone})</span>
+                      <span className="text-xs text-slate-400 font-semibold sm:truncate">Customer: {customerLabel(job)}</span>
                     </div>
 
                     <h4 className="text-base font-bold text-slate-900 dark:text-slate-100">Issue: {job.description}</h4>
 
                     <div className="flex flex-wrap items-center gap-4 text-xs text-slate-600 dark:text-slate-400">
-                      <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400" /> {job.scheduled_date} ({job.timeSlot})</span>
+                      <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400" /> {bookingWhen(job)}</span>
                       <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-slate-400" /> {job.address}</span>
                     </div>
                   </div>
@@ -1237,13 +1255,17 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                       <p className="text-base font-bold text-slate-900 dark:text-slate-100">{formatCurrency(job.amount || 0)}</p>
                     </div>
 
-                    {job.status === 'pending' || job.status === 'accepted' ? (
+                    {job.status === 'pending' ? (
                       <button
-                        onClick={() => handleOptimisticUpdateStatus(job.id, 'in_progress')}
+                        onClick={() => handleOptimisticUpdateStatus(job.id, 'accepted')}
                         className="px-4 py-2 bg-navy-800 hover:bg-navy-900 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer w-full sm:w-auto shadow-xs"
                       >
-                        Start Job
+                        Accept
                       </button>
+                    ) : job.status === 'accepted' ? (
+                      <span className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-semibold w-full sm:w-auto text-center">
+                        Waiting for client payment
+                      </span>
                     ) : job.status === 'in_progress' ? (
                       <button
                         onClick={() => {

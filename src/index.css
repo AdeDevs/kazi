@@ -69,7 +69,8 @@ a,
 @media (pointer: coarse) {
   input,
   textarea,
-  select {
+  select,
+  .form-field-text {
     font-size: 16px;
   }
 }

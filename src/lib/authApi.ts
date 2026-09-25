@@ -1,7 +1,10 @@
 import { apiDelete, apiGet, apiPost, apiPostForm, apiPostMultipart, apiPut, clearTokens, setTokens } from './apiClient';
 import {
   AuthUser,
+  ChangePasswordSchema,
   ForgotPasswordSchema,
+  RequestEmailChangeSchema,
+  SessionInfo,
   LoginCredentials,
   ResendOTPSchema,
   ResetPasswordSchema,
@@ -75,6 +78,35 @@ export async function deactivateMe(): Promise<void> {
 
 export async function setupTwoFactor(): Promise<TwoFactorSetupResponse> {
   return apiPost<TwoFactorSetupResponse>('/auth/2fa/setup');
+}
+
+export async function changePassword(payload: ChangePasswordSchema): Promise<void> {
+  await apiPost<unknown>('/auth/change-password', payload);
+}
+
+/** Sends a code to the NEW address; the email only changes once confirmEmailChange succeeds. */
+export async function requestEmailChange(payload: RequestEmailChangeSchema): Promise<void> {
+  await apiPost<unknown>('/auth/change-email', payload);
+}
+
+export async function confirmEmailChange(otp: string): Promise<AuthUser> {
+  return apiPost<AuthUser>('/auth/change-email/confirm', { otp });
+}
+
+export async function freezeMe(): Promise<void> {
+  await apiPost<unknown>('/auth/freeze-me');
+}
+
+export async function unfreezeMe(): Promise<void> {
+  await apiPost<unknown>('/auth/unfreeze-me');
+}
+
+export async function listSessions(): Promise<SessionInfo[]> {
+  return apiGet<SessionInfo[]>('/auth/sessions');
+}
+
+export async function revokeSession(sessionId: string): Promise<void> {
+  await apiDelete<unknown>(`/auth/sessions/${encodeURIComponent(sessionId)}`);
 }
 
 export async function verifyTwoFactorSetup(totpCode: string): Promise<void> {

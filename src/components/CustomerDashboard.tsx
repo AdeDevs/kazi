@@ -9,14 +9,15 @@ import { VerifiedBadge } from './ui/VerifiedBadge';
 import { SheetDragHandle } from './ui/SheetDragHandle';
 import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
-import { formatCurrency, formatServicePrice, isBookingArchived } from '../utils';
+import { bookingWhen, formatCurrency, isBookingArchived } from '../utils';
 import { useAuth } from '../context/AuthContext';
+import { professionalSearchScore } from '../lib/professionalSearch';
 import { 
   Search, MapPin, Star, ShieldCheck, Sparkles, Filter, CheckCircle2, 
   Calendar, MessageSquare, Clock, ArrowRight, User, Bookmark, Bell, 
-  Settings, Zap, Flame, Award, Tag, Eye, Phone, Heart, Check, CheckCheck, CreditCard,
-  RotateCcw, AlertCircle, ShieldAlert, ThumbsUp, X, Send, Info, XCircle,
-  Wrench, Briefcase, ChevronRight, ChevronDown, CheckCircle, ArrowUpRight, Grid, ChevronUp
+  Settings, Zap, Flame, Award, Tag, Eye, Heart, CheckCheck, CreditCard,
+  RotateCcw, AlertCircle, ShieldAlert, X, Info, XCircle,
+  Wrench, Briefcase, CheckCircle, FileText
 } from 'lucide-react';
 
 interface CustomerDashboardProps {
@@ -28,11 +29,13 @@ interface CustomerDashboardProps {
   onSelectProForProfile: (pro: Professional) => void;
   onOpenBooking: (pro: Professional) => void;
   onOpenChat: (pro: Professional) => void;
-  onOpenAIDiagnosis?: () => void;
   selectedCategoryFilter: Category | 'All';
   onSelectCategoryFilter: (cat: Category | 'All') => void;
   onCancelBooking: (bookingId: string) => void;
   onUpdateBookingStatus?: (bookingId: string, status: Booking['status'], extra?: Partial<Booking>) => void;
+  onAcceptQuote?: (bookingId: string) => void;
+  /** Opens a dispute on the backend; resolves to its ticket id, or null if it failed. */
+  onDisputeBooking?: (bookingId: string, reason: string, details: string, evidencePhotos?: string[]) => Promise<string | null>;
   onAddReview?: (proId: string, rating: number, comment: string) => void;
   activeTab: string;
   onTabChange: (tab: string) => void;
@@ -57,11 +60,12 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   onSelectProForProfile,
   onOpenBooking,
   onOpenChat,
-  onOpenAIDiagnosis,
   selectedCategoryFilter,
   onSelectCategoryFilter,
   onCancelBooking,
   onUpdateBookingStatus,
+  onAcceptQuote,
+  onDisputeBooking,
   onAddReview,
   activeTab,
   onTabChange,
@@ -80,8 +84,6 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   const clientGreetingName = user?.first_name || (user?.email ? user.email.split('@')[0] : 'Client');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedNeighborhood, setSelectedNeighborhood] = useState<string>('All');
-  const [defaultNeighborhood, setDefaultNeighborhood] = useState<string>('Bodija, Ibadan');
-  const [recentlyViewedIds, setRecentlyViewedIds] = useState<string[]>(['p1', 'p2', 'p4']);
   const [searchMinRating, setSearchMinRating] = useState<number>(0);
   const [searchMinExperience, setSearchMinExperience] = useState<number>(0);
   const [searchAvailabilityOnly, setSearchAvailabilityOnly] = useState<boolean>(false);
@@ -93,50 +95,8 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   const [savedSearchTerm, setSavedSearchTerm] = useState('');
   const [savedCategoryFilter, setSavedCategoryFilter] = useState<Category | 'All'>('All');
   const [savedNeighborhoodFilter, setSavedNeighborhoodFilter] = useState<string>('All');
-  const [messagesSearchTerm, setMessagesSearchTerm] = useState('');
-  const [messagesCategoryFilter, setMessagesCategoryFilter] = useState<Category | 'All'>('All');
   const [notificationsSearchTerm, setNotificationsSearchTerm] = useState('');
   const [notificationsFilterType, setNotificationsFilterType] = useState<string>('All');
-  const [settingsSearchTerm, setSettingsSearchTerm] = useState('');
-
-  // AI Diagnosis State
-  const [isAIDiagnosisOpen, setIsAIDiagnosisOpen] = useState(false);
-  const [aiSymptomInput, setAiSymptomInput] = useState('');
-  const [isAiDiagnosing, setIsAiDiagnosing] = useState(false);
-  const [aiDiagnosisReport, setAiDiagnosisReport] = useState<{
-    symptom: string;
-    identifiedIssue: string;
-    category: Category;
-    urgency: 'Low' | 'Medium' | 'High' | 'Emergency';
-    estimatedCost: string;
-    safetyPrecaution: string;
-    likelyCauses: string[];
-  } | null>(null);
-  const aiDiagnosisSheet = useSlideUpSheet(isAIDiagnosisOpen, () => {
-    setIsAIDiagnosisOpen(false);
-    setAiDiagnosisReport(null);
-  });
-
-  // Password change state
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-
-  const handlePasswordChange = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      alert('Please fill in all password fields.');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      alert('New passwords do not match.');
-      return;
-    }
-    alert('Password updated successfully!');
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
-  };
 
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
@@ -155,6 +115,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   const [complaintPhoto1, setComplaintPhoto1] = useState<string>('');
   const [complaintPhoto2, setComplaintPhoto2] = useState<string>('');
   const [complaintStep, setComplaintStep] = useState<'form' | 'review'>('form');
+  const [isSubmittingDispute, setIsSubmittingDispute] = useState(false);
   const closeComplaintModal = () => {
     setComplaintModalBooking(null);
     setComplaintStep('form');
@@ -176,12 +137,6 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   }, [submittedTicket]);
   const ticketSheet = useSlideUpSheet(Boolean(submittedTicket), () => setSubmittedTicket(null));
 
-  const getCancelEligibility = (b: Booking): { eligible: boolean; reason?: string } => {
-    if (b.status === 'cancelled' || b.status === 'paid_out') {
-      return { eligible: false, reason: 'Booking has already ended.' };
-    }
-    return { eligible: true };
-  };
   const [recentSearches, setRecentSearches] = useState<string[]>([
     'Plumber leak repair',
     'Certified electrician',
@@ -199,12 +154,6 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
     'Mechanics'
   ]);
 
-  const [notifications, setNotifications] = useState([
-    { id: 'cn1', title: 'Booking Accepted', desc: 'Engr. Babatunde Lawal accepted your Inverter & Solar Installation booking request.', time: '10 mins ago', read: false, isRead: false, type: 'booking', relatedTab: 'bookings' },
-    { id: 'cn2', title: 'Work Completion Submitted', desc: 'Engr. Babatunde Lawal submitted completion details & photos for your inverter installation.', time: '1 hour ago', read: false, isRead: false, type: 'completion', relatedTab: 'bookings' },
-    { id: 'cn3', title: 'Payment Secured', desc: 'Your payment of ₦48,000 has been received and is safely held until job confirmation.', time: '1 day ago', read: true, isRead: true, type: 'payment', relatedTab: 'bookings' },
-    { id: 'cn4', title: 'Post-Completion Warranty Active', desc: '4-day window active to inspect solar installation and report any issues before job closure.', time: '2 days ago', read: true, isRead: true, type: 'warranty', relatedTab: 'bookings' }
-  ]);
 
   const neighborhoods = ['All', 'Bodija GRA', 'Ring Road', 'Dugbe', 'UI / Agbowo', 'Samonda', 'Oluyole Estate', 'Challenge', 'Akobo', 'Iyaganku GRA', 'Ogbomoso', 'Oyo Town', 'Iseyin'];
 
@@ -215,102 +164,19 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
 
   const searchTrimmed = searchTerm.trim().toLowerCase();
 
-  const filteredProfessionals = professionals.filter((pro) => {
-    const matchesCategory = selectedCategoryFilter === 'All' || pro.category === selectedCategoryFilter;
-    const matchesNeighborhood = selectedNeighborhood === 'All' || pro.neighborhood === selectedNeighborhood || pro.state === selectedNeighborhood;
-    const matchesRating = pro.rating_average >= searchMinRating;
-    const matchesExperience = pro.years_of_experience >= searchMinExperience;
-    const matchesAvailability = !searchAvailabilityOnly || pro.is_available_now;
+  const filteredProfessionals = professionals
+    .map((pro) => ({ pro, score: searchTrimmed ? professionalSearchScore(pro, searchTrimmed) : 1 }))
+    .filter(({ pro, score }) => {
+      const matchesCategory = selectedCategoryFilter === 'All' || pro.category === selectedCategoryFilter;
+      const matchesNeighborhood = selectedNeighborhood === 'All' || pro.neighborhood === selectedNeighborhood || pro.state === selectedNeighborhood;
+      const matchesRating = pro.rating_average >= searchMinRating;
+      const matchesExperience = pro.years_of_experience >= searchMinExperience;
+      const matchesAvailability = !searchAvailabilityOnly || pro.is_available_now;
+      return score > 0 && matchesCategory && matchesNeighborhood && matchesRating && matchesExperience && matchesAvailability;
+    })
+    .sort((a, b) => b.score - a.score)
+    .map(({ pro }) => pro);
 
-    const categoryCatalog = CATEGORY_SERVICES_CATALOG[pro.category] || [];
-    const matchesCatalogServices = searchTrimmed ? categoryCatalog.some(srv =>
-      srv.name.toLowerCase().includes(searchTrimmed) ||
-      srv.description.toLowerCase().includes(searchTrimmed)
-    ) : false;
-
-    const matchesSearch =
-      searchTrimmed === '' ||
-      pro.name.toLowerCase().includes(searchTrimmed) ||
-      pro.category.toLowerCase().includes(searchTrimmed) ||
-      pro.tagline.toLowerCase().includes(searchTrimmed) ||
-      pro.neighborhood.toLowerCase().includes(searchTrimmed) ||
-      pro.bio.toLowerCase().includes(searchTrimmed) ||
-      matchesCatalogServices;
-
-    return matchesCategory && matchesNeighborhood && matchesRating && matchesExperience && matchesAvailability && matchesSearch;
-  });
-
-  const handleRunAIDiagnosis = (symptomText?: string) => {
-    const text = (symptomText || aiSymptomInput).trim();
-    if (!text) return;
-    setIsAiDiagnosing(true);
-    setAiDiagnosisReport(null);
-
-    setTimeout(() => {
-      const lower = text.toLowerCase();
-      let identifiedIssue = 'General Fault & Preventive Inspection';
-      let category: Category = 'Electricians';
-      let urgency: 'Low' | 'Medium' | 'High' | 'Emergency' = 'Medium';
-      let estimatedCost = '₦5,000 - ₦15,000';
-      let safetyPrecaution = 'Turn off power and isolate the circuit before touching any connections.';
-      let likelyCauses = ['Loose terminal screws', 'Overheating junction', 'Age and wear of insulation'];
-
-      if (lower.includes('leak') || lower.includes('water') || lower.includes('pipe') || lower.includes('tap') || lower.includes('sink') || lower.includes('drain') || lower.includes('toilet') || lower.includes('tank')) {
-        category = 'Plumbers';
-        identifiedIssue = 'Plumbing Line Leakage or Pressure Joint Failure';
-        urgency = lower.includes('burst') || lower.includes('flooding') ? 'Emergency' : 'High';
-        estimatedCost = '₦6,000 - ₦18,000';
-        safetyPrecaution = 'Immediately turn off the main water gate valve or pumping machine stopcock.';
-        likelyCauses = ['Worn rubber washer/gasket', 'P-trap blockage or corrosion', 'High water pump pressure cracking PVC joint'];
-      } else if (lower.includes('ac') || lower.includes('cooling') || lower.includes('warm air') || lower.includes('air condition') || lower.includes('compressor') || lower.includes('gas')) {
-        category = 'AC Technicians';
-        identifiedIssue = 'Refrigerant Gas Depletion or Capacitor Failure';
-        urgency = 'Medium';
-        estimatedCost = '₦8,000 - ₦25,000';
-        safetyPrecaution = 'Switch off the AC unit to prevent compressor coil burnout while running without gas.';
-        likelyCauses = ['Flare nut leak at copper pipe', 'Faulty dual-run capacitor', 'Clogged indoor evaporator / dirty filter'];
-      } else if (lower.includes('inverter') || lower.includes('solar') || lower.includes('battery') || lower.includes('panel') || lower.includes('tripping') || lower.includes('breaker') || lower.includes('spark') || lower.includes('shock') || lower.includes('wire')) {
-        category = 'Electricians';
-        identifiedIssue = 'Electrical Short Circuit / Inverter Overload Fault';
-        urgency = lower.includes('spark') || lower.includes('shock') ? 'Emergency' : 'High';
-        estimatedCost = '₦7,500 - ₦22,000';
-        safetyPrecaution = 'Switch off your main distribution board (DB) master MCB breaker and do not touch wet wall surfaces.';
-        likelyCauses = ['Burnt socket neutral contact', 'Short circuit on heavy load line', 'Inverter changeover switch arcing'];
-      } else if (lower.includes('wood') || lower.includes('door') || lower.includes('hinge') || lower.includes('wardrobe') || lower.includes('lock') || lower.includes('cabinet') || lower.includes('table') || lower.includes('chair')) {
-        category = 'Carpenters';
-        identifiedIssue = 'Wood Swelling / Hinge Alignment & Lock Mechanism Failure';
-        urgency = 'Low';
-        estimatedCost = '₦4,500 - ₦14,000';
-        safetyPrecaution = 'Avoid forcing the door handle or lock cylinder to prevent internal latch breakage.';
-        likelyCauses = ['Moisture humidity expansion', 'Loose screw anchors in MDF/hardwood', 'Worn mortise lock tumbler'];
-      } else if (lower.includes('generator') || lower.includes('engine') || lower.includes('car') || lower.includes('brake') || lower.includes('sound') || lower.includes('oil')) {
-        category = 'Mechanics';
-        identifiedIssue = 'Engine Ignition or Fuel Delivery Obstruction';
-        urgency = 'High';
-        estimatedCost = '₦6,000 - ₦20,000';
-        safetyPrecaution = 'Allow the engine to cool completely before inspecting spark plugs or fluid reservoirs.';
-        likelyCauses = ['Clogged carburetor jet', 'Degraded spark plug electrode', 'Contaminated fuel or low engine oil level'];
-      } else if (lower.includes('paint') || lower.includes('damp') || lower.includes('wall') || lower.includes('peeling')) {
-        category = 'Painters';
-        identifiedIssue = 'Wall Dampness & Surface Screeding Deterioration';
-        urgency = 'Low';
-        estimatedCost = '₦8,000 - ₦30,000';
-        safetyPrecaution = 'Scrape peeling paint with a mask to avoid inhaling old plaster dust.';
-        likelyCauses = ['Rising damp from floor slab', 'Inadequate primer sealer', 'Water seepage from exterior block wall'];
-      }
-
-      setAiDiagnosisReport({
-        symptom: text,
-        identifiedIssue,
-        category,
-        urgency,
-        estimatedCost,
-        safetyPrecaution,
-        likelyCauses
-      });
-      setIsAiDiagnosing(false);
-    }, 650);
-  };
 
   // Calculate catalog service matches for live auto-sync dropdown
   const matchingCatalogServices = searchTrimmed ? Object.entries(CATEGORY_SERVICES_CATALOG).flatMap(([cat, services]) => {
@@ -330,22 +196,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
       const matchesNeighborhood = selectedNeighborhood === 'All' || pro.neighborhood === selectedNeighborhood || pro.state === selectedNeighborhood;
       if (!matchesNeighborhood) return false;
 
-      if (!searchTrimmed) return true;
-
-      const categoryCatalog = CATEGORY_SERVICES_CATALOG[pro.category] || [];
-      const matchesCatalog = categoryCatalog.some(srv =>
-        srv.name.toLowerCase().includes(searchTrimmed) ||
-        srv.description.toLowerCase().includes(searchTrimmed)
-      );
-
-      return (
-        pro.name.toLowerCase().includes(searchTrimmed) ||
-        pro.category.toLowerCase().includes(searchTrimmed) ||
-        pro.tagline.toLowerCase().includes(searchTrimmed) ||
-        pro.neighborhood.toLowerCase().includes(searchTrimmed) ||
-        pro.bio.toLowerCase().includes(searchTrimmed) ||
-        matchesCatalog
-      );
+      return !searchTrimmed || professionalSearchScore(pro, searchTrimmed) > 0;
     }).length;
   };
 
@@ -411,13 +262,6 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
     }
   };
 
-  const topRatedPros = [...filteredProfessionals].sort((a, b) => b.rating_average - a.rating_average).slice(0, 4);
-  const emergencyPros = filteredProfessionals.filter(p => p.is_available_now).length > 0
-    ? filteredProfessionals.filter(p => p.is_available_now).slice(0, 3)
-    : filteredProfessionals.slice(0, 3);
-  const trendingPros = filteredProfessionals.filter(p => p.completed_jobs_count > 100).slice(0, 4);
-  const recommendedPros = filteredProfessionals.filter(p => p.rating_average >= 4.8).slice(0, 4);
-  const recentlyViewedPros = professionals.filter(p => recentlyViewedIds.includes(p.id));
   const savedPros = professionals.filter(p => savedProIds.includes(p.id));
 
   const displayedPros = filteredProfessionals.filter(p => {
@@ -992,14 +836,15 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
         ) : (
           <div className="space-y-4">
             {filteredBookingsList.map(b => {
-              const pro = professionals.find(p => p.id === b.artisan_id);
+              const pro = professionals.find(p => p.id === b.artisan_id || p.user_id === b.artisan_id);
               const isCompleted = b.status === 'paid_out';
               const isClosed = isBookingArchived(b);
               const isAwaitingCompletion = b.status === 'completed_by_artisan';
               const isIssueReported = b.status === 'disputed';
               const isCancelled = b.status === 'cancelled';
-              const isQuoteRequest = b.status === 'quote_requested' || (b.servicePricingType === 'quote_required' && !isClosed && !isCancelled);
-              const { eligible, reason } = getCancelEligibility(b);
+              // Only while no price exists yet -- once quoted (quote_sent) or accepted, the amount is real.
+              const isQuoteRequest = b.status === 'quote_requested' || (b.servicePricingType === 'quote_required' && b.status === 'pending');
+              const isQuoteSent = b.status === 'quote_sent';
 
               // Status configuration for single, clean status pill
               const getStatusConfig = () => {
@@ -1043,6 +888,22 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     icon: <XCircle className="w-3.5 h-3.5 text-rose-400" />
                   };
                 }
+                if (isQuoteSent) {
+                  return {
+                    label: 'Quote Received',
+                    className: 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+                    dotColor: 'bg-amber-500 animate-pulse',
+                    icon: <FileText className="w-3.5 h-3.5 text-amber-500" />
+                  };
+                }
+                if (b.status === 'escrow_funded') {
+                  return {
+                    label: 'Paid into Escrow',
+                    className: 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+                    dotColor: null,
+                    icon: <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  };
+                }
                 if (b.status === 'in_progress') {
                   return {
                     label: 'Work In Progress',
@@ -1053,7 +914,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 }
                 if (b.status === 'accepted') {
                   return {
-                    label: 'Scheduled',
+                    label: 'Accepted',
                     className: 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
                     dotColor: null,
                     icon: <Calendar className="w-3.5 h-3.5 text-emerald-600" />
@@ -1127,9 +988,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-800/80 text-xs">
                     <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 min-w-0">
                       <Calendar className="w-3.5 h-3.5 text-brand-orange-500 shrink-0" />
-                      <span className="font-bold text-slate-900 dark:text-slate-100">{b.scheduled_date}</span>
-                      <span className="text-slate-300 dark:text-slate-600">•</span>
-                      <span className="text-slate-600 dark:text-slate-400 font-medium">{b.timeSlot}</span>
+                      <span className={b.scheduled_date ? 'font-bold text-slate-900 dark:text-slate-100' : 'text-slate-500 dark:text-slate-400 font-medium'}>{bookingWhen(b)}</span>
                     </div>
                     <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300 min-w-0 sm:max-w-[55%]">
                       <MapPin className="w-3.5 h-3.5 text-brand-orange-500 shrink-0" />
@@ -1165,6 +1024,32 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                       </div>
                     )}
                   </div>
+
+                  {/* Quote received: the artisan's price, which the client accepts or declines (cancel). */}
+                  {isQuoteSent && (
+                    <div className="p-3.5 rounded-xl bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200/90 dark:border-amber-800/70 space-y-2.5 text-xs">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="font-bold text-amber-900 dark:text-amber-200">{b.professionalName.split(' ')[0] || b.professionalName} sent you a quote</span>
+                        <span className="text-base font-black text-slate-900 dark:text-white">{formatCurrency(b.amount ?? 0)}</span>
+                      </div>
+                      {b.quote_breakdown && (
+                        <p className="text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900/90 p-2.5 rounded-lg border border-amber-100 dark:border-amber-900/40 whitespace-pre-wrap">
+                          {b.quote_breakdown}
+                        </p>
+                      )}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <span className="text-[11px] text-slate-500 dark:text-slate-400">Accepting doesn’t charge you. Paying into escrow is the next step.</span>
+                        <button
+                          type="button"
+                          onClick={() => onAcceptQuote?.(b.id)}
+                          className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs cursor-pointer shrink-0"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Accept Quote</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Contextual Notification 1: Awaiting Completion Review Banner */}
                   {isAwaitingCompletion && b.completionDetails && (() => {
@@ -1262,11 +1147,13 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800/60 text-xs text-slate-500 dark:text-slate-400">
                       <Info className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400 shrink-0" />
                       <p className="text-[11px] truncate">
-                        {isQuoteRequest ? (
-                          'Artisan is assessing job scope. Message them directly to discuss requirements.'
-                        ) : (
-                          <>Free cancellation up to 45 mins prior to scheduled time. {!eligible && <span className="text-rose-600 font-bold ml-1">({reason})</span>}</>
-                        )}
+                        {isQuoteRequest
+                          ? 'The artisan is reviewing your request and will send you a price.'
+                          : b.status === 'pending'
+                            ? 'Waiting for the artisan to accept.'
+                            : b.status === 'accepted'
+                              ? 'Accepted. Paying into escrow is coming soon, so message the artisan to agree next steps.'
+                              : 'Work is in progress.'}
                       </p>
                     </div>
                   )}
@@ -1288,7 +1175,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     {/* Right: Contextual Primary & High-Priority Actions */}
                     <div className="flex flex-wrap items-center gap-2 shrink-0 justify-end">
                       {/* Active / Pending / Quote Request: Cancel Option */}
-                      {(b.status === 'pending' || b.status === 'quote_requested' || b.status === 'accepted' || b.status === 'in_progress') && (
+                      {(b.status === 'pending' || b.status === 'quote_requested' || isQuoteSent || b.status === 'accepted' || b.status === 'in_progress') && (
                         <button
                           type="button"
                           onClick={(e) => {
@@ -1299,7 +1186,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                           className="px-3.5 py-2 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50/50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/80 hover:bg-rose-100 dark:hover:bg-rose-900/50 hover:border-rose-300 dark:hover:border-rose-700 transition-all cursor-pointer flex items-center justify-center gap-1.5"
                         >
                           <XCircle className="w-3.5 h-3.5 shrink-0" />
-                          <span>{isQuoteRequest || b.status === 'pending' ? 'Cancel Request' : 'Cancel Booking'}</span>
+                          <span>{isQuoteSent ? 'Decline Quote' : isQuoteRequest || b.status === 'pending' ? 'Cancel Request' : 'Cancel Booking'}</span>
                         </button>
                       )}
 
@@ -1351,7 +1238,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                           <button
                             type="button"
                             onClick={() => {
-                              const targetPro = pro || professionals.find(p => p.id === b.artisan_id || p.category === b.category) || professionals[0];
+                              const targetPro = pro || professionals.find(p => p.id === b.artisan_id || p.user_id === b.artisan_id || p.category === b.category) || professionals[0];
                               if (targetPro) {
                                 onOpenBooking(targetPro);
                               } else {
@@ -1362,7 +1249,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                           >
                             <RotateCcw className="w-3.5 h-3.5 text-white" />
                             <span>Rehire Artisan</span>
-                            {(pro?.is_available_now || (professionals.find(p => p.id === b.artisan_id)?.is_available_now)) && (
+                            {(pro?.is_available_now || (professionals.find(p => p.id === b.artisan_id || p.user_id === b.artisan_id)?.is_available_now)) && (
                               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-0.5" title="Available Now" aria-label="Available Now" />
                             )}
                           </button>
@@ -1545,25 +1432,16 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      const ticketId = `KAZI-DISPUTE-${Math.floor(1000 + Math.random() * 9000)}`;
-                      const evidencePhotos = [complaintPhoto1, complaintPhoto2].filter(Boolean);
-                      if (complaintModalBooking) {
-                        if (onUpdateBookingStatus) {
-                          onUpdateBookingStatus(complaintModalBooking.id, 'disputed', {
-                            issueDetails: {
-                              description: `[${complaintReason}] ${complaintDetails}`,
-                              evidencePhotos,
-                              reportedAt: new Date().toISOString()
-                            }
-                          });
-                        }
-                        setSubmittedTicket({
-                          ticketId,
-                          bookingId: complaintModalBooking.id,
-                          professionalName: complaintModalBooking.professionalName
-                        });
-                      }
+                    disabled={isSubmittingDispute}
+                    onClick={async () => {
+                      const evidencePhotos = [complaintPhoto1, complaintPhoto2].map(u => u.trim()).filter(Boolean);
+                      if (!complaintModalBooking || !onDisputeBooking) return;
+                      // The backend opens the dispute and issues the ticket id shown next.
+                      setIsSubmittingDispute(true);
+                      const ticketId = await onDisputeBooking(complaintModalBooking.id, complaintReason, complaintDetails.trim(), evidencePhotos);
+                      setIsSubmittingDispute(false);
+                      if (!ticketId) return; // failure already explained; keep the form open
+                      setSubmittedTicket({ ticketId, bookingId: complaintModalBooking.id, professionalName: complaintModalBooking.professionalName });
                       setComplaintModalBooking(null);
                       setComplaintStep('form');
                       setComplaintDetails('');
@@ -1572,7 +1450,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     }}
                     className="flex-1 py-3 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
                   >
-                    <AlertCircle className="w-4 h-4" /> Submit Issue Report
+                    <AlertCircle className="w-4 h-4" /> {isSubmittingDispute ? 'Submitting…' : 'Submit Issue Report'}
                   </button>
                 </div>
               </div>
@@ -1643,20 +1521,18 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
         onConfirm={() => {
           if (cancelModalBooking) {
             onCancelBooking(cancelModalBooking.id);
-            setRateToast(`Request with ${cancelModalBooking.professionalName} was cancelled.`);
-            setTimeout(() => setRateToast(null), 4000);
           }
           setCancelModalBooking(null);
         }}
-        title={`Cancel ${cancelModalBooking?.servicePricingType === 'quote_required' || cancelModalBooking?.status === 'quote_requested' ? 'Quote Request' : 'Booking'}?`}
+        title={cancelModalBooking?.status === 'quote_sent' ? 'Decline This Quote?' : `Cancel ${cancelModalBooking?.status === 'quote_requested' ? 'Quote Request' : 'Booking'}?`}
         description={`Are you sure you want to cancel this booking with ${cancelModalBooking?.professionalName || 'the artisan'}?`}
         confirmText="Yes, Cancel Booking"
         cancelText="No, Keep Booking"
         type="danger"
         details={cancelModalBooking ? [
           `Service: ${cancelModalBooking.title || cancelModalBooking.category}`,
-          `Scheduled: ${cancelModalBooking.scheduled_date} (${cancelModalBooking.timeSlot})`,
-          'Zero cancellation penalty applied'
+          `When: ${bookingWhen(cancelModalBooking)}`,
+          ...(cancelModalBooking.escrow_status === 'held_in_escrow' ? ['A refund is recorded for the money held in escrow'] : []),
         ] : []}
       />
       </>
@@ -1862,7 +1738,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   }
 
   if (activeTab === 'notifications') {
-    const notificationsList = customerNotifications !== undefined ? customerNotifications : notifications;
+    const notificationsList = customerNotifications ?? [];
     const unreadCount = notificationsList.filter(n => !n.read && !n.isRead).length;
 
     const notifSearchTrimmed = notificationsSearchTerm.trim().toLowerCase();
@@ -1902,11 +1778,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
               type="button"
               onClick={() => {
                 const updated = notificationsList.map(n => ({ ...n, read: true, isRead: true }));
-                if (onUpdateCustomerNotifications) {
-                  onUpdateCustomerNotifications(updated);
-                } else {
-                  setNotifications(updated);
-                }
+                onUpdateCustomerNotifications?.(updated);
               }}
               className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs transition-all cursor-pointer shrink-0 self-start sm:self-auto flex items-center gap-1.5"
             >
@@ -1963,11 +1835,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                   type="button"
                   onClick={() => {
                     const updated = notificationsList.map(n => ({ ...n, read: true, isRead: true }));
-                    if (onUpdateCustomerNotifications) {
-                      onUpdateCustomerNotifications(updated);
-                    } else {
-                      setNotifications(updated);
-                    }
+                    onUpdateCustomerNotifications?.(updated);
                   }}
                   className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
                   title="Mark all notifications as read"
@@ -2031,11 +1899,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                   key={n.id}
                   onClick={() => {
                     const updated = notificationsList.map(item => item.id === n.id ? { ...item, read: true, isRead: true } : item);
-                    if (onUpdateCustomerNotifications) {
-                      onUpdateCustomerNotifications(updated);
-                    } else {
-                      setNotifications(updated);
-                    }
+                    onUpdateCustomerNotifications?.(updated);
                     if (n.relatedTab) {
                       onTabChange(n.relatedTab);
                     } else {
@@ -2229,8 +2093,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
           {/* Matching Catalog Sub-Services Pills (when typing search term) */}
           {searchTrimmed !== '' && matchingCatalogServices.length > 0 && (
             <div className="pt-1 flex flex-wrap items-center gap-1.5 text-xs">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider shrink-0 flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-brand-orange-400" />
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider shrink-0">
                 Matching Services:
               </span>
               {matchingCatalogServices.slice(0, 6).map((srv) => (
@@ -2459,240 +2322,6 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
         )}
       </div>
 
-      {/* AI Fault Diagnostic Assistant Modal */}
-      {aiDiagnosisSheet.shouldRender && (
-        <div
-          className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md ${aiDiagnosisSheet.backdropAnimationClasses}`}
-          onClick={() => {
-            setIsAIDiagnosisOpen(false);
-            setAiDiagnosisReport(null);
-          }}
-        >
-          <div
-            className={`bg-white dark:bg-slate-900 w-full sm:max-w-2xl max-h-[92vh] sm:max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl p-4 sm:p-5 space-y-4 border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl relative text-left ${aiDiagnosisSheet.sheetAnimationClasses}`}
-            style={aiDiagnosisSheet.dragStyle}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <SheetDragHandle dragHandleProps={aiDiagnosisSheet.dragHandleProps} className="sm:hidden -mx-4 -mt-4 mb-1 px-4 pt-4 pb-3 cursor-grab active:cursor-grabbing touch-none" />
-            <button
-              onClick={() => {
-                setIsAIDiagnosisOpen(false);
-                setAiDiagnosisReport(null);
-              }}
-              className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-brand-orange-500/20 text-brand-orange-500 flex items-center justify-center shrink-0 border border-brand-orange-500/30">
-                <Sparkles className="w-6 h-6" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-slate-100">
-                    AI Home Repair & Fault Diagnosis
-                  </h2>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                    Active
-                  </span>
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Instant root-cause breakdown, safety tips, estimated costs & matching vetted Oyo State artisans.
-                </p>
-              </div>
-            </div>
-
-            {/* Quick Symptom Chips */}
-            <div className="space-y-2">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-                Select Common Issue or Type Below:
-              </span>
-              <div className="flex flex-wrap gap-1.5">
-                {[
-                  { label: '💧 Water leak under kitchen sink', text: 'Water leaking under the kitchen sink from pipe joint' },
-                  { label: '⚡ Inverter trips when AC turns on', text: 'Inverter tripping MCB breaker whenever AC or pump turns on' },
-                  { label: '❄️ AC blowing warm air', text: 'Air conditioner is running but blowing warm air and not cooling' },
-                  { label: '🚪 Wardrobe door hinge broken', text: 'Wardrobe door hinges came loose and door is sagging' },
-                  { label: '🚗 Generator won\'t start', text: 'Generator engine cranks but fails to start after fueling' },
-                  { label: '🎨 Wall paint peeling & dampness', text: 'Wall paint peeling with damp white powder on interior wall' }
-                ].map((chip, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => {
-                      setAiSymptomInput(chip.text);
-                      handleRunAIDiagnosis(chip.text);
-                    }}
-                    className="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[11px] font-medium text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 transition-all cursor-pointer text-left"
-                  >
-                    {chip.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Custom Input Form */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
-                Describe the Fault or Symptom in your words:
-              </label>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <input
-                  type="text"
-                  value={aiSymptomInput}
-                  onChange={(e) => setAiSymptomInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleRunAIDiagnosis();
-                    }
-                  }}
-                  placeholder="e.g. Toilet tank won't stop filling, or solar battery draining in 20 mins..."
-                  className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-orange-500/50 focus:border-brand-orange-500"
-                />
-                <button
-                  type="button"
-                  onClick={() => handleRunAIDiagnosis()}
-                  disabled={!aiSymptomInput.trim() || isAiDiagnosing}
-                  className="px-4 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 disabled:opacity-50 text-white font-extrabold text-xs shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
-                >
-                  {isAiDiagnosing ? (
-                    <>
-                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Analyzing...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>Diagnose Fault</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Diagnostic Report Result */}
-            {aiDiagnosisReport && (
-              <div className="p-4 sm:p-5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-4 animate-in fade-in">
-                <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-200 dark:border-slate-700">
-                  <div>
-                    <span className="text-[10px] uppercase font-extrabold tracking-wider text-slate-400 block">
-                      AI Diagnostic Result
-                    </span>
-                    <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-slate-100">
-                      {aiDiagnosisReport.identifiedIssue}
-                    </h3>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="px-2.5 py-1 rounded-lg bg-navy-800 text-white font-bold text-xs">
-                      {aiDiagnosisReport.category}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded-lg text-[11px] font-extrabold ${
-                      aiDiagnosisReport.urgency === 'Emergency' ? 'bg-rose-500/20 text-rose-700 dark:text-rose-300' :
-                      aiDiagnosisReport.urgency === 'High' ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300' :
-                      'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
-                    }`}>
-                      {aiDiagnosisReport.urgency} Urgency
-                    </span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="p-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
-                    <span className="text-[10px] font-extrabold uppercase text-slate-400 block">Estimated Repair Bracket</span>
-                    <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">
-                      {aiDiagnosisReport.estimatedCost}
-                    </p>
-                    <p className="text-[10px] text-slate-400">Standard Ibadan artisan rate</p>
-                  </div>
-
-                  <div className="p-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
-                    <span className="text-[10px] font-extrabold uppercase text-slate-400 block">Immediate Safety Step</span>
-                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      {aiDiagnosisReport.safetyPrecaution}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <span className="text-[10px] font-extrabold uppercase text-slate-400 block">
-                    Probable Root Causes:
-                  </span>
-                  <div className="space-y-1">
-                    {aiDiagnosisReport.likelyCauses.map((cause, i) => (
-                      <div key={i} className="flex items-start gap-1.5 text-xs text-slate-600 dark:text-slate-300">
-                        <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0 mt-[5px]" />
-                        <span>{cause}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Direct Matching Specialists */}
-                <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-700">
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">
-                    Recommended Vetted Specialists in Oyo State:
-                  </span>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {professionals
-                      .filter(p => p.category === aiDiagnosisReport.category)
-                      .slice(0, 2)
-                      .map(pro => (
-                        <div key={pro.id} className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 shadow-xs">
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <img src={pro.profile_picture} alt={pro.name} className="w-9 h-9 rounded-lg object-cover shrink-0" />
-                            <div className="min-w-0">
-                              <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">{pro.name}</h4>
-                              <p className="text-[10px] text-slate-500 truncate">{pro.neighborhood} • ⭐ {pro.rating_average}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setIsAIDiagnosisOpen(false);
-                                onOpenChat(pro);
-                              }}
-                              className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-                              title="Chat with specialist"
-                            >
-                              <MessageSquare className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setIsAIDiagnosisOpen(false);
-                                onOpenBooking(pro);
-                              }}
-                              className="px-2.5 py-1.5 rounded-lg bg-navy-800 hover:bg-navy-900 text-white font-extrabold text-[11px] shadow-xs cursor-pointer"
-                            >
-                              Book Now
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-
-                <div className="flex justify-end pt-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onSelectCategoryFilter(aiDiagnosisReport.category);
-                      setIsAIDiagnosisOpen(false);
-                    }}
-                    className="text-xs font-bold text-navy-800 dark:text-navy-400 hover:underline cursor-pointer flex items-center gap-1"
-                  >
-                    <span>View all {aiDiagnosisReport.category} in feed</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
     </div>
   );

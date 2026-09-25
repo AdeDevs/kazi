@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Moon, Sun, Globe, CheckCircle2, X } from 'lucide-react';
-import { Language, SUPPORTED_LANGUAGES } from '../../translations';
+import { Language, SUPPORTED_LANGUAGES, languageCode } from '../../translations';
 import { useAuth } from '../../context/AuthContext';
 import { Card, CardHeader } from '../ui/Card';
 import { SheetDragHandle } from '../ui/SheetDragHandle';
@@ -45,7 +45,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({
     setShowLanguageModal(false);
     toast.success(`Language changed to ${lang}`);
     try {
-      await updateUser({ preferred_language: lang });
+      await updateUser({ preferred_language: languageCode(lang) });
     } catch {
       // Local language change already applied; syncing it to the account is best-effort.
     }
