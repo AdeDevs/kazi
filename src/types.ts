@@ -190,6 +190,18 @@ export interface ChatMessage {
   retry?: () => void;
 }
 
+/** A saved artisan as the client's profile shows it -- from GET /favorites/ for real accounts. */
+export interface SavedArtisanSummary {
+  /** The artisan's user id (favourites are keyed by it), or the sample profile id on the demo. */
+  key: string;
+  /** Directory profile id, when the artisan is in the loaded directory -- used to open their page. */
+  profileId?: string;
+  name: string;
+  category?: string;
+  rating: number;
+  avatar?: string;
+}
+
 export interface Gig {
   id: string;
   professional_id: string;

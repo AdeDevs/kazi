@@ -1,9 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { HeroScrim } from './ui/HeroScrim';
-import { NIGERIAN_STATES, isValidNigerianPhone, sanitizeName, toStoredPhone } from '../lib/inputRules';
+import { NIGERIAN_STATES, digitsOnly, isValidNigerianPhone, sanitizeName, toStoredPhone } from '../lib/inputRules';
 import { PhoneField, displayPhone } from './ui/PhoneField';
 import { CustomDropdown } from './CustomDropdown';
-import { Role, Professional, Booking } from '../types';
+import { Role, Professional, Booking, SavedArtisanSummary } from '../types';
 import { Language } from '../translations';
 import {
   MapPin, Edit3,
@@ -19,12 +19,16 @@ import { useAuth } from '../context/AuthContext';
 import { useAccountFrozen } from '../hooks/useAccountFrozen';
 import { toast } from 'sonner';
 
+const ACTIVE_STATUSES: Booking['status'][] = [
+  'quote_requested', 'quote_sent', 'pending', 'accepted', 'escrow_funded', 'in_progress', 'completed_by_artisan', 'disputed',
+];
+
 interface ProfileViewProps {
   currentRole: Role;
   activeProfessional: Professional;
   bookings: Booking[];
-  professionals: Professional[];
-  savedProIds: string[];
+  /** Saved artisans (GET /favorites/ for real accounts). */
+  savedArtisans: SavedArtisanSummary[];
   customerAvatar: string;
   onUpdateCustomerAvatar: (url: string) => void;
   onUpdateProfile?: (updated: Partial<Professional>) => void;
@@ -43,8 +47,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   currentRole,
   activeProfessional,
   bookings,
-  professionals,
-  savedProIds,
+  savedArtisans,
   customerAvatar,
   onUpdateCustomerAvatar,
   onUpdateProfile,
@@ -94,6 +97,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [draftPhone, setDraftPhone] = useState('');
   const [draftEmail, setDraftEmail] = useState('');
   const [draftLocation, setDraftLocation] = useState('');
+  // Empty means "keep what's on file"; only a full new 11-digit NIN is sent.
+  const [draftNin, setDraftNin] = useState('');
 
   // Modals & UI States
   const [isEditing, setIsEditing] = useState(false);
@@ -105,7 +110,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     draftLastName !== customerLastName ||
     draftPhone !== customerPhone ||
     draftEmail !== customerEmail ||
-    draftLocation !== customerState;
+    draftLocation !== customerState ||
+    draftNin !== '';
 
   const startEditing = () => {
     if (blockIfFrozen()) return;
@@ -114,6 +120,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     setDraftPhone(customerPhone);
     setDraftEmail(customerEmail);
     setDraftLocation(customerState);
+    setDraftNin('');
     setIsEditing(true);
   };
 
@@ -180,6 +187,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       toast.error('Enter a valid Nigerian mobile number, e.g. 802 345 6789.');
       return;
     }
+    if (draftNin && !/^\d{11}$/.test(draftNin)) {
+      toast.error('Your NIN is 11 digits.');
+      return;
+    }
     setIsSavingProfile(true);
     try {
       if (user) {
@@ -188,6 +199,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           last_name: draftLastName.trim(),
           phone_number: toStoredPhone(draftPhone),
           ...(draftLocation ? { state: draftLocation } : {}),
+          ...(draftNin ? { nin: draftNin } : {}),
         });
       }
       setIsEditing(false);
@@ -217,8 +229,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const currentAvatar = customerAvatar;
   const hasHeroPhoto = Boolean(currentAvatar && currentAvatar.trim().length > 0 && !heroPhotoFailed);
   const completedBookingsCount = bookings.filter(b => b.status === 'paid_out').length;
-  const activeBookingsCount = bookings.filter(b => ['pending', 'quote_requested', 'accepted', 'in_progress'].includes(b.status)).length;
-  const savedPros = professionals.filter(p => savedProIds.includes(p.id)).slice(0, 3);
+  // Every status where the job is still open: waiting on a quote or a reply, paid, underway,
+  // awaiting your confirmation, or in dispute. (Not paid_out or cancelled.)
+  const activeBookingsCount = bookings.filter(b => ACTIVE_STATUSES.includes(b.status)).length;
+  const savedPreview = savedArtisans.slice(0, 3);
+  // The backend returns the NIN masked (e.g. "*******8291"); only the last digits are ever shown.
+  const ninOnFile = user?.nin_masked ? `•••••••${user.nin_masked.replace(/\D/g, '').slice(-4)}` : '';
 
   return (
     <div className="w-full max-w-none space-y-4 animate-in fade-in duration-300">
@@ -271,19 +287,18 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               </div>
             )}
           </button>
-          <HeroScrim src={hasHeroPhoto ? currentAvatar : undefined} />
           {isUploadingAvatar && (
             <div className="absolute inset-0 bg-slate-950/50 flex items-center justify-center pointer-events-none">
               <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
             </div>
           )}
-          <div className="absolute left-4 right-4 bottom-3.5 text-white pointer-events-none">
+          <HeroScrim src={hasHeroPhoto ? currentAvatar : undefined} textClassName="absolute left-4 right-4 bottom-3.5 text-white pointer-events-none">
             <div className="flex items-center gap-1.5">
               <h2 className="text-lg font-black truncate">{customerName}</h2>
               {Boolean(user?.is_email_verified) && <VerifiedBadge title="Verified Customer" />}
             </div>
             <p className="text-xs font-semibold text-white/85 truncate">Client &middot; {customerLocation}</p>
-          </div>
+          </HeroScrim>
         </div>
         <div className="sm:hidden pt-3 flex items-center justify-between gap-3">
           <p className="text-[11px] font-medium text-slate-400">
@@ -374,6 +389,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 <span className="font-semibold text-slate-500">State</span>
                 <span className="font-bold text-slate-900 dark:text-slate-100">{customerLocation}</span>
               </div>
+              <div className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-0.5 sm:gap-2">
+                <span className="font-semibold text-slate-500">NIN</span>
+                <span className={`font-bold tabular-nums ${ninOnFile ? 'text-slate-900 dark:text-slate-100' : 'text-slate-400'}`}>{ninOnFile || 'Not added'}</span>
+              </div>
             </div>
           ) : (
             <form onSubmit={handleSaveCustomerInfo} className="space-y-3.5">
@@ -443,6 +462,29 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 />
               </div>
 
+              <div>
+                <label htmlFor="client-nin" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  NIN <span className="font-medium text-slate-400">(optional)</span>
+                </label>
+                <input
+                  id="client-nin"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  maxLength={11}
+                  value={draftNin}
+                  onChange={(e) => setDraftNin(digitsOnly(e.target.value, 11))}
+                  placeholder={ninOnFile ? 'New 11-digit NIN' : '11-digit NIN'}
+                  aria-invalid={draftNin.length > 0 && draftNin.length !== 11}
+                  className={`w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border text-xs tracking-wider text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-navy-500/50 ${
+                    draftNin.length > 0 && draftNin.length !== 11 ? 'border-rose-400 dark:border-rose-500/70' : 'border-slate-200 dark:border-slate-700'
+                  }`}
+                />
+                <p className="mt-1 text-[11px] text-slate-400">
+                  {ninOnFile ? `${ninOnFile} is on file. Leave this empty to keep it. ` : ''}Stored privately; only the last 4 digits are ever shown.
+                </p>
+              </div>
+
               <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
@@ -479,13 +521,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           <p className="text-[11px] font-semibold text-slate-500">Active Bookings</p>
         </Card>
         <Card className="text-center">
-          <p className="text-xl font-black text-slate-900 dark:text-slate-100">{savedProIds.length}</p>
+          <p className="text-xl font-black text-slate-900 dark:text-slate-100">{savedArtisans.length}</p>
           <p className="text-[11px] font-semibold text-slate-500">Saved Artisans</p>
         </Card>
       </div>
 
       {/* 3. SAVED ARTISANS PREVIEW */}
-      {savedPros.length > 0 && (
+      {savedPreview.length > 0 && (
         <Card className="space-y-4">
           <CardHeader
             title="Saved Artisans"
@@ -501,10 +543,17 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             )}
           />
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {savedPros.map((pro) => (
-              <div key={pro.id} className="flex items-center gap-2.5 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
+            {savedPreview.map((pro) => (
+              <button
+                key={pro.key}
+                type="button"
+                onClick={() => pro.profileId && navigate(`/professionals/${pro.profileId}`)}
+                disabled={!pro.profileId}
+                title={pro.profileId ? `View ${pro.name}` : 'This artisan isn’t taking new jobs right now'}
+                className="flex items-center gap-2.5 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 text-left cursor-pointer disabled:cursor-default hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-[background-color,transform] duration-150 active:scale-[0.98] disabled:active:scale-100"
+              >
                 <UserAvatar
-                  src={pro.profile_picture}
+                  src={pro.avatar}
                   name={pro.name}
                   sizeClassName="w-9 h-9"
                   textClassName="text-xs font-black"
@@ -514,10 +563,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">{pro.name}</p>
                   <p className="text-[11px] text-slate-500 flex items-center gap-1">
                     <Star className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />
-                    <span>{pro.rating_average} &middot; {pro.category}</span>
+                    <span className="truncate">{pro.rating}{pro.category ? ` · ${pro.category}` : ''}</span>
                   </p>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </Card>

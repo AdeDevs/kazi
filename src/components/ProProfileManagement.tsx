@@ -674,13 +674,12 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
               </div>
             )}
           </button>
-          <HeroScrim src={hasHeroPhoto ? activeProfessional.profile_picture : undefined} />
           {isUploadingAvatar && (
             <div className="absolute inset-0 bg-slate-950/50 flex items-center justify-center pointer-events-none">
               <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
             </div>
           )}
-          <div className="absolute left-4 right-4 bottom-3.5 text-white pointer-events-none space-y-0.5">
+          <HeroScrim src={hasHeroPhoto ? activeProfessional.profile_picture : undefined} textClassName="absolute left-4 right-4 bottom-3.5 text-white pointer-events-none space-y-0.5">
             <div className="flex items-center gap-1.5">
               <h1 className="text-lg font-black tracking-tight truncate">{name}</h1>
               {isVerified && <VerifiedBadge title="Verified" />}
@@ -701,7 +700,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
                 )}
               </div>
             )}
-          </div>
+          </HeroScrim>
         </div>
         <div className="sm:hidden pt-3 space-y-3">
           <div className="flex items-center justify-between gap-3">

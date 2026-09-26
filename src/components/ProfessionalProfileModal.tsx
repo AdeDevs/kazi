@@ -114,7 +114,6 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
               className="w-full h-full object-cover"
             />
           </button>
-          <HeroScrim src={professional.profile_picture} />
           <button
             onClick={onClose}
             className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer z-10"
@@ -132,7 +131,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
               Available Now
             </span>
           )}
-          <div className="absolute left-4 right-4 bottom-3.5 text-white">
+          <HeroScrim src={professional.profile_picture} textClassName="absolute left-4 right-4 bottom-3.5 text-white">
             <div className="flex items-center gap-1.5 mb-0.5">
               <h2 className="text-lg font-bold tracking-tight truncate">{professional.name}</h2>
               {professional.is_verified && <VerifiedBadge title="Verified Pro" />}
@@ -143,7 +142,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
               <Star className="w-3 h-3 fill-amber-400 text-amber-400 shrink-0" />
               <span>{professional.rating_average} ({professional.review_count})</span>
             </p>
-          </div>
+          </HeroScrim>
         </div>
         <div className="sm:hidden px-4 pt-2 pb-1">
           <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-600 dark:text-slate-300">

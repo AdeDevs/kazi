@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom';
-import { Role, Professional, Booking, ChatMessage, Category, Notification, Gig } from './types';
+import { Role, Professional, Booking, ChatMessage, Category, Notification, Gig, SavedArtisanSummary } from './types';
 import { Language, languageFromStored } from './translations';
 import { INITIAL_PROFESSIONALS, INITIAL_BOOKINGS } from './mockData';
 import { AppShell } from './components/AppShell';
@@ -19,7 +19,7 @@ import {
   sendQuote, submitCompletion, acceptQuote, confirmCompletion, disputeBooking, cancelBooking, createReview, buyGig,
 } from './lib/bookingsApi';
 import { NotificationResponse, listNotifications, markNotificationRead, markAllNotificationsRead } from './lib/notificationsApi';
-import { listFavorites, saveFavorite, removeFavorite } from './lib/favoritesApi';
+import { FavoriteResponse, listFavorites, saveFavorite, removeFavorite } from './lib/favoritesApi';
 import {
   ConversationResponse, MessageResponse, MessageCreate, listConversations, listMessages, startConversation, sendMessage,
   markConversationRead, uploadChatMedia,
@@ -631,18 +631,41 @@ export default function App() {
   // Saved artisans for real accounts live on the backend (keyed by the artisan's user id); the
   // local list above is the demo account's only.
   const [favoriteUserIds, setFavoriteUserIds] = useState<string[]>([]);
+  // The full favourites as the backend returns them (name, trade, rating, photo), so saved artisans
+  // show even when they aren't in the loaded directory (paused, or beyond the first page).
+  const [favorites, setFavorites] = useState<FavoriteResponse[]>([]);
+  const reloadFavorites = useCallback(() => listFavorites()
+    .then(list => {
+      setFavorites(list);
+      setFavoriteUserIds(list.map(f => f.artisan_id));
+    })
+    .catch((err) => console.warn('Could not load saved artisans', err)), []);
   useEffect(() => {
     if (!usesBackendBookings) {
       setFavoriteUserIds([]);
+      setFavorites([]);
       return;
     }
-    listFavorites()
-      .then(list => setFavoriteUserIds(list.map(f => f.artisan_id)))
-      .catch((err) => console.warn('Could not load saved artisans', err));
-  }, [usesBackendBookings, user?.id]);
+    reloadFavorites();
+  }, [usesBackendBookings, user?.id, reloadFavorites]);
   const shownSavedProIds = usesBackendBookings
     ? allProfessionals.filter(p => p.user_id && favoriteUserIds.includes(p.user_id)).map(p => p.id)
     : savedProIds;
+  const savedArtisans: SavedArtisanSummary[] = usesBackendBookings
+    ? favorites.map(f => {
+        const pro = allProfessionals.find(p => p.user_id === f.artisan_id);
+        return {
+          key: f.artisan_id,
+          profileId: pro?.id,
+          name: f.business_name?.trim() || pro?.name || 'Artisan',
+          category: f.category || pro?.category,
+          rating: f.rating_average ?? pro?.rating_average ?? 0,
+          avatar: f.avatar_url || pro?.profile_picture,
+        };
+      })
+    : allProfessionals.filter(p => savedProIds.includes(p.id)).map(p => ({
+        key: p.id, profileId: p.id, name: p.name, category: p.category, rating: p.rating_average, avatar: p.profile_picture,
+      }));
 
   const handleToggleSavePro = (proId: string) => {
     if (!usesBackendBookings) {
@@ -657,7 +680,7 @@ export default function App() {
     }
     const wasSaved = favoriteUserIds.includes(artisanUserId);
     setFavoriteUserIds(prev => (wasSaved ? prev.filter(id => id !== artisanUserId) : [...prev, artisanUserId]));
-    (wasSaved ? removeFavorite(artisanUserId) : saveFavorite(artisanUserId)).catch((err) => {
+    (wasSaved ? removeFavorite(artisanUserId) : saveFavorite(artisanUserId)).then(() => reloadFavorites(), (err) => {
       setFavoriteUserIds(prev => (wasSaved ? [...prev, artisanUserId] : prev.filter(id => id !== artisanUserId)));
       toast.error(errorTextOf(err, wasSaved ? 'Could not remove this artisan. Try again.' : 'Could not save this artisan. Try again.'));
     });
@@ -1463,8 +1486,7 @@ export default function App() {
                 currentRole={currentRole}
                 activeProfessional={activeProfessional}
                 bookings={roleBookings}
-                professionals={allProfessionals}
-                savedProIds={shownSavedProIds}
+                savedArtisans={savedArtisans}
                 customerAvatar={customerAvatar}
                 onUpdateCustomerAvatar={setCustomerAvatar}
                 onUpdateProfile={handleUpdateProfile}
