@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { Role, Professional, Booking, ChatMessage, Category, Notification, Gig, SavedArtisanSummary } from './types';
 import { Language, languageFromStored } from './translations';
 import { INITIAL_PROFESSIONALS, INITIAL_BOOKINGS } from './mockData';
@@ -8,6 +8,8 @@ import { ProfessionalProfileModal } from './components/ProfessionalProfileModal'
 import { BookingModal, BookingRequestInput } from './components/BookingModal';
 import { BuyGigSheet } from './components/BuyGigSheet';
 import { AuthPage } from './components/AuthPage';
+import { LandingPage } from './components/LandingPage';
+import { hasPendingSearch } from './lib/pendingSearch';
 import { RequireAuth } from './components/RequireAuth';
 import { RequireRole } from './components/RequireRole';
 import { NotFound } from './components/NotFound';
@@ -1335,7 +1337,8 @@ export default function App() {
   // resolved before this fires), not a client-side value this callback has to set.
   const handleAuthSuccess = () => {
     const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
-    navigate(from || '/home', { replace: true });
+    // A client who searched on the landing page goes straight to the artisan search, pre-filled.
+    navigate(from || (hasPendingSearch() ? '/search' : '/home'), { replace: true });
   };
 
   const [buyGigTarget, setBuyGigTarget] = useState<{ gig: Gig; artisanName: string } | null>(null);
@@ -1387,7 +1390,9 @@ export default function App() {
         {/* Public / pre-auth -- AuthPage renders regardless of auth state (matches the previous
             showFullAuthPage behavior, which let an already-signed-in user reach it manually too),
             and syncs its own internal view state with these 5 real URLs (see AuthPage.tsx). */}
-        <Route path="/" element={<AuthPage initialView="signin" onAuthSuccess={handleAuthSuccess} />} />
+        {/* The public landing page; signed-in visitors go straight to their home. */}
+        <Route path="/" element={user ? <Navigate to="/home" replace /> : <LandingPage />} />
+        <Route path="/signin" element={<AuthPage initialView="signin" onAuthSuccess={handleAuthSuccess} />} />
         <Route path="/signup" element={<AuthPage initialView="signup" onAuthSuccess={handleAuthSuccess} />} />
         <Route path="/verify-email" element={<AuthPage initialView="verify" onAuthSuccess={handleAuthSuccess} />} />
         <Route path="/forgot-password" element={<AuthPage initialView="forgot" onAuthSuccess={handleAuthSuccess} />} />

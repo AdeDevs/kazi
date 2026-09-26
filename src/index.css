@@ -169,3 +169,19 @@ html.dark img {
   .tab-panel-from-right,
   .tab-panel-from-left { animation: none; }
 }
+
+/* Landing page (components/LandingPage.tsx). First-visit motion only: the hero and photo mosaic
+   rise in on load in a stagger (delays set inline); sections below reveal on first scroll into
+   view (inline transitions). Strong ease-out so movement starts fast and settles. */
+@keyframes kh-rise {
+  from { opacity: 0; transform: translateY(36px); }
+}
+@keyframes kh-fade {
+  from { opacity: 0; }
+}
+.kh-rise { animation: kh-rise 800ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.kh-fade { animation: kh-fade 600ms ease both; }
+@media (prefers-reduced-motion: reduce) {
+  .kh-rise,
+  .kh-fade { animation: none; }
+}

@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { takePendingSearch } from '../lib/pendingSearch';
 import { Toggle } from './ui/Toggle';
 import { Professional, Category, Booking, ChatMessage } from '../types';
 import { CATEGORIES, CATEGORY_SERVICES_CATALOG } from '../mockData';
@@ -83,7 +84,8 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
 }) => {
   const { user } = useAuth();
   const clientGreetingName = user?.first_name || (user?.email ? user.email.split('@')[0] : 'Client');
-  const [searchTerm, setSearchTerm] = useState('');
+  // Pre-filled from the landing page's hero search when a new client arrives through it.
+  const [searchTerm, setSearchTerm] = useState(() => takePendingSearch());
   const [selectedNeighborhood, setSelectedNeighborhood] = useState<string>('All');
   const [searchMinRating, setSearchMinRating] = useState<number>(0);
   const [searchMinExperience, setSearchMinExperience] = useState<number>(0);

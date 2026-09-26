@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NIGERIAN_STATES, digitsOnly, formatNigerianPhone, isValidNigerianPhone, nationalDigits, sanitizeName } from '../lib/inputRules';
 import { Checkbox } from './ui/Checkbox';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
   Lock, Mail, User, ArrowRight, CheckCircle2, AlertCircle, RefreshCw, 
@@ -52,14 +52,14 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
   const VIEW_TO_PATH: Record<AuthPageView, string> = {
-    signin: '/',
+    signin: '/signin',
     signup: '/signup',
     verify: '/verify-email',
     forgot: '/forgot-password',
     reset: '/reset-password',
   };
   const PATH_TO_VIEW: Record<string, AuthPageView> = {
-    '/': 'signin',
+    '/signin': 'signin',
     '/signup': 'signup',
     '/verify-email': 'verify',
     '/forgot-password': 'forgot',
@@ -96,7 +96,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   const [signInTouched, setSignInTouched] = useState<Record<string, boolean>>({});
 
   // Sign Up State
-  const [selectedRole, setSelectedRole] = useState<'client' | 'artisan'>('client');
+  // The landing page's two sign-up buttons pass ?role=client or ?role=artisan.
+  const [selectedRole, setSelectedRole] = useState<'client' | 'artisan'>(() =>
+    new URLSearchParams(window.location.search).get('role') === 'artisan' ? 'artisan' : 'client'
+  );
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -337,9 +340,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({
       {/* Top Edge-to-Edge Bar */}
       <header className="w-full h-14 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 lg:px-12 flex items-center justify-between z-20 shrink-0">
         <div className="flex items-center gap-2">
-          <span className="font-black text-lg tracking-tight text-navy-900 dark:text-zinc-100">
+          <Link to="/" aria-label="KaziHub home" className="font-black text-lg tracking-tight text-navy-900 dark:text-zinc-100">
             Kazi<span className="text-brand-orange-700">Hub</span>
-          </span>
+          </Link>
           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
             Nigeria Verified
           </span>

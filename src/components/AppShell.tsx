@@ -323,7 +323,7 @@ export const AppShell: React.FC<AppShellProps> = ({
               ) : (
                 <button
                   type="button"
-                  onClick={() => onOpenAuthPage ? onOpenAuthPage('signin') : navigate('/')}
+                  onClick={() => onOpenAuthPage ? onOpenAuthPage('signin') : navigate('/signin')}
                   className="w-full relative flex items-center h-11 rounded-xl bg-navy-900 hover:bg-navy-800 text-white font-bold text-xs transition-colors cursor-pointer shadow-xs"
                 >
                   <div className="w-11 h-11 flex items-center justify-center shrink-0">
@@ -405,7 +405,7 @@ export const AppShell: React.FC<AppShellProps> = ({
               {!user && (
                 <button
                   type="button"
-                  onClick={() => onOpenAuthPage ? onOpenAuthPage('signin') : navigate('/')}
+                  onClick={() => onOpenAuthPage ? onOpenAuthPage('signin') : navigate('/signin')}
                   className="px-3.5 py-1.5 rounded-xl bg-navy-900 hover:bg-navy-800 text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
                 >
                   <LogIn className="w-3.5 h-3.5" />
