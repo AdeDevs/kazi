@@ -1,15 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import {
-  ArrowUpRight, Car, Hammer, MapPin, Plus, Smartphone, Snowflake, Sun, Wrench, Zap,
-} from 'lucide-react';
-import { CustomDropdown } from './CustomDropdown';
 import { TermsAndPrivacyModal } from './ui/TermsAndPrivacyModal';
-import { NIGERIAN_STATES } from '../lib/inputRules';
 import { savePendingSearch } from '../lib/pendingSearch';
+import { formatCurrency } from '../utils';
 
-// The landing page keeps its own palette (from the design canvas, direction E), separate from
-// the app's theme and independent of dark mode.
+// The landing page keeps its own palette (from the design canvas, direction E "Ibadan hero,
+// illustrated"), separate from the app's theme and independent of dark mode.
 const C = {
   orange: '#FF6A2B',
   orangeSoft: '#FF9A6B',
@@ -18,6 +14,7 @@ const C = {
   indigo: '#3B35C9',
   pink: '#F7B8D2',
   mint: '#9BF0C4',
+  yellow: '#FFB020',
   peach: '#FFE3CC',
   muted: '#C9D1DE',
 };
@@ -25,40 +22,10 @@ const C = {
 const CLIENT_SIGNUP = '/signup?role=client';
 const ARTISAN_SIGNUP = '/signup?role=artisan';
 const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
+const ART = '/landing';
 
-/**
- * Real photos of KaziHub artisans at work go here (e.g. files in /public/landing/, referenced as
- * '/landing/carpenter.jpg'). Until a photo exists, its tile shows its colour and the trade's icon,
- * never a stock or made-up image.
- */
-const PHOTOS: Record<string, string | undefined> = {
-  carpenter: undefined,
-  plumber: undefined,
-  solar: undefined,
-  electrician: undefined,
-  mechanic: undefined,
-  ac: undefined,
-  artisanPhone: undefined,
-};
-
-const Photo: React.FC<{
-  src?: string;
-  alt: string;
-  tone: string;
-  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
-  className?: string;
-  style?: React.CSSProperties;
-  children?: React.ReactNode;
-}> = ({ src, alt, tone, icon: Icon, className = '', style, children }) => (
-  <div className={`relative overflow-hidden ${className}`} style={{ background: tone, ...style }}>
-    {src ? (
-      <img src={src} alt={alt} loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
-    ) : (
-      <Icon aria-hidden="true" className="absolute right-[-6%] top-1/2 -translate-y-1/2 w-[62%] h-auto max-w-[260px] opacity-[0.14]" style={{ color: C.navy }} />
-    )}
-    {children}
-  </div>
-);
+const display = "font-['Bricolage_Grotesque',sans-serif] font-extrabold";
+const eyebrow = 'text-[13px] lg:text-sm font-extrabold uppercase tracking-[0.08em]';
 
 /** Fades and lifts a block in the first time it scrolls into view. */
 function useInView<T extends HTMLElement>(threshold = 0.2) {
@@ -95,39 +62,69 @@ function useIsDesktop() {
   return matches;
 }
 
-/** Counts 0 → 1 once over `duration`, starting when `start` turns true. Jumps to 1 for reduced motion. */
-function useCountUp(start: boolean, duration = 1500) {
-  const [t, setT] = useState(0);
-  useEffect(() => {
-    if (!start) return;
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
-      setT(1);
-      return;
-    }
-    let raf = 0;
-    const begin = performance.now();
-    const step = (now: number) => {
-      const p = Math.min(1, (now - begin) / duration);
-      setT(p);
-      if (p < 1) raf = requestAnimationFrame(step);
-    };
-    raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
-  }, [start, duration]);
-  return t;
-}
-const easeOutCubic = (x: number) => 1 - Math.pow(1 - Math.max(0, Math.min(1, x)), 3);
-
 const TRADES = [
-  { name: 'Electricians', bg: C.orange, fg: C.navy, tone: '#D7C5B0', photo: PHOTOS.electrician, icon: Zap, blurb: 'Sockets, wiring, inverter hook-ups and fault finding.' },
-  { name: 'Plumbers', bg: C.indigo, fg: C.cream, tone: '#CDBBA7', photo: PHOTOS.plumber, icon: Wrench, blurb: 'Leaks, blocked drains, water heaters and new fittings.' },
-  { name: 'Mechanics', bg: C.pink, fg: C.navy, tone: '#D7C5B0', photo: PHOTOS.mechanic, icon: Car, blurb: 'Diagnostics, servicing, brakes and roadside help.' },
-  { name: 'Solar installers', bg: C.mint, fg: C.navy, tone: '#CDBBA7', photo: PHOTOS.solar, icon: Sun, blurb: 'Panels, batteries and inverters sized for your home.' },
-  { name: 'AC technicians', bg: C.navy, fg: C.cream, tone: '#D7C5B0', photo: PHOTOS.ac, icon: Snowflake, blurb: 'Installs, gas top-ups, servicing and repairs.' },
+  { name: 'Electricians', search: 'Electrician', lower: 'electricians', bg: C.orange, fg: C.navy, spot: 'spot-electrician', img: 'trade-electrician', desc: 'Sparking sockets, new wiring, inverter hook-ups and fault finding.' },
+  { name: 'Plumbers', search: 'Plumber', lower: 'plumbers', bg: C.indigo, fg: C.cream, spot: 'spot-plumber', img: 'trade-plumber', desc: 'Leaking taps, blocked drains, water heaters and new fittings.' },
+  { name: 'Mechanics', search: 'Mechanic', lower: 'mechanics', bg: C.pink, fg: C.navy, spot: 'spot-mechanic', img: 'trade-mechanic', desc: 'Diagnostics, servicing, brakes and roadside help.' },
+  { name: 'Solar installers', search: 'Solar', lower: 'solar installers', bg: C.mint, fg: C.navy, spot: 'spot-solar', img: 'trade-solar', desc: 'Panels, batteries and inverters sized for your home.' },
+  { name: 'AC technicians', search: 'AC', lower: 'AC technicians', bg: C.navy, fg: C.cream, spot: 'spot-ac', img: 'trade-ac', desc: 'Installs, gas top-ups, servicing and repairs.' },
 ];
 
-const display = "font-['Bricolage_Grotesque',sans-serif] font-extrabold";
-const pressable = 'transition-[transform,background-color,opacity] duration-150 active:scale-[0.97]';
+const STEPS = [
+  { title: 'Tell us what needs fixing', body: 'Search a trade or describe the problem. We show checked artisans near you.', bg: C.mint, fg: C.navy },
+  { title: 'Agree a quote', body: 'Chat with the artisan and accept a written price before any work starts.', bg: C.pink, fg: C.navy },
+  { title: 'Pay into escrow', body: 'Your money goes to KaziHub escrow, not the artisan. It stays there while the job is done.', bg: C.yellow, fg: C.navy },
+  { title: 'Confirm, and they get paid', body: 'Happy with the work? Confirm it and the payment is released to the artisan.', bg: C.indigo, fg: C.cream },
+];
+
+const MARQUEE = [
+  { text: 'ID-checked artisans', star: C.orange },
+  { text: 'Money held in escrow', star: C.mint },
+  { text: 'Written quotes before work', star: C.yellow },
+  { text: 'You confirm, then they get paid', star: C.orange },
+  { text: 'Reviews from paid jobs only', star: C.mint },
+  { text: 'Electricians, plumbers, mechanics and more', star: C.yellow },
+  { text: 'Made in Ibadan', star: C.orange },
+];
+
+const ARTISAN_POINTS = [
+  'Job requests from people near you',
+  'Send quotes from your phone',
+  'Payment secured before you start',
+  'Reviews from paid jobs build your name',
+];
+
+const FAQS = [
+  { q: 'How does escrow work on KaziHub?', a: 'When you book, you pay into KaziHub escrow, not to the artisan. The money stays there while the work is done and is released only when you confirm the job is finished.' },
+  { q: 'How are artisans checked?', a: 'Every artisan verifies with a government ID and a live selfie before they get the Verified badge.' },
+  { q: 'What if I am not happy with the job?', a: 'Don’t confirm it. Raise it in the app instead, and the payment stays held while KaziHub looks into it with you and the artisan.' },
+  { q: 'Can I agree the price before work starts?', a: 'Yes. You chat with the artisan and accept a written quote first. Work starts only after you accept it.' },
+  { q: 'When do artisans get paid?', a: 'As soon as the customer confirms the job is done, the payment in escrow is released to the artisan.' },
+  { q: 'How do I join as an artisan?', a: 'Sign up, verify your ID and selfie, add your trade and the areas you cover, and you’ll start getting requests from people nearby.' },
+];
+const FAQ_VERIFIED = 1;
+const FAQ_PAID = 4;
+
+const Arrow = () => <span className="kh-arrow" aria-hidden="true">→</span>;
+
+const Star: React.FC<{ color: string }> = ({ color }) => (
+  <svg width="18" height="18" viewBox="-14 -14 28 28" aria-hidden="true" className="shrink-0">
+    <path d="M 0 -14 l 4 10 l 10 4 l -10 4 l -4 10 l -4 -10 l -10 -4 l 10 -4 z" fill={color} />
+  </svg>
+);
+
+const Check: React.FC<{ size: number }> = ({ size }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" className="shrink-0">
+    <circle cx="12" cy="12" r="11" fill={C.mint} stroke={C.navy} strokeWidth="2" />
+    <path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke={C.navy} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const PlusIcon: React.FC<{ size?: number }> = ({ size = 18 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 5v14" /><path d="M5 12h14" />
+  </svg>
+);
 
 const Swoosh: React.FC<{ d: string; color: string; width: number; className: string; viewBox: string }> = ({ d, color, width, className, viewBox }) => (
   <svg viewBox={viewBox} fill="none" aria-hidden="true" className={`absolute pointer-events-none ${className}`}>
@@ -135,246 +132,503 @@ const Swoosh: React.FC<{ d: string; color: string; width: number; className: str
   </svg>
 );
 
+/**
+ * A status bubble floating over the skyline, drawn in the skyline's own 1440×500 coordinates.
+ * `left` is the bubble's left edge relative to its tail at (x, y).
+ */
+const Bubble: React.FC<{
+  x: number; y: number; scale?: number; left: number; width: number;
+  dot: string; done?: boolean; text: string; delay: number; floatDelay: number;
+}> = ({ x, y, scale = 1, left, width, dot, done, text, delay, floatDelay }) => {
+  const cx = left + 22;
+  return (
+    <g transform={`translate(${x} ${y}) scale(${scale})`}>
+      <g
+        className="kh-bubble"
+        style={{ animation: `kh-pop 600ms ${EASE} ${delay}ms both, kh-float 5.5s ease-in-out ${floatDelay}s infinite alternate` }}
+      >
+        <rect x={left} y="-52" width={width} height="40" rx="14" fill="#FFFFFF" stroke={C.navy} strokeWidth="2" />
+        <path d="M -8 -13 L 0 -2 L 8 -13 Z" fill="#FFFFFF" stroke={C.navy} strokeWidth="2" strokeLinejoin="round" />
+        <rect x="-9" y="-16" width="18" height="5" fill="#FFFFFF" />
+        <circle cx={cx} cy="-32" r="11" fill={dot} />
+        {done
+          ? <path d={`M ${cx - 5.5} -32 l 4 4 l 7 -8`} fill="none" stroke={C.navy} strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />
+          : <circle cx={cx} cy="-32" r="4" fill="#FFFFFF" />}
+        <text x={cx + 20} y="-26.5" fontFamily="Plus Jakarta Sans, system-ui, sans-serif" fontSize="15" fontWeight="800" fill={C.navy}>{text}</text>
+      </g>
+    </g>
+  );
+};
+
+const JOB_DONE = `Job done · ${formatCurrency(18500)} released`;
+
+/** The illustrated Ibadan skyline (Cocoa House, Bower's Tower, Mapo Hall) with its bubbles on top. */
+const Skyline: React.FC<{ className: string; style?: React.CSSProperties; children: React.ReactNode }> = ({ className, style, children }) => (
+  <div className={`absolute aspect-[1440/500] ${className}`} style={style}>
+    <img src={`${ART}/ibadan-skyline.svg`} alt="" className="absolute inset-0 w-full h-full" />
+    <svg viewBox="0 0 1440 500" aria-hidden="true" className="absolute inset-0 w-full h-full overflow-visible">{children}</svg>
+  </div>
+);
+
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const isDesktop = useIsDesktop();
-  const [state, setState] = useState('');
   const [query, setQuery] = useState('');
   const [openTrade, setOpenTrade] = useState(0);
+  const [openFaq, setOpenFaq] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [legal, setLegal] = useState<null | 'terms' | 'escrow' | 'privacy'>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const why = useInView<HTMLElement>(0.2);
-  const count = useCountUp(why.inView);
-  const nTrades = Math.round(16 * easeOutCubic(count / 0.85));
-  const nStates = Math.round(36 * easeOutCubic((count - 0.15) / 0.85));
-  const artisans = useInView<HTMLElement>(0.25);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false); };
+    const onDown = (e: PointerEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('pointerdown', onDown);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('pointerdown', onDown);
+    };
+  }, [menuOpen]);
 
   // The directory needs an account, so the search is carried through sign-up (lib/pendingSearch)
   // and the new client lands on the artisan search with it filled in.
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    savePendingSearch([query.trim(), state].filter(Boolean).join(' '));
+    savePendingSearch(query);
+    navigate(CLIENT_SIGNUP);
+  };
+  const seeTrade = (search: string) => {
+    savePendingSearch(search);
     navigate(CLIENT_SIGNUP);
   };
 
-  return (
-    <div className="min-h-dvh overflow-x-clip font-['Plus_Jakarta_Sans',system-ui,sans-serif]" style={{ background: C.cream, color: C.navy }}>
-      {/* ───────── Hero ───────── */}
-      <section style={{ background: C.orange }} className="px-5 lg:px-[72px] pb-8 lg:pb-16">
-        <header className="kh-fade h-[68px] lg:h-24 flex items-center justify-between max-w-[1296px] mx-auto">
-          <Link to="/" aria-label="KaziHub home" className={`${display} text-[26px] lg:text-[32px] tracking-[-0.04em]`}>KaziHub</Link>
-          <nav aria-label="Sections" className="hidden lg:flex gap-8 text-[15px] font-bold">
-            <a href="#trades" className="hover:underline underline-offset-4">Trades</a>
-            <a href="#why" className="hover:underline underline-offset-4">Why KaziHub</a>
-            <a href="#artisans" className="hover:underline underline-offset-4">For artisans</a>
-          </nav>
-          <div className="flex items-center gap-1.5 lg:gap-3">
-            <Link to="/signin" className={`px-2.5 lg:px-4 py-3 text-sm lg:text-[15px] font-extrabold rounded-xl ${pressable}`}>Sign in</Link>
-            <Link to={CLIENT_SIGNUP} className={`px-4 lg:px-[22px] py-3 lg:py-3.5 rounded-xl lg:rounded-2xl text-sm lg:text-[15px] font-extrabold ${pressable}`} style={{ background: C.navy, color: C.cream }}>
-              Get started
-            </Link>
-          </div>
-        </header>
+  const reveal = (i: number): React.CSSProperties => ({
+    opacity: why.inView ? 1 : 0,
+    transform: why.inView ? 'none' : 'translateY(40px)',
+    transition: `opacity 600ms ease ${i * 90}ms, transform 800ms ${EASE} ${i * 90}ms`,
+  });
 
-        <div className="max-w-[1296px] mx-auto flex flex-col gap-6 lg:gap-9 pt-5 lg:pt-40">
-          <h1 className={`kh-rise ${display} text-[clamp(3.9rem,10.4vw,9.4rem)] leading-[0.87] tracking-[-0.055em]`} style={{ animationDelay: '60ms' }}>
-            Light don off?<br className="hidden lg:block" /> Get person wey sabi.
+  const sections = [
+    { href: '#how', label: 'How it works' },
+    { href: '#trades', label: 'Trades' },
+    { href: '#clients', label: 'For clients' },
+    { href: '#artisans', label: 'For artisans' },
+    { href: '#faq', label: 'FAQ' },
+  ];
+
+  return (
+    <div className="kh-landing min-h-dvh overflow-x-clip font-['Plus_Jakarta_Sans',system-ui,sans-serif]" style={{ background: C.cream, color: C.navy }}>
+      {/* ───────── Hero: Ibadan skyline ───────── */}
+      <section className="relative overflow-hidden flex flex-col lg:block lg:h-[1230px]" style={{ background: C.orange }}>
+        <svg viewBox="0 0 1440 300" aria-hidden="true" className="hidden lg:block absolute left-1/2 -translate-x-1/2 top-0 w-[1440px] h-[300px]">
+          <g fill={C.cream} opacity="0.22">
+            <path d="M -40 200 q 0 -70 70 -70 q 20 -80 110 -80 q 90 0 110 80 q 70 0 70 70 z" />
+            <path d="M 1120 250 q 0 -60 60 -60 q 16 -70 96 -70 q 80 0 96 70 q 60 0 60 60 z" />
+          </g>
+        </svg>
+
+        <div className="relative z-10 px-5 lg:px-[72px] flex flex-col items-center gap-5 lg:gap-0 max-w-[1440px] mx-auto w-full box-border">
+          <header ref={menuRef} className="kh-fade relative z-30 self-stretch h-[68px] lg:h-24 flex items-center justify-between">
+            <Link to="/" aria-label="KaziHub home" className={`${display} text-[26px] lg:text-[32px] tracking-[-0.04em]`}>KaziHub</Link>
+            <nav aria-label="Sections" className="hidden lg:flex gap-8 text-base font-bold">
+              {sections.map(s => <a key={s.href} href={s.href} className="kh-link">{s.label}</a>)}
+            </nav>
+            <div className="flex items-center gap-2 lg:gap-3">
+              <Link to="/signin" className="kh-link hidden lg:inline mx-3 py-1 text-base font-extrabold">Sign in</Link>
+              <Link to={CLIENT_SIGNUP} className="kh-btn px-4 lg:px-[22px] py-3 lg:py-3.5 rounded-xl lg:rounded-[14px] text-[15px] font-extrabold" style={{ background: C.navy, color: C.cream }}>
+                Get started
+              </Link>
+              <button
+                type="button"
+                onClick={() => setMenuOpen(o => !o)}
+                aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+                aria-expanded={menuOpen}
+                aria-controls="kh-menu"
+                className="kh-round lg:hidden w-11 h-11 rounded-xl border-2 flex items-center justify-center cursor-pointer"
+                style={{ borderColor: C.navy }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.navy} strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
+                  {menuOpen
+                    ? <><path d="M6 6l12 12" /><path d="M18 6L6 18" /></>
+                    : <><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" /></>}
+                </svg>
+              </button>
+            </div>
+            {menuOpen && (
+              <nav
+                id="kh-menu"
+                aria-label="Sections"
+                className="kh-fade lg:hidden absolute right-0 top-[62px] z-20 w-56 rounded-[18px] border-2 p-2 flex flex-col text-base font-bold"
+                style={{ background: C.cream, borderColor: C.navy, animationDuration: '180ms' }}
+              >
+                {sections.map(s => (
+                  <a key={s.href} href={s.href} onClick={() => setMenuOpen(false)} className="px-3 py-3 rounded-xl active:bg-white">{s.label}</a>
+                ))}
+                <Link to="/signin" className="px-3 py-3 rounded-xl font-extrabold active:bg-white">Sign in</Link>
+              </nav>
+            )}
+          </header>
+
+          <h1 className={`kh-rise mt-7 lg:mt-14 text-center ${display} text-[54px] lg:text-[104px] leading-[0.92] lg:leading-[0.88] tracking-[-0.055em]`} style={{ animationDelay: '60ms' }}>
+            Light don off?<br />Get person<br className="lg:hidden" /> wey sabi.
           </h1>
-          <p className="kh-rise text-[17px] lg:text-[22px] leading-normal font-semibold max-w-[640px]" style={{ animationDelay: '180ms' }}>
+          <p className="kh-rise lg:mt-6 lg:mb-8 max-w-[330px] lg:max-w-[660px] text-center text-base lg:text-[21px] leading-normal font-semibold" style={{ animationDelay: '160ms' }}>
             ID-verified artisans near you. Your money stays in escrow until the job is done, and you say so.
           </p>
 
-          <form onSubmit={handleSearch} role="search" aria-label="Find an artisan" className="kh-rise flex flex-col lg:flex-row gap-2.5 max-w-[980px]" style={{ animationDelay: '280ms' }}>
-            <div className="flex-1 flex flex-col lg:flex-row bg-white rounded-2xl lg:rounded-[18px] border-2 overflow-hidden" style={{ borderColor: C.navy }}>
-              <div className="flex items-center gap-1 pl-3.5 lg:pl-5 lg:min-w-[230px] border-b-[1.5px] lg:border-b-0 lg:border-r-[1.5px] border-[#D9DCE2]">
-                <MapPin className="w-[18px] h-[18px] shrink-0" aria-hidden="true" />
-                <CustomDropdown
-                  value={state}
-                  onChange={(v) => setState(String(v))}
-                  options={NIGERIAN_STATES.map(s => ({ value: s, label: s }))}
-                  placeholder="Your state"
-                  className="flex-1"
-                  buttonClassName="!border-0 !shadow-none !bg-transparent !text-base !font-bold h-[52px] lg:h-[64px]"
-                />
-              </div>
-              <label className="flex-none lg:flex-1 flex items-center px-4 lg:px-5 h-[54px] lg:h-auto">
-                <span className="sr-only">What needs fixing?</span>
-                <input
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value.slice(0, 80))}
-                  enterKeyHint="search"
-                  placeholder={isDesktop ? 'What needs fixing? e.g. sparking socket, leaking tap' : 'What needs fixing?'}
-                  className="w-full bg-transparent outline-none text-base lg:text-[17px] placeholder:text-[#6B7486]"
-                />
-              </label>
-            </div>
-            <button type="submit" className={`h-[58px] lg:h-[68px] px-8 rounded-2xl lg:rounded-[18px] text-[17px] lg:text-lg font-extrabold cursor-pointer ${pressable}`} style={{ background: C.navy, color: C.cream }}>
-              Find an artisan
+          <form
+            onSubmit={handleSearch}
+            role="search"
+            aria-label="Find an artisan"
+            className="kh-rise kh-search self-stretch lg:self-auto lg:w-[820px] h-16 lg:h-20 box-border flex items-center gap-2.5 lg:gap-3.5 py-1.5 lg:py-2 pr-1.5 lg:pr-2 pl-[18px] lg:pl-[30px] bg-white rounded-full"
+            style={{ animationDelay: '260ms' }}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={C.navy} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0">
+              <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
+            </svg>
+            <label className="flex-1 min-w-0 flex items-center">
+              <span className="sr-only">What needs fixing?</span>
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value.slice(0, 80))}
+                enterKeyHint="search"
+                placeholder={isDesktop ? 'What needs fixing? e.g. a leaking tap' : 'What needs fixing?'}
+                className="w-full bg-transparent outline-none text-[17px] lg:text-lg font-medium placeholder:text-[#5A6478]"
+                style={{ color: C.navy }}
+              />
+            </label>
+            <button
+              type="submit"
+              aria-label="Find artisans"
+              className="kh-btn-solid shrink-0 w-[52px] lg:w-auto h-[52px] lg:h-16 lg:px-8 rounded-full flex items-center justify-center text-lg font-extrabold cursor-pointer"
+              style={{ background: C.navy, color: C.cream }}
+            >
+              <span className="hidden lg:inline">Find artisans</span>
+              <span className="kh-arrow lg:hidden flex">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M5 12h14" /><path d="m13 6 6 6-6 6" />
+                </svg>
+              </span>
             </button>
           </form>
-          <a href="#artisans" className="kh-fade self-start text-[15px] lg:text-base font-extrabold underline-offset-[5px] hover:underline" style={{ animationDelay: '420ms' }}>
-            I’m an artisan. Get jobs near me →
-          </a>
+        </div>
+
+        {/* Phone: cropped to Cocoa House and the cherry-picker */}
+        <div className="kh-rise lg:hidden relative h-[310px] mt-4 overflow-hidden" style={{ animationDuration: '1100ms', animationDelay: '300ms' }}>
+          <Skyline className="bottom-0 w-[893px]" style={{ left: 'calc(50% - 575px)' }}>
+            <Bubble x={1000} y={140} scale={1.5} left={-204} width={238} dot={C.indigo} text="AC repair · Working" delay={900} floatDelay={1.7} />
+            <Bubble x={1170} y={236} scale={1.5} left={-279} width={313} dot={C.mint} done text={JOB_DONE} delay={1400} floatDelay={2.2} />
+          </Skyline>
+        </div>
+        {/* Desktop: the full skyline across the bottom of the hero */}
+        <div className="kh-rise hidden lg:block absolute inset-x-0 bottom-0 h-[650px]" style={{ animationDuration: '1100ms', animationDelay: '300ms' }}>
+          <Skyline className="bottom-0 left-1/2 -translate-x-1/2 w-[max(1872px,100%)]">
+            <Bubble x={452} y={328} left={-124} width={248} dot={C.orange} text="Plumber · On the way" delay={900} floatDelay={1.7} />
+            <Bubble x={362} y={132} left={-34} width={220} dot={C.indigo} text="Painter · Working" delay={1300} floatDelay={2.1} />
+            <Bubble x={1152} y={254} left={-279} width={313} dot={C.mint} done text={JOB_DONE} delay={1700} floatDelay={2.5} />
+          </Skyline>
+        </div>
+      </section>
+
+      {/* ───────── Marquee ───────── */}
+      <section aria-label="KaziHub at a glance" className="h-14 lg:h-[76px] overflow-hidden flex items-center" style={{ background: C.navy, color: C.cream }}>
+        <div className={`kh-marquee flex w-max ${display} text-[17px] lg:text-[22px] tracking-[-0.02em]`}>
+          {[0, 1].map(copy => (
+            <div key={copy} aria-hidden={copy === 1 || undefined} className="flex">
+              {MARQUEE.map(m => (
+                <span key={m.text} className="inline-flex items-center gap-5 lg:gap-7 pr-5 lg:pr-7 whitespace-nowrap">
+                  {m.text}<Star color={m.star} />
+                </span>
+              ))}
+            </div>
+          ))}
         </div>
       </section>
 
       <main className="max-w-[1440px] mx-auto">
-        {/* ───────── Photo mosaic ───────── */}
-        <section aria-label="KaziHub at work" className="px-5 lg:px-[72px] pt-4 lg:pt-5 grid grid-cols-2 lg:grid-cols-12 lg:grid-rows-2 gap-2.5 lg:gap-4 lg:h-[600px]">
-          <Photo src={PHOTOS.carpenter} alt="A KaziHub carpenter at a workbench" tone="#CDBBA7" icon={Hammer} style={{ animationDelay: '380ms' }} className="kh-rise col-span-2 lg:col-span-5 lg:row-span-2 h-[260px] lg:h-auto rounded-3xl lg:rounded-[28px]">
-            <span className={`absolute left-5 lg:left-6 bottom-4 lg:bottom-5 ${display} text-2xl lg:text-[30px] tracking-[-0.03em] leading-none`}>Quotes before work</span>
-          </Photo>
-          <Photo src={PHOTOS.plumber} alt="A KaziHub plumber with a customer" tone="#D7C5B0" icon={Wrench} style={{ animationDelay: '470ms' }} className="kh-rise h-[180px] lg:h-auto lg:col-span-4 rounded-3xl lg:rounded-[28px]" >
-            <span className={`absolute left-4 lg:left-6 bottom-4 lg:bottom-5 ${display} text-lg lg:text-[26px] tracking-[-0.03em] leading-none`}>People near you</span>
-          </Photo>
-          <Photo src={PHOTOS.solar} alt="A KaziHub solar installer on a rooftop" tone="#C6B4A0" icon={Sun} style={{ animationDelay: '560ms' }} className="kh-rise hidden lg:block lg:col-span-3 lg:row-span-2 rounded-[28px]">
-            <span className={`absolute left-6 bottom-5 ${display} text-[26px] tracking-[-0.03em] leading-none`}>Paid when done</span>
-          </Photo>
-          <div className="kh-rise h-[180px] lg:h-auto lg:col-start-6 lg:col-span-4 lg:row-start-2 rounded-3xl lg:rounded-[28px] p-[18px] lg:px-[30px] lg:py-[26px] flex flex-col lg:flex-row justify-between lg:justify-start lg:items-center gap-3 lg:gap-[22px]" style={{ background: C.indigo, color: C.cream, animationDelay: '650ms' }}>
-            <span className={`${display} text-[44px] lg:text-[64px] tracking-[-0.05em] leading-none`} style={{ color: C.mint }}>ID+</span>
-            <span className="text-[13px] lg:text-[17px] leading-snug font-semibold">
-              <span className="lg:hidden">Government ID and live selfie checked</span>
-              <span className="hidden lg:inline">Every artisan checked with a government ID and a live selfie before the Verified badge.</span>
-            </span>
+        {/* ───────── Illustrated mosaic ───────── */}
+        <section aria-label="Why KaziHub" className="px-5 lg:px-[72px] pt-10 lg:pt-24 grid grid-cols-2 lg:grid-cols-12 lg:grid-rows-2 gap-2.5 lg:gap-4 lg:h-[696px]">
+          <div className="kh-card kh-rise relative overflow-hidden h-[250px] lg:h-auto lg:col-span-5 lg:row-span-2 rounded-[22px] lg:rounded-[28px]" style={{ background: C.pink, animationDelay: '360ms' }}>
+            <div className="relative z-10 px-4 lg:px-[30px] pt-4 lg:pt-[26px] flex flex-col items-start gap-1.5 lg:gap-2.5">
+              <img src={`${ART}/icon-quote.svg`} alt="" className="hidden lg:block w-[52px] h-[52px]" />
+              <h3 className={`${display} text-[22px] lg:text-[40px] leading-[0.95] tracking-[-0.04em]`}>Quotes before work</h3>
+              <p className="text-[13px] lg:text-[17px] leading-snug lg:leading-[1.45] font-semibold lg:font-medium lg:max-w-[360px]">
+                <span className="lg:hidden">Agree a written quote before work starts.</span>
+                <span className="hidden lg:inline">Chat with the artisan and agree a written quote before any work starts.</span>
+              </p>
+            </div>
+            <img src={`${ART}/mosaic-quotes.svg`} alt="" className="absolute left-0 -bottom-4 lg:-bottom-[30px] w-full h-auto" />
+          </div>
+          <div className="kh-card kh-rise relative overflow-hidden h-[250px] lg:h-auto lg:col-span-4 rounded-[22px] lg:rounded-[28px]" style={{ background: C.mint, animationDelay: '430ms' }}>
+            <div className="relative z-10 px-4 lg:px-[30px] pt-4 lg:pt-[26px] flex flex-col items-start gap-1.5 lg:gap-2.5">
+              <h3 className={`${display} text-[22px] lg:text-[30px] leading-[0.95] tracking-[-0.04em]`}>People near you</h3>
+              <p className="text-[13px] lg:text-[17px] leading-snug lg:leading-[1.45] font-semibold lg:font-medium lg:max-w-[320px]">
+                <span className="lg:hidden">Verified artisans close by, so help comes fast.</span>
+                <span className="hidden lg:inline">Verified artisans in your area, so help arrives fast.</span>
+              </p>
+            </div>
+            <img src={`${ART}/mosaic-near.svg`} alt="" className="absolute -left-6 lg:left-0 -bottom-1.5 lg:-bottom-3.5 w-[220px] lg:w-full h-auto" />
+          </div>
+          <div className="kh-card kh-rise relative overflow-hidden h-[250px] lg:h-auto lg:col-span-3 lg:row-span-2 rounded-[22px] lg:rounded-[28px]" style={{ background: C.yellow, animationDelay: '500ms' }}>
+            <div className="relative z-10 px-4 lg:px-[30px] pt-4 lg:pt-[26px] flex flex-col items-start gap-1.5 lg:gap-2.5">
+              <img src={`${ART}/icon-paid.svg`} alt="" className="hidden lg:block w-[52px] h-[52px]" />
+              <h3 className={`${display} text-[22px] lg:text-[40px] leading-[0.95] tracking-[-0.04em]`}>Paid when done</h3>
+              <p className="text-[13px] lg:text-[17px] leading-snug lg:leading-[1.45] font-semibold lg:font-medium">
+                <span className="lg:hidden">Money waits in escrow till you confirm.</span>
+                <span className="hidden lg:inline">Your money waits in escrow and moves only when you confirm.</span>
+              </p>
+            </div>
+            <img src={`${ART}/mosaic-paid.svg`} alt="" className="absolute -right-1 lg:right-auto lg:left-0 -bottom-[22px] lg:-bottom-10 w-[124px] lg:w-full h-auto" />
+          </div>
+          <div className="kh-card kh-rise relative overflow-hidden h-[250px] lg:h-auto lg:col-start-6 lg:col-span-4 lg:row-start-2 rounded-[22px] lg:rounded-[28px] px-4 pt-4 lg:px-[30px] lg:py-[26px] flex flex-col lg:flex-row lg:items-center gap-1.5 lg:gap-[22px]" style={{ background: C.indigo, color: C.cream, animationDelay: '570ms' }}>
+            <h3 className={`lg:hidden ${display} text-[22px] leading-[0.95] tracking-[-0.04em]`}>Every artisan checked</h3>
+            <p className="lg:hidden text-[13px] leading-snug font-semibold">Government ID and a live selfie, before any job.</p>
+            <span aria-hidden="true" className={`absolute lg:static left-4 bottom-1.5 ${display} text-[76px] lg:text-[64px] leading-none tracking-[-0.06em] lg:tracking-[-0.05em]`} style={{ color: C.mint }}>ID+</span>
+            <span className="hidden lg:block text-[17px] leading-[1.45] font-semibold">Every artisan checked with a government ID and a live selfie before the Verified badge.</span>
           </div>
         </section>
 
-        {/* ───────── Trades: expanding cards (desktop) / accordion (phone) ───────── */}
-        <section id="trades" className="scroll-mt-6 px-5 lg:px-[72px] pt-16 lg:pt-[104px] flex flex-col gap-6 lg:gap-9">
-          <div className="flex items-end justify-between gap-10">
-            <h2 className={`${display} text-[52px] lg:text-[84px] leading-[0.9] tracking-[-0.055em]`}>Sixteen trades.<br className="hidden lg:block" /> One place.</h2>
-            <Link to={CLIENT_SIGNUP} className="hidden lg:inline text-[17px] font-extrabold underline-offset-[5px] hover:underline">See all 16 →</Link>
+        {/* ───────── How it works ───────── */}
+        <section id="how" className="scroll-mt-4 pt-16 lg:pt-[120px] lg:px-[72px] flex flex-col gap-5 lg:gap-11">
+          <div className="px-5 lg:px-0 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3 lg:gap-10">
+            <div className="flex flex-col gap-3 lg:gap-4">
+              <p className={eyebrow}>How it works</p>
+              <h2 className={`${display} text-[44px] lg:text-[72px] leading-[0.92] tracking-[-0.055em]`}>Book it. We hold the money.<br className="hidden lg:block" /> You say when it’s done.</h2>
+            </div>
+            <p className="lg:mb-1.5 lg:max-w-[360px] text-[15px] lg:text-lg leading-normal font-medium">
+              Four steps, and your money is protected at every one<span className="hidden lg:inline"> of them</span>.<span className="lg:hidden"> Swipe through.</span>
+            </p>
           </div>
-          <ul className="flex flex-col lg:flex-row gap-2 lg:gap-3.5 lg:h-[480px]">
+          <ol className="kh-snap flex lg:grid lg:grid-cols-4 gap-2.5 lg:gap-4 px-5 lg:px-0 overflow-x-auto lg:overflow-visible snap-x snap-mandatory scroll-pl-5 lg:h-[470px]">
+            {STEPS.map((s, i) => (
+              <li
+                key={s.title}
+                className="kh-card kh-rise relative overflow-hidden shrink-0 basis-[272px] lg:basis-auto h-[400px] lg:h-auto snap-start rounded-[22px] lg:rounded-[26px]"
+                style={{ background: s.bg, color: s.fg, animationDelay: `${200 + i * 90}ms` }}
+              >
+                <div className="relative z-10 px-5 lg:px-[26px] pt-5 lg:pt-[26px] flex flex-col items-start gap-2.5 lg:gap-3">
+                  <span className="px-[11px] lg:px-3 py-[5px] lg:py-1.5 rounded-full text-xs lg:text-[13px] font-extrabold tracking-[0.04em]" style={{ background: s.fg, color: s.bg === C.indigo ? C.navy : C.cream }}>
+                    Step {i + 1}<span className="lg:hidden"> of 4</span>
+                  </span>
+                  <h3 className={`mt-0.5 lg:mt-1 ${display} text-[26px] lg:text-[30px] leading-[0.98] tracking-[-0.04em]`}>{s.title}</h3>
+                  <p className="text-sm lg:text-base leading-[1.45] font-medium">{s.body}</p>
+                </div>
+                <img src={`${ART}/step-${i + 1}.svg`} alt="" className="absolute left-0 -bottom-2 lg:-bottom-2.5 w-full h-auto" />
+              </li>
+            ))}
+            <li aria-hidden="true" className="lg:hidden shrink-0 basis-2.5" />
+          </ol>
+        </section>
+
+        {/* ───────── Trades: expanding cards (desktop) / accordion (phone) ───────── */}
+        <section id="trades" className="scroll-mt-4 px-5 lg:px-[72px] pt-16 lg:pt-[104px] flex flex-col gap-[22px] lg:gap-9">
+          <div className="flex items-end justify-between gap-10">
+            <h2 className={`${display} text-[52px] lg:text-[84px] leading-[0.9] tracking-[-0.055em]`}>The trades people<br className="hidden lg:block" /> book most.</h2>
+            <Link to={CLIENT_SIGNUP} className="kh-link hidden lg:inline pb-0.5 text-[17px] font-extrabold">See all trades <Arrow /></Link>
+          </div>
+          <ul className="flex flex-col lg:flex-row gap-2.5 lg:gap-3.5 lg:h-[610px]">
             {TRADES.map((t, i) => {
               const open = i === openTrade;
               return (
                 <li
                   key={t.name}
                   onMouseEnter={isDesktop ? () => setOpenTrade(i) : undefined}
-                  className="relative box-border overflow-hidden rounded-[22px] lg:rounded-[26px] border-2 flex flex-col min-w-0"
+                  className="relative box-border overflow-hidden rounded-[22px] lg:rounded-[26px] min-w-0"
                   style={{
                     background: t.bg,
                     color: t.fg,
-                    borderColor: t.bg,
                     ...(isDesktop
-                      ? { flexGrow: open ? 3.6 : 1, flexBasis: 0, transition: `flex-grow 620ms ${EASE}` }
-                      : { height: open ? 330 : 64, transition: `height 520ms ${EASE}` }),
+                      ? { flexGrow: open ? 3.8 : 1, flexBasis: 0, transition: `flex-grow 620ms ${EASE}` }
+                      : { height: open ? 430 : 76, transition: `height 520ms ${EASE}` }),
                   }}
                 >
-                  <button
-                    type="button"
-                    onClick={() => setOpenTrade(isDesktop ? i : (open ? -1 : i))}
-                    onFocus={isDesktop ? () => setOpenTrade(i) : undefined}
-                    aria-expanded={open}
-                    className="shrink-0 min-h-[60px] lg:min-h-16 box-border flex items-center lg:items-start justify-between gap-3 pl-[18px] pr-3 lg:px-[18px] py-3 lg:pt-[18px] lg:pb-3.5 text-left text-[17px] lg:text-lg font-extrabold leading-tight cursor-pointer"
-                  >
-                    <span className="min-w-0">{t.name}</span>
-                    <span
-                      aria-hidden="true"
-                      className="shrink-0 h-[34px] rounded-full flex items-center justify-center overflow-hidden"
-                      style={{
-                        background: t.fg,
-                        color: t.bg,
-                        // Closed desktop cards are narrow: the arrow steps aside so the trade's name fits.
-                        opacity: isDesktop && !open ? 0 : 1,
-                        width: isDesktop && !open ? 0 : 34,
-                        transform: `rotate(${isDesktop ? (open ? '0deg' : '45deg') : (open ? '45deg' : '0deg')})`,
-                        transition: `transform 480ms ${EASE}, opacity 300ms ease, width 480ms ${EASE}`,
-                      }}
-                    >
-                      {isDesktop ? <ArrowUpRight className="w-4 h-4" strokeWidth={2.4} /> : <Plus className="w-4 h-4" strokeWidth={2.4} />}
-                    </span>
-                  </button>
-                  {open && (
-                    <Photo src={t.photo} alt={`A KaziHub ${t.name.toLowerCase().replace(/s$/, '')} at work`} tone={t.tone} icon={t.icon} className="kh-fade flex-1 mx-[5px] lg:mx-1.5 mb-[5px] lg:mb-1.5 rounded-[17px] lg:rounded-[20px]">
-                      <div className="kh-rise absolute left-2.5 right-2.5 bottom-2.5 lg:left-3 lg:right-3 lg:bottom-3 box-border rounded-[14px] lg:rounded-2xl p-3.5 lg:px-5 lg:py-[18px] flex flex-col lg:flex-row lg:items-end lg:justify-between gap-2 lg:gap-[18px]" style={{ background: C.cream, color: C.navy, animationDelay: '180ms' }}>
-                        <p className="text-sm lg:text-base leading-snug font-semibold lg:max-w-[300px]">{t.blurb}</p>
-                        <Link to={CLIENT_SIGNUP} className="shrink-0 text-sm lg:text-[15px] font-extrabold underline-offset-4 hover:underline">See {t.name.toLowerCase().replace('ac ', 'AC ')} →</Link>
-                      </div>
-                    </Photo>
+                  {isDesktop ? (
+                    open ? (
+                      <>
+                        <div className="kh-rise absolute inset-x-0 -bottom-14" style={{ animationDuration: '620ms', animationDelay: '180ms' }}>
+                          <img src={`${ART}/${t.img}.svg`} alt="" className="block w-full h-auto" />
+                        </div>
+                        <div className="kh-fade relative px-[30px] pt-[26px] flex flex-col gap-3.5" style={{ animationDuration: '420ms', animationDelay: '120ms' }}>
+                          <div className="flex items-center justify-between">
+                            <img src={`${ART}/${t.spot}.svg`} alt="" className="w-14 h-14" />
+                            <button
+                              type="button"
+                              onClick={() => seeTrade(t.search)}
+                              aria-label={`See ${t.lower}`}
+                              className="kh-round w-12 h-12 rounded-full flex items-center justify-center cursor-pointer"
+                              style={{ background: t.fg, color: t.bg }}
+                            >
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 17 17 7" /><path d="M8 7h9v9" /></svg>
+                            </button>
+                          </div>
+                          <h3 className={`mt-1.5 ${display} text-[clamp(2.75rem,4.2vw,3.75rem)] leading-[0.92] tracking-[-0.05em]`}>{t.name}</h3>
+                          <p className="max-w-[440px] text-lg leading-[1.45] font-medium">{t.desc}</p>
+                        </div>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setOpenTrade(i)}
+                        onFocus={() => setOpenTrade(i)}
+                        aria-expanded="false"
+                        aria-label={t.name}
+                        className="absolute inset-0 w-full box-border px-[22px] py-6 flex flex-col justify-end items-start text-left cursor-pointer"
+                      >
+                        <span className={`[writing-mode:vertical-rl] rotate-180 ${display} text-[46px] leading-[0.95] tracking-[-0.04em] whitespace-nowrap`}>{t.name}</span>
+                      </button>
+                    )
+                  ) : (
+                    <>
+                      {open && <img src={`${ART}/${t.img}.svg`} alt="" className="kh-rise absolute left-0 -bottom-[26px] w-full h-auto" style={{ animationDuration: '560ms', animationDelay: '160ms' }} />}
+                      <button
+                        type="button"
+                        onClick={() => setOpenTrade(open ? -1 : i)}
+                        aria-expanded={open}
+                        className="relative z-10 w-full h-[76px] box-border pl-5 pr-3.5 flex items-center gap-3 text-left cursor-pointer"
+                      >
+                        <span className={`flex-1 ${display} text-[28px] leading-none tracking-[-0.04em]`}>{t.name}</span>
+                        <span
+                          aria-hidden="true"
+                          className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center"
+                          style={{ background: t.fg, color: t.bg, transform: `rotate(${open ? 45 : 0}deg)`, transition: `transform 460ms ${EASE}` }}
+                        >
+                          <PlusIcon size={16} />
+                        </span>
+                      </button>
+                      {open && (
+                        <div className="kh-fade relative z-10 px-5 flex flex-col items-start gap-2.5" style={{ animationDuration: '400ms', animationDelay: '120ms' }}>
+                          <p className="text-[15px] leading-[1.45] font-medium">{t.desc}</p>
+                          <button type="button" onClick={() => seeTrade(t.search)} className="kh-link pb-0.5 text-[15px] font-extrabold cursor-pointer">
+                            See {t.lower} <Arrow />
+                          </button>
+                        </div>
+                      )}
+                    </>
                   )}
                 </li>
               );
             })}
           </ul>
-          <Link to={CLIENT_SIGNUP} className="lg:hidden self-start text-[15px] font-extrabold underline-offset-[5px] hover:underline">See all 16 →</Link>
+          <Link to={CLIENT_SIGNUP} className="kh-link lg:hidden self-start pb-0.5 text-[15px] font-extrabold">See all trades <Arrow /></Link>
         </section>
 
-        {/* ───────── Fact grid: true facts only; numbers count up once on first view ───────── */}
-        <section id="why" ref={why.ref} className="scroll-mt-6 px-5 lg:px-[72px] pt-16 lg:pt-28 grid grid-cols-2 lg:grid-cols-12 lg:grid-rows-3 gap-2.5 lg:gap-3.5 lg:h-[708px]">
-          {[
-            <div key="lead" className="order-1 lg:order-none col-span-2 lg:col-span-5 rounded-[22px] lg:rounded-[26px] bg-white border-2 p-[22px] lg:p-[30px] flex flex-col justify-between gap-6" style={{ borderColor: C.navy }}>
-              <p className={`${display} text-[30px] lg:text-4xl leading-none tracking-[-0.035em]`}>The secret to hiring well? Checks, and money held until it’s done.</p>
-              <span className="hidden lg:block text-sm font-bold">How KaziHub works</span>
-            </div>,
-            <div key="trades" className="order-2 lg:order-none relative overflow-hidden h-[170px] lg:h-auto lg:col-span-7 rounded-[22px] lg:rounded-[26px] p-[18px] lg:p-[30px] flex flex-col justify-between" style={{ background: C.indigo, color: C.cream }}>
-              <Swoosh viewBox="0 0 420 300" d="M60 40 C 60 260, 250 260, 250 110 S 400 -20, 400 200" color={C.mint} width={56} className="w-[130px] lg:w-[420px] -right-14 lg:-right-10 -top-12 lg:-top-[60px]" />
-              <span className={`relative ${display} text-[64px] lg:text-[120px] leading-[0.8] tracking-[-0.06em] tabular-nums`}>{nTrades}</span>
-              <span className="relative text-[13px] lg:text-base font-semibold lg:max-w-[280px]">
-                <span className="lg:hidden">trades</span>
-                <span className="hidden lg:inline">trades, from electricians and plumbers to tailors and event pros</span>
-              </span>
-            </div>,
-            <div key="states" className="order-4 lg:order-none relative overflow-hidden col-span-2 lg:col-span-6 h-[170px] lg:h-auto rounded-[22px] lg:rounded-[26px] p-5 lg:p-[30px] flex flex-col justify-between" style={{ background: C.orange }}>
-              <Swoosh viewBox="0 0 300 260" d="M40 240 C 40 60, 260 60, 260 220" color={C.orangeSoft} width={54} className="w-[200px] lg:w-[300px] -right-8 -bottom-16 lg:-bottom-[70px]" />
-              <span className={`relative ${display} text-[72px] lg:text-[120px] leading-[0.8] tracking-[-0.06em] tabular-nums`}>{nStates} + FCT</span>
-              <span className="relative text-sm lg:text-base font-bold">Every Nigerian state, plus Abuja</span>
-            </div>,
-            <div key="escrow" className="order-3 lg:order-none h-[170px] lg:h-auto lg:col-span-6 rounded-[22px] lg:rounded-[26px] p-[18px] lg:p-[30px] flex flex-col justify-between" style={{ background: C.pink }}>
-              <span className={`${display} text-[64px] lg:text-[120px] leading-[0.8] tracking-[-0.06em]`}>₦0</span>
-              <span className="text-[13px] lg:text-base font-bold lg:max-w-[380px]">
-                <span className="lg:hidden">to the artisan until you confirm</span>
-                <span className="hidden lg:inline">reaches the artisan until you confirm the job is done. It waits in escrow.</span>
-              </span>
-            </div>,
-            <div key="record" className="relative overflow-hidden hidden lg:flex lg:col-span-7 rounded-[26px] p-[30px] items-center justify-center" style={{ background: C.mint }}>
-              <Swoosh viewBox="0 0 260 260" d="M30 30 C 30 200, 200 230, 230 60" color={C.indigo} width={50} className="w-[220px] -left-[110px] -bottom-24" />
-              <p className={`relative text-center ${display} text-[44px] leading-none tracking-[-0.04em]`}>Checked pros, clear quotes,<br />and a record of every job</p>
-            </div>,
-            <div key="reviews" className="order-5 lg:order-none relative overflow-hidden col-span-2 lg:col-span-5 rounded-[22px] lg:rounded-[26px] p-[22px] lg:p-[30px] flex flex-col justify-between gap-3" style={{ background: C.navy, color: C.cream }}>
-              <Swoosh viewBox="0 0 220 240" d="M190 20 C 40 20, 40 220, 190 220" color={C.orange} width={48} className="hidden lg:block w-[220px] -right-[50px] -top-10" />
-              <span className={`relative ${display} text-[34px] lg:text-[44px] leading-[0.95] tracking-[-0.04em]`}>Reviews from<br className="hidden lg:block" /> real jobs only</span>
-              <span className="relative text-sm leading-relaxed" style={{ color: C.muted }}>Only after a paid, completed booking. No friends, no fakes.</span>
-            </div>,
-          ].map((tile, i) => (
-            <div key={i} className="contents">
-              {React.cloneElement(tile, {
-                style: {
-                  ...(tile.props.style || {}),
-                  opacity: why.inView ? 1 : 0,
-                  transform: why.inView ? 'none' : 'translateY(40px)',
-                  transition: `opacity 600ms ease ${i * 90}ms, transform 800ms ${EASE} ${i * 90}ms`,
-                },
-              })}
+        {/* ───────── For clients: tiles rise in on first view ───────── */}
+        <section id="clients" ref={why.ref} className="scroll-mt-4 px-5 lg:px-[72px] pt-16 lg:pt-28 grid grid-cols-2 lg:grid-cols-12 lg:grid-rows-3 gap-2.5 lg:gap-3.5 lg:h-[880px]">
+          <div className="col-span-2 lg:col-span-5 rounded-[22px] lg:rounded-[26px] bg-white border-2 p-[22px] lg:p-[30px] flex flex-col justify-between items-start gap-4" style={{ borderColor: C.navy, ...reveal(0) }}>
+            <div className="flex flex-col gap-3 lg:gap-3">
+              <p className={eyebrow}>For clients</p>
+              <h2 className={`${display} text-[44px] lg:text-[56px] leading-[0.92] tracking-[-0.05em]`}>Hire without the wahala.</h2>
             </div>
-          ))}
+            <Link to={CLIENT_SIGNUP} className="kh-btn px-5 lg:px-6 py-3.5 lg:py-4 rounded-[14px] text-[15px] lg:text-base font-extrabold" style={{ background: C.navy, color: C.cream }}>
+              Find an artisan <Arrow />
+            </Link>
+          </div>
+          <div className="relative overflow-hidden h-[170px] lg:h-auto lg:col-span-7 rounded-[22px] lg:rounded-[26px] p-[18px] lg:p-[30px] flex flex-col justify-between" style={{ background: C.indigo, color: C.cream, ...reveal(1) }}>
+            <Swoosh viewBox="0 0 150 130" d="M20 20 C 20 120, 120 120, 120 20" color={C.mint} width={26} className="lg:hidden w-[150px] -right-20 -bottom-[70px]" />
+            <Swoosh viewBox="0 0 420 300" d="M60 40 C 60 260, 250 260, 250 110 S 400 -20, 400 200" color={C.mint} width={56} className="hidden lg:block w-[420px] -right-[150px] -top-[70px]" />
+            <span className={`relative ${display} text-[44px] lg:text-[100px] leading-[0.86] lg:leading-[0.8] tracking-[-0.06em]`}>2<br className="lg:hidden" /> checks</span>
+            <span className="relative text-[13px] lg:text-base font-semibold leading-snug lg:max-w-[340px]">
+              <span className="lg:hidden">Government ID and a live selfie</span>
+              <span className="hidden lg:inline">A government ID and a live selfie, before any artisan gets the Verified badge.</span>
+            </span>
+          </div>
+          <div className="h-[170px] lg:h-auto lg:col-span-6 rounded-[22px] lg:rounded-[26px] p-[18px] lg:p-[30px] flex flex-col justify-between bg-[#F7B8D2] lg:bg-[#FF6A2B]" style={reveal(2)}>
+            <span className={`${display} text-[64px] lg:text-[120px] leading-[0.8] tracking-[-0.06em]`}>₦0</span>
+            <span className="text-[13px] lg:text-base font-bold leading-snug lg:max-w-[380px]">
+              <span className="lg:hidden">to the artisan until you confirm</span>
+              <span className="hidden lg:inline">reaches the artisan until you confirm the job is done. It waits in escrow.</span>
+            </span>
+          </div>
+          <div className="relative overflow-hidden col-span-2 lg:col-span-6 h-[170px] lg:h-auto rounded-[22px] lg:rounded-[26px] p-5 lg:p-[30px] flex flex-col justify-between bg-[#FF6A2B] lg:bg-[#F7B8D2]" style={reveal(3)}>
+            <Swoosh viewBox="0 0 200 170" d="M30 160 C 30 40, 170 40, 170 150" color={C.orangeSoft} width={40} className="lg:hidden w-[200px] -right-[30px] -bottom-[60px]" />
+            <span className={`relative ${display} text-[64px] lg:text-[104px] leading-[0.8] tracking-[-0.06em]`}>Quote first</span>
+            <span className="relative text-sm lg:text-base font-bold max-w-[260px] lg:max-w-[380px]">
+              The price is agreed in writing<span className="hidden lg:inline">, in chat,</span> before anyone picks up a tool.
+            </span>
+          </div>
+          <div className="relative overflow-hidden hidden lg:flex lg:col-span-7 rounded-[26px] p-[30px] items-center justify-center" style={{ background: C.mint, ...reveal(4) }}>
+            <Swoosh viewBox="0 0 260 260" d="M30 30 C 30 200, 200 230, 230 60" color={C.indigo} width={50} className="w-[260px] -left-[60px] -bottom-20" />
+            <p className={`relative text-center ${display} text-[44px] leading-none tracking-[-0.04em]`}>Checked pros, clear quotes,<br />and a record of every job</p>
+          </div>
+          <div className="relative overflow-hidden col-span-2 lg:col-span-5 rounded-[22px] lg:rounded-[26px] p-[22px] lg:p-[30px] flex flex-col justify-between gap-3" style={{ background: C.navy, color: C.cream, ...reveal(5) }}>
+            <Swoosh viewBox="0 0 220 240" d="M190 20 C 40 20, 40 220, 190 220" color={C.orange} width={48} className="hidden lg:block w-[220px] -right-[50px] -top-10" />
+            <span className={`relative ${display} text-[34px] lg:text-[44px] leading-[0.95] tracking-[-0.04em]`}>Reviews from<br className="hidden lg:block" /> real jobs only</span>
+            <span className="relative text-sm leading-relaxed lg:hidden" style={{ color: C.muted }}>Only after a paid, completed booking. No friends, no fakes.</span>
+            <ul className="relative hidden lg:block pl-[18px] list-disc text-sm leading-[1.7]" style={{ color: C.muted }}>
+              <li>Only after a paid, completed booking</li>
+              <li>No friends, no fakes</li>
+            </ul>
+          </div>
         </section>
 
         {/* ───────── For artisans ───────── */}
-        <section
-          id="artisans"
-          ref={artisans.ref}
-          className="scroll-mt-6 mx-5 lg:mx-[72px] mt-16 lg:mt-28 rounded-[28px] lg:rounded-[32px] overflow-hidden grid lg:grid-cols-12 gap-5 lg:gap-6 p-[22px] lg:p-0 lg:h-[460px]"
-          style={{
-            background: C.peach,
-            opacity: artisans.inView ? 1 : 0,
-            transform: artisans.inView ? 'none' : 'translateY(40px)',
-            transition: `opacity 600ms ease, transform 800ms ${EASE}`,
-          }}
-        >
-          <div className="lg:col-span-7 lg:py-14 lg:pl-14 flex flex-col justify-between gap-5">
-            <h2 className={`${display} text-[48px] lg:text-[80px] leading-[0.9] tracking-[-0.055em]`}>You do the work. The money don already land.</h2>
-            <Photo src={PHOTOS.artisanPhone} alt="An artisan checking a job request on their phone" tone="#D7C5B0" icon={Smartphone} className="lg:hidden h-[180px] rounded-[20px]" />
-            <div className="flex flex-col lg:flex-row lg:items-center gap-5 lg:gap-7">
-              <Link to={ARTISAN_SIGNUP} className={`order-last lg:order-none text-center px-7 py-[19px] lg:py-5 rounded-2xl text-[17px] font-extrabold ${pressable}`} style={{ background: C.navy, color: C.cream }}>
-                Join as an artisan
-              </Link>
-              <p className="text-[15px] lg:text-base leading-normal font-medium lg:max-w-[340px]">Requests from people near you, quotes from your phone, payment secured before you start.</p>
+        <section id="artisans" className="scroll-mt-4 mx-5 lg:mx-[72px] mt-16 lg:mt-28 rounded-[28px] lg:rounded-[32px] overflow-hidden flex flex-col lg:grid lg:grid-cols-12 gap-5 lg:gap-6 px-[22px] pt-[26px] pb-[22px] lg:p-0 lg:h-[640px]" style={{ background: C.peach }}>
+          <div className="contents lg:flex lg:col-span-7 lg:p-14 lg:pr-0 lg:flex-col lg:justify-between lg:items-start">
+            <div className="flex flex-col gap-3 lg:gap-4">
+              <p className={eyebrow}>For artisans</p>
+              <h2 className={`${display} text-[44px] lg:text-[76px] leading-[0.9] tracking-[-0.055em]`}>You do the work. The money don already land.</h2>
             </div>
+            <div className="lg:hidden h-60 rounded-[20px] overflow-hidden flex items-end justify-center" style={{ background: C.indigo }}>
+              <img src={`${ART}/artisan.svg`} alt="An artisan receiving a job request, with payment already secured in escrow" className="w-full h-full object-contain object-bottom" />
+            </div>
+            <ul className="flex flex-col lg:grid lg:grid-cols-2 gap-3 lg:gap-x-7 lg:gap-y-4 lg:self-stretch">
+              {ARTISAN_POINTS.map(p => (
+                <li key={p} className="flex items-center gap-2.5 lg:gap-3 text-[15px] lg:text-[17px] font-bold leading-tight">
+                  <span className="lg:hidden"><Check size={24} /></span>
+                  <span className="hidden lg:inline"><Check size={28} /></span>
+                  {p}
+                </li>
+              ))}
+            </ul>
+            <Link to={ARTISAN_SIGNUP} className="kh-btn text-center p-[19px] lg:px-7 lg:py-5 rounded-2xl text-[17px] font-extrabold" style={{ background: C.navy, color: C.cream }}>
+              Join as an artisan <Arrow />
+            </Link>
           </div>
-          <Photo src={PHOTOS.artisanPhone} alt="An artisan checking a job request on their phone" tone="#D7C5B0" icon={Smartphone} className="hidden lg:block lg:col-start-9 lg:col-span-4 my-5 mr-5 rounded-3xl" />
+          <div className="hidden lg:flex lg:col-start-9 lg:col-span-4 my-5 mr-5 rounded-3xl overflow-hidden items-end justify-center" style={{ background: C.indigo }}>
+            <img src={`${ART}/artisan.svg`} alt="An artisan receiving a job request, with payment already secured in escrow" className="w-full h-full object-contain object-bottom" />
+          </div>
+        </section>
+
+        {/* ───────── FAQ: one answer open at a time ───────── */}
+        <section id="faq" className="scroll-mt-4 px-5 lg:px-[72px] pt-16 lg:pt-28 flex flex-col lg:grid lg:grid-cols-12 gap-5 lg:gap-6 lg:items-start">
+          <div className="lg:col-span-4 flex flex-col gap-3 lg:gap-[18px]">
+            <p className={eyebrow}>FAQ</p>
+            <h2 className={`${display} text-[44px] lg:text-[76px] leading-[0.9] tracking-[-0.055em]`}>Questions, answered.</h2>
+          </div>
+          <ul className="lg:col-start-6 lg:col-span-7 flex flex-col gap-2 lg:gap-2.5">
+            {FAQS.map((f, i) => {
+              const open = i === openFaq;
+              return (
+                <li key={f.q} className="kh-faq rounded-[18px] lg:rounded-[20px] border-2 overflow-hidden" style={{ borderColor: C.navy, background: open ? '#FFFFFF' : C.cream }}>
+                  <button
+                    type="button"
+                    onClick={() => setOpenFaq(open ? -1 : i)}
+                    aria-expanded={open}
+                    className="w-full min-h-16 lg:min-h-[72px] box-border py-3 lg:py-4 pr-3 lg:pr-4 pl-[18px] lg:pl-[26px] flex items-center justify-between gap-3.5 lg:gap-5 text-left cursor-pointer"
+                  >
+                    <span className={`${display} text-lg lg:text-[22px] leading-[1.15] tracking-[-0.02em]`}>{f.q}</span>
+                    <span
+                      aria-hidden="true"
+                      className="shrink-0 w-9 h-9 lg:w-10 lg:h-10 rounded-full flex items-center justify-center"
+                      style={{ background: C.navy, color: C.cream, transform: `rotate(${open ? 45 : 0}deg)`, transition: `transform 360ms ${EASE}` }}
+                    >
+                      <PlusIcon />
+                    </span>
+                  </button>
+                  {open && (
+                    <p className="kh-fade px-[18px] lg:pl-[26px] lg:pr-[84px] pb-[18px] lg:pb-6 text-[15px] lg:text-[17px] leading-[1.55] font-medium" style={{ animationDuration: '300ms' }}>{f.a}</p>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         </section>
       </main>
 
@@ -382,35 +636,42 @@ export const LandingPage: React.FC = () => {
       <footer className="mt-16 lg:mt-28 overflow-hidden" style={{ background: C.navy, color: C.cream }}>
         <div className="max-w-[1440px] mx-auto px-5 lg:px-[72px] pt-12 lg:pt-20 flex flex-col gap-10 lg:gap-16">
           <div className="grid lg:grid-cols-12 gap-10 lg:gap-6">
-            <div className="lg:col-span-5 flex flex-col items-start gap-6 lg:gap-7">
+            <div className="lg:col-span-5 flex flex-col items-start gap-[22px] lg:gap-7">
               <p className={`${display} text-[32px] lg:text-[40px] leading-none tracking-[-0.04em]`}>Checked artisans. Money held until it’s done.</p>
-              <Link to={CLIENT_SIGNUP} className={`px-6 lg:px-[26px] py-[17px] lg:py-[18px] rounded-2xl text-base font-extrabold ${pressable}`} style={{ background: C.orange, color: C.navy }}>Find an artisan</Link>
+              <Link to={CLIENT_SIGNUP} className="kh-btn kh-btn-light px-6 lg:px-[26px] py-[17px] lg:py-[18px] rounded-2xl text-base font-extrabold" style={{ background: C.orange, color: C.navy }}>
+                Find an artisan <Arrow />
+              </Link>
             </div>
-            <div className="lg:col-start-7 lg:col-span-6 grid grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-7 text-[15px] font-semibold">
-              <nav aria-label="Customers" className="flex flex-col">
-                <span className="pb-2 text-xs lg:text-[13px] font-extrabold uppercase tracking-[0.08em]" style={{ color: C.mint }}>Customers</span>
-                <Link to={CLIENT_SIGNUP} className="py-2 hover:underline underline-offset-4">Find an artisan</Link>
-                <button type="button" onClick={() => setLegal('escrow')} className="py-2 text-left hover:underline underline-offset-4 cursor-pointer">How escrow works</button>
-                <a href="#trades" className="py-2 hover:underline underline-offset-4">All 16 trades</a>
+            <div className="lg:col-start-7 lg:col-span-6 grid grid-cols-2 lg:grid-cols-3 gap-x-4 lg:gap-x-6 gap-y-7 text-[15px] font-semibold">
+              <nav aria-label="Customers" className="flex flex-col items-start gap-1 lg:gap-1.5">
+                <span className="pb-1 text-[13px] lg:text-sm font-extrabold uppercase tracking-[0.08em]" style={{ color: C.mint }}>Customers</span>
+                <Link to={CLIENT_SIGNUP} className="kh-link py-2 lg:py-1">Find an artisan</Link>
+                <a href="#how" className="kh-link py-2 lg:py-1">How it works</a>
+                <a href="#trades" className="kh-link py-2 lg:py-1">All trades</a>
               </nav>
-              <nav aria-label="Artisans" className="flex flex-col">
-                <span className="pb-2 text-xs lg:text-[13px] font-extrabold uppercase tracking-[0.08em]" style={{ color: C.mint }}>Artisans</span>
-                <Link to={ARTISAN_SIGNUP} className="py-2 hover:underline underline-offset-4">Join KaziHub</Link>
-                <Link to="/signin" className="py-2 hover:underline underline-offset-4">Sign in</Link>
+              <nav aria-label="Artisans" className="flex flex-col items-start gap-1 lg:gap-1.5">
+                <span className="pb-1 text-[13px] lg:text-sm font-extrabold uppercase tracking-[0.08em]" style={{ color: C.mint }}>Artisans</span>
+                <Link to={ARTISAN_SIGNUP} className="kh-link py-2 lg:py-1">Join KaziHub</Link>
+                <a href="#faq" className="kh-link py-2 lg:py-1">FAQ</a>
+                <a href="#faq" onClick={() => setOpenFaq(FAQ_VERIFIED)} className="kh-link py-2 lg:py-1">Getting verified</a>
+                <a href="#faq" onClick={() => setOpenFaq(FAQ_PAID)} className="kh-link py-2 lg:py-1">Getting paid</a>
               </nav>
-              <nav aria-label="KaziHub" className="col-span-2 lg:col-span-1 flex flex-row flex-wrap lg:flex-col gap-x-5">
-                <span className="hidden lg:block pb-2 text-[13px] font-extrabold uppercase tracking-[0.08em]" style={{ color: C.mint }}>KaziHub</span>
-                <button type="button" onClick={() => setLegal('terms')} className="py-2 text-left hover:underline underline-offset-4 cursor-pointer">Terms</button>
-                <button type="button" onClick={() => setLegal('privacy')} className="py-2 text-left hover:underline underline-offset-4 cursor-pointer">Privacy</button>
+              <nav aria-label="KaziHub" className="col-span-2 lg:col-span-1 flex flex-row flex-wrap lg:flex-col items-start gap-x-5 gap-y-1 lg:gap-1.5">
+                <span className="hidden lg:block pb-1 text-sm font-extrabold uppercase tracking-[0.08em]" style={{ color: C.mint }}>KaziHub</span>
+                <Link to="/signin" className="kh-link py-2 lg:py-1">Sign in</Link>
+                <button type="button" onClick={() => setLegal('terms')} className="kh-link py-2 lg:py-1 text-left cursor-pointer">Terms</button>
+                <button type="button" onClick={() => setLegal('escrow')} className="kh-link py-2 lg:py-1 text-left cursor-pointer">Escrow policy</button>
+                <button type="button" onClick={() => setLegal('privacy')} className="kh-link py-2 lg:py-1 text-left cursor-pointer">Privacy</button>
               </nav>
             </div>
           </div>
-          <div className="flex flex-col gap-5 lg:gap-7">
-            <div className="pt-5 lg:pt-6 border-t border-[#243A66] flex flex-col lg:flex-row lg:justify-between gap-1 text-[13px] lg:text-sm font-semibold" style={{ color: C.muted }}>
-              <span>Across all 36 states and the FCT</span>
-              <span>Payments held in escrow until you confirm</span>
+          <div className="flex flex-col gap-[18px] lg:gap-7">
+            <div className="pt-[18px] lg:pt-6 border-t border-[#243A66] flex flex-col lg:flex-row lg:justify-between text-sm font-semibold" style={{ color: C.muted }}>
+              <span className="lg:hidden">Made in Ibadan · Payments held in escrow until you confirm</span>
+              <span className="hidden lg:inline">Made in Ibadan</span>
+              <span className="hidden lg:inline">Payments held in escrow until you confirm</span>
             </div>
-            <span aria-hidden="true" className={`block -mb-[0.16em] ${display} text-[clamp(6rem,25.8vw,23.25rem)] leading-[0.8] tracking-[-0.065em] whitespace-nowrap text-[#1B3160]`}>KaziHub</span>
+            <span aria-hidden="true" className={`block -mb-[0.16em] ${display} text-[min(25.8vw,23.25rem)] leading-[0.8] tracking-[-0.065em] whitespace-nowrap text-[#1B3160]`}>KaziHub</span>
           </div>
         </div>
       </footer>

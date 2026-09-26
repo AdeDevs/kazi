@@ -170,18 +170,51 @@ html.dark img {
   .tab-panel-from-left { animation: none; }
 }
 
-/* Landing page (components/LandingPage.tsx). First-visit motion only: the hero and photo mosaic
-   rise in on load in a stagger (delays set inline); sections below reveal on first scroll into
-   view (inline transitions). Strong ease-out so movement starts fast and settles. */
-@keyframes kh-rise {
-  from { opacity: 0; transform: translateY(36px); }
-}
-@keyframes kh-fade {
-  from { opacity: 0; }
-}
+/* Landing page (components/LandingPage.tsx). First-visit motion only: the hero and mosaic rise
+   in on load in a stagger (delays set inline); sections below reveal on first scroll into view.
+   Strong ease-out so movement starts fast and settles. Hover lifts only on real pointers. */
+@keyframes kh-rise { from { opacity: 0; transform: translateY(36px); } }
+@keyframes kh-fade { from { opacity: 0; } }
+@keyframes kh-pop { from { opacity: 0; transform: translateY(18px) scale(0.9); } }
+@keyframes kh-float { to { transform: translateY(-12px); } }
+@keyframes kh-marquee { to { transform: translateX(-50%); } }
 .kh-rise { animation: kh-rise 800ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 .kh-fade { animation: kh-fade 600ms ease both; }
-@media (prefers-reduced-motion: reduce) {
-  .kh-rise,
-  .kh-fade { animation: none; }
+.kh-bubble { transform-box: fill-box; transform-origin: 50% 100%; }
+.kh-marquee { animation: kh-marquee 40s linear infinite; }
+.kh-snap { scrollbar-width: none; }
+.kh-snap::-webkit-scrollbar { display: none; }
+.kh-search { transition: box-shadow 200ms ease; }
+.kh-search:focus-within { box-shadow: 0 0 0 5px rgba(11, 27, 58, 0.22); }
+.kh-btn, .kh-btn-solid, .kh-round, .kh-card {
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 200ms ease, background-color 180ms ease;
 }
+.kh-arrow { display: inline-block; transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1); }
+.kh-link {
+  text-decoration: none;
+  background-image: linear-gradient(currentColor, currentColor);
+  background-size: 0% 2px;
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  transition: background-size 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.kh-btn:active, .kh-btn-solid:active { transform: translateY(1px) scale(0.98); }
+.kh-faq { transition: background-color 200ms ease; }
+@media (hover: hover) and (pointer: fine) {
+  .kh-btn:hover { transform: translateY(-3px); box-shadow: 0 5px 0 #0B1B3A; }
+  .kh-btn-light:hover { box-shadow: 0 5px 0 #FFF6EC; }
+  .kh-btn-solid:hover { background-color: #22356B !important; }
+  .kh-btn:hover .kh-arrow, .kh-btn-solid:hover .kh-arrow, .kh-link:hover .kh-arrow { transform: translateX(4px); }
+  .kh-link:hover { background-size: 100% 2px; }
+  .kh-round:hover { transform: scale(1.08); }
+  .kh-card:hover { transform: translateY(-6px); box-shadow: 0 8px 0 #0B1B3A; }
+  .kh-faq:hover { background-color: #FFFFFF !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kh-rise, .kh-fade, .kh-bubble, .kh-bubble-float, .kh-marquee { animation: none !important; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  html:has(.kh-landing) { scroll-behavior: smooth; }
+}
+/* The landing illustrations are transparent line art, not photos: no loading placeholder. */
+:root .kh-landing img { background-color: transparent; }
