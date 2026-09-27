@@ -231,4 +231,42 @@ html.dark img {
   html:has(.kh-landing) { scroll-behavior: smooth; }
 }
 /* The landing illustrations are transparent line art, not photos: no loading placeholder. */
-:root .kh-landing img { background-color: transparent; }
+:root .kh-landing img, :root .kh-auth img { background-color: transparent; }
+
+/* Auth pages (components/AuthPage.tsx): same palette and hover rules as the landing page. */
+.kh-input { border-color: #0B1B3A; color: #0B1B3A; transition: box-shadow 180ms ease, border-color 180ms ease; }
+.kh-input:focus-within { border-color: #3B35C9; box-shadow: 0 0 0 4px rgba(59, 53, 201, 0.22); }
+.kh-input[data-invalid="true"] { border-color: #D93A2B; }
+.kh-input[data-invalid="true"]:focus-within { box-shadow: 0 0 0 4px rgba(217, 58, 43, 0.2); }
+.kh-input input { flex: 1; min-width: 0; width: 100%; height: 100%; border: 0; outline: none; background: transparent; font: inherit; color: inherit; }
+.kh-auth input::placeholder { color: #5A6478; font-weight: 500; }
+.kh-otp { box-sizing: border-box; border: 2px solid #0B1B3A; border-radius: 14px; background: #FFFFFF; color: #0B1B3A; outline: none; transition: box-shadow 180ms ease, border-color 180ms ease; }
+.kh-otp:focus { border-color: #3B35C9; box-shadow: 0 0 0 4px rgba(59, 53, 201, 0.22); }
+.kh-auth-select:focus-visible { border-color: #3B35C9 !important; box-shadow: 0 0 0 4px rgba(59, 53, 201, 0.22) !important; }
+.kh-role { border-color: #0B1B3A; background-color: #FFFFFF; color: #0B1B3A; transition: background-color 180ms ease, color 180ms ease, transform 160ms cubic-bezier(0.22, 1, 0.36, 1); }
+.kh-role[data-selected="true"] { background-color: #0B1B3A; color: #FFF6EC; }
+.kh-role:active { transform: scale(0.98); }
+@media (hover: hover) and (pointer: fine) {
+  .kh-role:not([data-selected="true"]):hover { background-color: #FFE3CC; }
+  .kh-btn:disabled:hover { background-color: #0B1B3A; color: #FFF6EC; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kh-role { transition-property: background-color, color; }
+}
+/* Browser autofill paints its own tint on the <input>, which here sits inside a padded box, so the
+   tint stopped short of the box edges. Cover it with the box's white and keep the text navy. The
+   long transition stops Chrome flashing its colour back in. */
+.kh-input input:-webkit-autofill,
+.kh-input input:-webkit-autofill:hover,
+.kh-input input:-webkit-autofill:focus,
+.kh-search input:-webkit-autofill,
+.kh-search input:-webkit-autofill:hover,
+.kh-search input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #0B1B3A;
+  caret-color: #0B1B3A;
+  -webkit-box-shadow: 0 0 0 1000px #FFFFFF inset;
+  box-shadow: 0 0 0 1000px #FFFFFF inset;
+  transition: background-color 600000s 0s, color 600000s 0s;
+}
+.kh-input input:autofill,
+.kh-search input:autofill { box-shadow: 0 0 0 1000px #FFFFFF inset; -webkit-text-fill-color: #0B1B3A; }

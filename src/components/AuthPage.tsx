@@ -3,9 +3,7 @@ import { NIGERIAN_STATES, digitsOnly, formatNigerianPhone, isValidNigerianPhone,
 import { Checkbox } from './ui/Checkbox';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { 
-  Lock, Mail, User, ArrowRight, CheckCircle2, AlertCircle, RefreshCw, 
-  Eye, EyeOff, Briefcase, ChevronRight } from 'lucide-react';
+import { CheckCircle2, AlertCircle, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import { UserCreate } from '../types/auth';
 import { useDocumentMeta } from '../hooks/useDocumentMeta';
 import { TermsAndPrivacyModal } from './ui/TermsAndPrivacyModal';
@@ -94,6 +92,11 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   const [signInPassword, setSignInPassword] = useState('');
   const [showSignInPassword, setShowSignInPassword] = useState(false);
   const [signInTouched, setSignInTouched] = useState<Record<string, boolean>>({});
+  // Accounts with two-step sign-in need an authenticator code with the password. The field stays
+  // tucked away until the person opens it, or the backend's error asks for a code.
+  const [showTotp, setShowTotp] = useState(false);
+  const [totpCode, setTotpCode] = useState('');
+  const totpInputRef = useRef<HTMLInputElement | null>(null);
 
   // Sign Up State
   // The landing page's two sign-up buttons pass ?role=client or ?role=artisan.
@@ -187,12 +190,19 @@ export const AuthPage: React.FC<AuthPageProps> = ({
       const authedUser = await login({
         username: signInIdentifier.trim(),
         password: signInPassword,
+        totp_code: showTotp && totpCode ? totpCode : undefined,
       });
       if (onAuthSuccess) {
         onAuthSuccess(authedUser.role === 'artisan' ? 'artisan' : 'client');
       }
-    } catch {
-      // Error is caught in AuthContext
+    } catch (err) {
+      // The error itself is shown by AuthContext. The spec doesn't document the "code required"
+      // response, so this matches its wording loosely to open the code field; the "Use two-step
+      // sign-in?" link is the dependable way in.
+      if (err instanceof Error && /2fa|two[- ]?(factor|step)|totp|authenticator/i.test(err.message)) {
+        setShowTotp(true);
+        requestAnimationFrame(() => totpInputRef.current?.focus());
+      }
     }
   };
 
@@ -237,19 +247,17 @@ export const AuthPage: React.FC<AuthPageProps> = ({
     const clean = val.replace(/[^0-9]/g, '');
     const newArr = [...otpDigits];
 
-    if (clean.length > 1) {
-      // Multi-digit paste
-      const pasted = clean.slice(0, 5).split('');
-      pasted.forEach((ch, idx) => {
-        if (idx < 5) newArr[idx] = ch;
-      });
+    if (clean.length > 2) {
+      // Pasted or autofilled code: spread it across the boxes from this one on.
+      const start = clean.length >= 5 ? 0 : index;
+      clean.slice(0, 5 - start).split('').forEach((ch, idx) => { newArr[start + idx] = ch; });
       setOtpDigits(newArr);
-      const nextIdx = Math.min(pasted.length, 4);
-      otpInputsRef.current[nextIdx]?.focus();
+      otpInputsRef.current[Math.min(start + clean.length, 4)]?.focus();
       return;
     }
 
-    newArr[index] = clean;
+    // Typing over a filled box leaves two digits in it; keep the new one.
+    newArr[index] = clean.slice(-1);
     setOtpDigits(newArr);
 
     if (clean && index < 4) {
@@ -335,844 +343,470 @@ export const AuthPage: React.FC<AuthPageProps> = ({
     }
   };
 
+  const panel = currentView === 'signup'
+    ? PANELS[selectedRole === 'artisan' ? 'signupArtisan' : 'signupClient']
+    : PANELS[currentView];
+
+  const goTo = (view: AuthPageView) => {
+    clearError();
+    setCurrentView(view);
+  };
+
+  const topLink: Record<AuthPageView, { text: string; cta: string; view: AuthPageView }> = {
+    signin: { text: 'New to KaziHub?', cta: 'Create an account', view: 'signup' },
+    signup: { text: 'Already on KaziHub?', cta: 'Sign in', view: 'signin' },
+    verify: { text: 'Wrong account?', cta: 'Sign in', view: 'signin' },
+    forgot: { text: 'Remembered it?', cta: 'Sign in', view: 'signin' },
+    reset: { text: 'Remembered it?', cta: 'Sign in', view: 'signin' },
+  };
+  const switchLink = topLink[currentView];
+
+  const strength = getPasswordStrength(password);
+  const resetMismatch = resetConfirmPassword.length > 0 && resetNewPassword !== resetConfirmPassword;
+  const resendClock = `${Math.floor(resendTimer / 60)}:${String(resendTimer % 60).padStart(2, '0')}`;
+
+  const submitLabel = (loading: boolean, idle: string, busy: string) => loading ? (
+    <><RefreshCw className="w-[18px] h-[18px] animate-spin" aria-hidden="true" /><span>{busy}</span></>
+  ) : (
+    <><span>{idle}</span><Arrow /></>
+  );
+
   return (
-    <div className="h-dvh w-full bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col selection:bg-brand-orange-500 selection:text-white overflow-hidden">
-      {/* Top Edge-to-Edge Bar */}
-      <header className="w-full h-14 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 lg:px-12 flex items-center justify-between z-20 shrink-0">
-        <div className="flex items-center gap-2">
-          <Link to="/" aria-label="KaziHub home" className="font-black text-lg tracking-tight text-navy-900 dark:text-zinc-100">
-            Kazi<span className="text-brand-orange-700">Hub</span>
-          </Link>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
-            Nigeria Verified
-          </span>
-        </div>
-      </header>
-
-      {/* Main Split Poster Layout: Edge to Edge, Left Side strictly non-scrolling 100vh fit with space-between, Right Side scrollable only if needed */}
-      <main className="flex-1 flex flex-col lg:flex-row w-full overflow-hidden">
-        
-        {/* Left Side Poster Column (Hidden on mobile/tablet, shown on desktop) */}
-        <section className="hidden lg:flex lg:flex-col lg:w-5/12 xl:w-1/2 bg-navy-950 text-white px-8 py-8 sm:px-12 sm:py-10 lg:px-14 lg:py-10 justify-between border-b lg:border-b-0 lg:border-r border-navy-900 relative overflow-hidden shrink-0">
-          {/* Subtle background ambient gradients */}
-          <div className="absolute top-0 right-0 w-80 h-80 bg-brand-orange-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-80 h-80 bg-navy-800/30 rounded-full blur-3xl pointer-events-none" />
-
-          {/* Top/Main Brand Content with space-between distribution */}
-          <div className="relative z-10 flex flex-col justify-between flex-1 max-w-lg pb-6">
-            <div className="space-y-3">
-              <p className="text-2xl sm:text-3xl xl:text-4xl font-black tracking-tight text-white leading-tight">
-                Vetted Artisans. Verified Work.
-              </p>
-              <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
-                KaziHub connects verified electricians, plumbers, AC technicians, solar installers, and carpenters with clients across all 36 Nigerian states.
-              </p>
-            </div>
-
-            {/* Role Pillars with balanced spacing */}
-            <div className="space-y-4 my-auto py-6">
-              <div className="space-y-1">
-                <div className="flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-brand-orange-400" />
-                  <h3 className="text-xs sm:text-sm font-bold text-white">Client Experience</h3>
-                </div>
-                <p className="text-[11px] sm:text-xs text-zinc-300 leading-relaxed">
-                  Browse real video & voice portfolios, compare itemized pricing, and book vetted artisans with confidence.
-                </p>
-              </div>
-
-              <div className="space-y-1">
-                <div className="flex items-center gap-1.5">
-                  <Briefcase className="w-3.5 h-3.5 text-emerald-400" />
-                  <h3 className="text-xs sm:text-sm font-bold text-white">Artisan Partner Experience</h3>
-                </div>
-                <p className="text-[11px] sm:text-xs text-zinc-300 leading-relaxed">
-                  Get high-intent client requests, submit custom bids, manage schedules, build verified reputation badges, and withdraw directly to your bank.
-                </p>
-              </div>
-            </div>
+    <div className="kh-auth min-h-dvh lg:h-dvh lg:overflow-hidden flex flex-col lg:flex-row font-['Plus_Jakarta_Sans',system-ui,sans-serif]" style={{ background: C.cream, color: C.navy }}>
+      {/* ───────── Illustrated panel: a header strip on phones, a rounded column on desktop ───────── */}
+      <aside
+        className="relative shrink-0 overflow-hidden h-[212px] rounded-b-[28px] px-5 py-[18px] lg:h-auto lg:w-[43%] lg:max-w-[620px] lg:m-5 lg:mr-0 lg:rounded-[32px] lg:p-0"
+        style={{ background: panel.bg, color: panel.fg, transition: 'background-color 360ms ease' }}
+      >
+        <div className="relative z-10 flex flex-col gap-6 max-w-[190px] lg:max-w-[480px] lg:gap-12 lg:px-11 lg:pt-9">
+          <Link to="/" aria-label="KaziHub home" className={`${display} text-2xl lg:text-[28px] tracking-[-0.04em]`} style={{ color: panel.fg }}>KaziHub</Link>
+          <div className="flex flex-col gap-3.5">
+            <p className={`${display} text-2xl leading-[0.98] tracking-[-0.04em] lg:text-[48px] lg:leading-[0.92] lg:tracking-[-0.05em]`}>{panel.title}</p>
+            <p className="hidden lg:block text-base leading-normal font-semibold">{panel.text}</p>
           </div>
-        </section>
+        </div>
+        <img key={`${panel.art}-m`} src={`/landing/${panel.art}.svg`} alt="" className="kh-fade lg:hidden absolute h-auto" style={panel.mobileArt} />
+        <img key={`${panel.art}-d`} src={`/landing/${panel.art}.svg`} alt="" className="kh-fade hidden lg:block absolute h-auto" style={panel.desktopArt} />
+      </aside>
 
-        {/* Right Side Form Column. Always top-aligned rather than vertically centered -- centering
-            looked fine for the short sign-in form on a tall screen, but produced an odd symmetric
-            gap above and below on shorter viewports, and centering a form taller than the viewport
-            (signup) would have cut off its top the same way. Top-aligned reads naturally at every
-            content/viewport ratio and just scrolls when content is taller than the screen. */}
-        <section className="lg:w-7/12 xl:w-1/2 bg-white dark:bg-zinc-900 px-4 sm:px-10 lg:px-14 py-6 sm:py-10 overflow-y-auto min-h-0 flex-1 flex flex-col justify-start">
-          <div className="w-full max-w-md mx-auto space-y-5 my-0 py-2">
+      {/* ───────── Form column ───────── */}
+      <main className="relative flex-1 min-h-0 lg:overflow-y-auto flex flex-col">
+        <p className="hidden lg:block absolute top-[34px] right-12 text-[15px] font-semibold" style={{ color: C.body }}>
+          {switchLink.text}{' '}
+          <button type="button" onClick={() => goTo(switchLink.view)} className="kh-link pb-px font-extrabold cursor-pointer" style={{ color: C.navy }}>{switchLink.cta}</button>
+        </p>
 
-            {/* Feedback Notifications */}
-            {error && (
-              <div className="p-3.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 flex items-start gap-2.5 text-xs text-rose-800 dark:text-rose-200 animate-in fade-in">
-                <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <p className="font-semibold">{error}</p>
-                </div>
-                <button onClick={clearError} className="text-rose-500 hover:text-rose-700 cursor-pointer">
-                  ×
-                </button>
-              </div>
-            )}
+        <div key={currentView} className="kh-rise w-full max-w-[440px] mx-auto lg:my-auto px-5 lg:px-0 pt-6 pb-8 lg:py-24 flex flex-col gap-5 lg:gap-[22px]" style={{ animationDuration: '600ms' }}>
+          {error && (
+            <div role="alert" className="flex items-start gap-3 p-4 rounded-2xl text-sm font-semibold leading-snug" style={{ background: '#FDE3E0', color: C.navy }}>
+              <AlertCircle className="w-[18px] h-[18px] shrink-0 mt-px" style={{ color: C.error }} aria-hidden="true" />
+              <p className="flex-1">{error}</p>
+              <button type="button" onClick={clearError} aria-label="Dismiss" className="shrink-0 -m-1 p-1 text-lg leading-none cursor-pointer">×</button>
+            </div>
+          )}
+          {successBanner && (
+            <div role="status" className="flex items-center gap-3 p-4 rounded-2xl text-sm font-semibold leading-snug" style={{ background: '#D9F7E7', color: C.navy }}>
+              <CheckCircle2 className="w-[18px] h-[18px] shrink-0" style={{ color: C.success }} aria-hidden="true" />
+              <p>{successBanner}</p>
+            </div>
+          )}
 
-            {successBanner && (
-              <div className="p-3.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 flex items-center gap-2.5 text-xs text-emerald-800 dark:text-emerald-200 animate-in fade-in">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                <p className="font-semibold">{successBanner}</p>
-              </div>
-            )}
-
-            {/* =================================================== */}
-            {/* 1. SIGN IN VIEW                                    */}
-            {/* =================================================== */}
-            {currentView === 'signin' && (
-              <div className="space-y-6">
-                <div>
-                  <h1 className="text-2xl sm:text-3xl font-black text-navy-900 dark:text-zinc-100 tracking-tight">
-                    Welcome back
-                  </h1>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-                    Enter your email or username to access your dashboard.
-                  </p>
-                </div>
-
-                <form onSubmit={handleSignInSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                      Email Address or Username
-                    </label>
-                    <div className="relative">
-                      <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
-                      <input
-                        type="text"
-                        required
-                        placeholder="nneka.okonkwo@kazihub.ng"
-                        value={signInIdentifier}
-                        onBlur={() => markSignInTouched('identifier')}
-                        onChange={(e) => setSignInIdentifier(e.target.value)}
-                        className={`w-full pl-10 pr-4 py-3 rounded-lg border bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 ${
-                          signInTouched.identifier && !signInIdentifier.trim()
-                            ? 'border-rose-400 focus:ring-rose-200'
-                            : signInTouched.identifier && signInIdentifier.includes('@') && !emailIsValid(signInIdentifier)
-                            ? 'border-rose-400 focus:ring-rose-200'
-                            : 'border-zinc-300 dark:border-zinc-700 focus:ring-navy-900/60 dark:focus:ring-zinc-400'
-                        }`}
-                      />
-                    </div>
-                    {signInTouched.identifier && !signInIdentifier.trim() && (
-                      <p className="text-[11px] text-rose-500 mt-1">Email address or username is required</p>
-                    )}
-                    {signInTouched.identifier && signInIdentifier.includes('@') && !emailIsValid(signInIdentifier) && (
-                      <p className="text-[11px] text-rose-500 mt-1">Please enter a valid email format (e.g. name@domain.com)</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                        Password
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          clearError();
-                          setForgotEmail(signInIdentifier);
-                          setCurrentView('forgot');
-                        }}
-                        className="text-xs text-brand-orange-600 hover:text-brand-orange-700 dark:text-brand-orange-400 font-semibold cursor-pointer"
-                      >
-                        Forgot password?
-                      </button>
-                    </div>
-                    <div className="relative">
-                      <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
-                      <input
-                        type={showSignInPassword ? 'text' : 'password'}
-                        required
-                        placeholder="Enter password"
-                        value={signInPassword}
-                        onChange={(e) => setSignInPassword(e.target.value)}
-                        className="w-full pl-10 pr-10 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-navy-900/60 dark:focus:ring-zinc-400"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowSignInPassword(!showSignInPassword)}
-                        aria-label={showSignInPassword ? 'Hide password' : 'Show password'}
-                        aria-pressed={showSignInPassword}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
-                      >
-                        {showSignInPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isLoginLoading}
-                    className="w-full py-3.5 rounded-lg bg-navy-900 hover:bg-navy-800 active:bg-navy-950 text-white text-sm font-bold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                  >
-                    {isLoginLoading ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Signing in...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Sign In to Dashboard</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </>
-                    )}
-                  </button>
-
-                  {/* On logging in notice */}
-                  <p className="text-[11px] text-center text-zinc-500 dark:text-zinc-400 leading-relaxed pt-1">
-                    By logging in, you agree to the{' '}
-                    <button
-                      type="button"
-                      onClick={() => openTermsWithTab('terms')}
-                      className="text-brand-orange-600 dark:text-brand-orange-400 hover:underline font-semibold cursor-pointer"
-                    >
-                      Terms of Service
-                    </button>
-                    .
-                  </p>
-                </form>
-
-                <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 text-center">
-                  <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                    New to KaziHub?{' '}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        clearError();
-                        setCurrentView('signup');
-                      }}
-                      className="font-bold text-brand-orange-600 hover:text-brand-orange-700 dark:text-brand-orange-400 cursor-pointer"
-                    >
-                      Create an account
-                    </button>
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* =================================================== */}
-            {/* 2. SIGN UP VIEW (Strict 'client' or 'artisan')     */}
-            {/* =================================================== */}
-            {currentView === 'signup' && (
-              <div className="space-y-5">
-                <div>
-                  <h1 className="text-2xl sm:text-3xl font-black text-navy-900 dark:text-zinc-100 tracking-tight">
-                    Create your account
-                  </h1>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-                    Select your account role to set up your workspace.
-                  </p>
-                </div>
-
-                {/* Role Switcher */}
-                <div className="p-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 grid grid-cols-2 gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedRole('client')}
-                    className={`py-2 px-3 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                      selectedRole === 'client'
-                        ? 'bg-navy-900 text-white shadow-xs'
-                        : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
-                    }`}
-                  >
-                    <User className="w-3.5 h-3.5" />
-                    <span>Client</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setSelectedRole('artisan')}
-                    className={`py-2 px-3 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                      selectedRole === 'artisan'
-                        ? 'bg-navy-900 text-white shadow-xs'
-                        : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
-                    }`}
-                  >
-                    <Briefcase className="w-3.5 h-3.5" />
-                    <span>Artisan</span>
-                  </button>
-                </div>
-
-                <form onSubmit={handleSignUpSubmit} className="space-y-3">
-                  {/* Names Row */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                        First Name *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Babatunde"
-                        value={firstName}
-                        onBlur={() => markTouched('firstName')}
-                        onChange={(e) => setFirstName(sanitizeName(e.target.value))}
-                        className={`w-full px-3.5 py-2.5 rounded-lg border bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 ${
-                          touched.firstName && !firstName.trim()
-                            ? 'border-rose-400 focus:ring-rose-200'
-                            : 'border-zinc-300 dark:border-zinc-700 focus:ring-navy-900/60'
-                        }`}
-                      />
-                      {touched.firstName && !firstName.trim() && (
-                        <p className="text-[11px] text-rose-500 mt-1">First name is required</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                        Last Name *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Adebayo"
-                        value={lastName}
-                        onBlur={() => markTouched('lastName')}
-                        onChange={(e) => setLastName(sanitizeName(e.target.value))}
-                        className={`w-full px-3.5 py-2.5 rounded-lg border bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 ${
-                          touched.lastName && !lastName.trim()
-                            ? 'border-rose-400 focus:ring-rose-200'
-                            : 'border-zinc-300 dark:border-zinc-700 focus:ring-navy-900/60'
-                        }`}
-                      />
-                      {touched.lastName && !lastName.trim() && (
-                        <p className="text-[11px] text-rose-500 mt-1">Last name is required</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Email */}
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                      Email Address *
-                    </label>
-                    <div className="relative">
-                      <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
-                      <input
-                        type="email"
-                        required
-                        placeholder="babatunde@kazihub.ng"
-                        value={email}
-                        onBlur={() => markTouched('email')}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className={`w-full pl-10 pr-3.5 py-2.5 rounded-lg border bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 ${
-                          touched.email && (!email || !emailIsValid(email))
-                            ? 'border-rose-400 focus:ring-rose-200'
-                            : 'border-zinc-300 dark:border-zinc-700 focus:ring-navy-900/60'
-                        }`}
-                      />
-                    </div>
-                    {touched.email && !email && (
-                      <p className="text-[11px] text-rose-500 mt-1">Email is required</p>
-                    )}
-                    {touched.email && email && !emailIsValid(email) && (
-                      <p className="text-[11px] text-rose-500 mt-1">Please enter a valid email address (e.g. name@domain.com)</p>
-                    )}
-                  </div>
-
-                  {/* Password & Password Meter */}
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                      Password *
-                    </label>
-                    <div className="relative">
-                      <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
-                      <input
-                        type={showSignUpPassword ? 'text' : 'password'}
-                        required
-                        minLength={6}
-                        placeholder="Minimum 6 characters"
-                        value={password}
-                        onBlur={() => markTouched('password')}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className={`w-full pl-10 pr-10 py-2.5 rounded-lg border bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 ${
-                          touched.password && (!password || !passwordIsValid)
-                            ? 'border-rose-400 focus:ring-rose-200'
-                            : 'border-zinc-300 dark:border-zinc-700 focus:ring-navy-900/60'
-                        }`}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowSignUpPassword(!showSignUpPassword)}
-                        aria-label={showSignUpPassword ? 'Hide password' : 'Show password'}
-                        aria-pressed={showSignUpPassword}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 cursor-pointer"
-                      >
-                        {showSignUpPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-
-                    {/* Simplistic Minimal Password Meter */}
-                    {password && (
-                      <div className="mt-1.5 flex items-center justify-between gap-2">
-                        <div className="flex-1 grid grid-cols-4 gap-1">
-                          {[1, 2, 3, 4].map((step) => {
-                            const strength = getPasswordStrength(password);
-                            const isActive = strength.score >= step;
-                            return (
-                              <div
-                                key={step}
-                                className={`h-1 rounded-full transition-colors ${
-                                  isActive ? strength.color : 'bg-zinc-200 dark:bg-zinc-700'
-                                }`}
-                              />
-                            );
-                          })}
-                        </div>
-                        <span className={`text-[10px] font-bold ${getPasswordStrength(password).textColor}`}>
-                          {getPasswordStrength(password).label}
-                        </span>
-                      </div>
-                    )}
-
-                    {touched.password && !password && (
-                      <p className="text-[11px] text-rose-500 mt-1">Password is required</p>
-                    )}
-                    {touched.password && password && !passwordIsValid && (
-                      <p className="text-[11px] text-rose-500 mt-1">Password must be at least 6 characters</p>
-                    )}
-                  </div>
-
-                  {/* Confirm Password */}
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                      Confirm Password *
-                    </label>
-                    <div className="relative">
-                      <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
-                      <input
-                        type={showSignUpConfirmPassword ? 'text' : 'password'}
-                        required
-                        placeholder="Re-enter your password"
-                        value={confirmPassword}
-                        onBlur={() => markTouched('confirmPassword')}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        className={`w-full pl-10 pr-10 py-2.5 rounded-lg border bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 ${
-                          touched.confirmPassword && (!confirmPassword || !passwordsMatch)
-                            ? 'border-rose-400 focus:ring-rose-200'
-                            : 'border-zinc-300 dark:border-zinc-700 focus:ring-navy-900/60'
-                        }`}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowSignUpConfirmPassword(!showSignUpConfirmPassword)}
-                        aria-label={showSignUpConfirmPassword ? 'Hide password' : 'Show password'}
-                        aria-pressed={showSignUpConfirmPassword}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 cursor-pointer"
-                      >
-                        {showSignUpConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                    {touched.confirmPassword && !confirmPassword && (
-                      <p className="text-[11px] text-rose-500 mt-1">Please confirm your password</p>
-                    )}
-                    {touched.confirmPassword && confirmPassword && !passwordsMatch && (
-                      <p className="text-[11px] text-rose-500 mt-1">Passwords do not match</p>
-                    )}
-                  </div>
-
-                  {/* Phone with +234 Nigerian Formatter & State -- stacked on mobile since the
-                      phone field (country-code prefix + a 10-digit number) needs more room than
-                      a half-width column leaves it; shares a row again from sm up. */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                        Phone Number *
-                      </label>
-                      <div className={`flex rounded-lg border bg-white dark:bg-zinc-800 overflow-hidden focus-within:ring-2 ${
-                        touched.phone && (!phoneNumber || !phoneIsValid)
-                          ? 'border-rose-400 focus-within:ring-rose-200'
-                          : 'border-zinc-300 dark:border-zinc-700 focus-within:ring-navy-900/30'
-                      }`}>
-                        <span className="inline-flex items-center px-2.5 bg-zinc-100 dark:bg-zinc-700/60 text-xs font-bold text-zinc-600 dark:text-zinc-300 border-r border-zinc-300 dark:border-zinc-700 select-none">
-                          +234
-                        </span>
-                        <input
-                          type="tel"
-                          required
-                          placeholder="802 345 6789"
-                          inputMode="tel"
-                          autoComplete="tel-national"
-                          value={phoneNumber}
-                          onBlur={() => markTouched('phone')}
-                          onChange={(e) => setPhoneNumber(formatNigerianPhone(e.target.value))}
-                          className="w-full px-2.5 py-2.5 bg-transparent text-sm text-zinc-900 dark:text-zinc-100 focus:outline-hidden"
-                        />
-                      </div>
-                      {touched.phone && (!phoneNumber || !phoneIsValid) && (
-                        <p className="text-[11px] text-rose-500 mt-1">Enter a valid Nigerian mobile number, e.g. 802 345 6789</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label htmlFor="signup-state" className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                        State of Residence *
-                      </label>
-                      <CustomDropdown
-                        value={state}
-                        onChange={(val) => setState(val)}
-                        options={NIGERIAN_STATES.map((st) => ({ value: st, label: st }))}
-                        className="w-full"
-                        buttonClassName="py-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100"
-                      />
-                    </div>
-                  </div>
-
-                  {/* NIN */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                        National Identity Number (NIN)
-                      </label>
-                      <span className="text-[10px] text-zinc-500">
-                        {selectedRole === 'artisan' ? 'Required for Verified Badge' : 'Optional'}
-                      </span>
-                    </div>
-                    <input
-                      type="text"
-                      maxLength={11}
-                      placeholder="11-digit NIN (e.g. 78291048291)"
-                      value={nin}
-                      onBlur={() => { if (nin) markTouched('nin'); }}
-                      onChange={(e) => setNin(e.target.value.replace(/[^0-9]/g, ''))}
-                      className={`w-full px-3.5 py-2.5 rounded-lg border bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 ${
-                        touched.nin && !ninIsValid
-                          ? 'border-rose-400 focus:ring-rose-200'
-                          : 'border-zinc-300 dark:border-zinc-700 focus:ring-navy-900/60'
-                      }`}
-                    />
-                    {touched.nin && !ninIsValid && (
-                      <p className="text-[11px] text-rose-500 mt-1">NIN must be exactly 11 digits</p>
-                    )}
-                  </div>
-
-                  {/* Terms */}
-                  <Checkbox
-                    id="signup-terms"
+          {/* ═════════ Sign in ═════════ */}
+          {currentView === 'signin' && (
+            <>
+              <Heading title="Welcome back" sub="Sign in with the email or username on your account." />
+              <form onSubmit={handleSignInSubmit} className="flex flex-col gap-4" noValidate>
+                <Field
+                  label="Email or username"
+                  htmlFor="signin-id"
+                  error={
+                    signInTouched.identifier && !signInIdentifier.trim() ? 'Enter your email or username'
+                      : signInTouched.identifier && signInIdentifier.includes('@') && !emailIsValid(signInIdentifier) ? 'Enter a valid email, e.g. name@domain.com'
+                      : undefined
+                  }
+                >
+                  <input
+                    id="signin-id"
+                    type="text"
+                    autoComplete="username"
+                    autoCapitalize="none"
+                    spellCheck={false}
                     required
-                    checked={termsAccepted}
-                    onChange={setTermsAccepted}
-                    className="pt-1 text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed"
-                  >
-                      I agree to the KaziHub{' '}
-                      <button
-                        type="button"
-                        onClick={() => openTermsWithTab('terms')}
-                        className="text-brand-orange-600 dark:text-brand-orange-400 hover:underline font-semibold cursor-pointer"
-                      >
-                        Terms of Service
+                    placeholder="you@example.com"
+                    value={signInIdentifier}
+                    onBlur={() => markSignInTouched('identifier')}
+                    onChange={(e) => setSignInIdentifier(e.target.value)}
+                  />
+                </Field>
+                <Field
+                  label="Password"
+                  htmlFor="signin-password"
+                  aside={
+                    <button type="button" onClick={() => { setForgotEmail(signInIdentifier.includes('@') ? signInIdentifier : ''); goTo('forgot'); }} className="kh-link pb-px text-sm font-extrabold cursor-pointer">
+                      Forgot password?
+                    </button>
+                  }
+                >
+                  <input
+                    id="signin-password"
+                    type={showSignInPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    required
+                    placeholder="Your password"
+                    value={signInPassword}
+                    onChange={(e) => setSignInPassword(e.target.value)}
+                  />
+                  <EyeToggle shown={showSignInPassword} onToggle={() => setShowSignInPassword(!showSignInPassword)} />
+                </Field>
+                {showTotp ? (
+                  <Field
+                    label="Authenticator code"
+                    htmlFor="signin-totp"
+                    aside={
+                      <button type="button" onClick={() => { setShowTotp(false); setTotpCode(''); }} className="kh-link pb-px text-sm font-extrabold cursor-pointer">
+                        Don’t use a code
                       </button>
-                      .
-                  </Checkbox>
-
-                  <button
-                    type="submit"
-                    disabled={isRegisterLoading || !termsAccepted}
-                    className="w-full py-3 rounded-lg bg-navy-900 hover:bg-navy-800 text-white text-sm font-bold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    }
                   >
-                    {isRegisterLoading ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Sending 5-digit OTP code...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Create Account & Continue</span>
-                        <ChevronRight className="w-4 h-4" />
-                      </>
-                    )}
-                  </button>
-                </form>
-
-                <div className="pt-3 border-t border-zinc-200 dark:border-zinc-800 text-center">
-                  <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                    Already registered on KaziHub?{' '}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        clearError();
-                        setCurrentView('signin');
-                      }}
-                      className="font-bold text-brand-orange-600 hover:text-brand-orange-700 dark:text-brand-orange-400 cursor-pointer"
-                    >
-                      Sign in here
-                    </button>
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* =================================================== */}
-            {/* 3. VERIFY EMAIL OTP VIEW                            */}
-            {/* =================================================== */}
-            {currentView === 'verify' && (
-              <div className="space-y-6 text-center">
-                <div className="w-12 h-12 rounded-lg bg-brand-orange-500/10 text-brand-orange-600 mx-auto flex items-center justify-center">
-                  <Mail className="w-6 h-6" strokeWidth={1.75} />
-                </div>
-
-                <div className="space-y-1">
-                  <h1 className="text-2xl sm:text-3xl font-black text-navy-900 dark:text-zinc-100">
-                    Verify Your Email
-                  </h1>
-                  <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">
-                    Enter the 5-digit verification code sent to{' '}
-                    <span className="font-bold text-navy-900 dark:text-zinc-200">
-                      {pendingEmail || email || signInIdentifier || 'your email'}
-                    </span>.
-                  </p>
-                </div>
-
-                <form onSubmit={handleVerifyOtpSubmit} className="space-y-5">
-                  <div className="flex items-center justify-center gap-2.5 sm:gap-3">
-                    {otpDigits.map((digit, index) => (
-                      <input
-                        key={index}
-                        ref={(el) => { otpInputsRef.current[index] = el; }}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        value={digit}
-                        onChange={(e) => handleOtpChange(index, e.target.value)}
-                        onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                        className="w-12 h-14 sm:w-14 sm:h-16 text-center text-xl sm:text-2xl font-black rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-navy-900 dark:text-zinc-100 focus:border-navy-900 dark:focus:border-zinc-400 focus:outline-hidden focus:ring-2 focus:ring-navy-900/20"
-                      />
-                    ))}
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isVerifyLoading || otpDigits.some(d => !d)}
-                    className="w-full py-3.5 rounded-lg bg-navy-900 hover:bg-navy-800 text-white text-sm font-bold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                  >
-                    {isVerifyLoading ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Verifying Token...</span>
-                      </>
-                    ) : (
-                      <span>Complete Verification</span>
-                    )}
-                  </button>
-                </form>
-
-                <div className="pt-2 space-y-2">
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    Didn't receive the code?{' '}
-                    <button
-                      type="button"
-                      disabled={resendTimer > 0 || isResendOtpLoading}
-                      onClick={handleResendOtpCode}
-                      className="font-bold text-brand-orange-600 hover:text-brand-orange-700 dark:text-brand-orange-400 disabled:opacity-50 cursor-pointer"
-                    >
-                      {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend 5-digit code'}
-                    </button>
-                  </p>
-
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => setCurrentView('signin')}
-                      className="text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300 underline cursor-pointer"
-                    >
-                      Return to Sign In
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* =================================================== */}
-            {/* 4. FORGOT PASSWORD VIEW                             */}
-            {/* =================================================== */}
-            {currentView === 'forgot' && (
-              <div className="space-y-6">
-                <div>
-                  <h1 className="text-2xl sm:text-3xl font-black text-navy-900 dark:text-zinc-100 tracking-tight">
-                    Recover Password
-                  </h1>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-                    Enter your account email to receive a password reset token.
-                  </p>
-                </div>
-
-                <form onSubmit={handleForgotPasswordSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                      Registered Email Address
-                    </label>
-                    <div className="relative">
-                      <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
-                      <input
-                        type="email"
-                        required
-                        placeholder="nneka.okonkwo@kazihub.ng"
-                        value={forgotEmail}
-                        onChange={(e) => setForgotEmail(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100"
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isForgotPasswordLoading}
-                    className="w-full py-3.5 rounded-lg bg-navy-900 hover:bg-navy-800 text-white text-sm font-bold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                  >
-                    {isForgotPasswordLoading ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Sending reset code...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Send Password Reset Code</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </>
-                    )}
-                  </button>
-                </form>
-
-                <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 text-center">
-                  <button
-                    type="button"
-                    onClick={() => setCurrentView('signin')}
-                    className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-navy-900 dark:hover:text-zinc-200 cursor-pointer"
-                  >
-                    Return to Sign In
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* =================================================== */}
-            {/* 5. RESET PASSWORD VIEW                              */}
-            {/* =================================================== */}
-            {currentView === 'reset' && (
-              <div className="space-y-6">
-                <div>
-                  <h1 className="text-2xl sm:text-3xl font-black text-navy-900 dark:text-zinc-100 tracking-tight">
-                    Set New Password
-                  </h1>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-                    Enter the reset OTP code sent to <span className="font-semibold">{pendingEmail || forgotEmail}</span>.
-                  </p>
-                </div>
-
-                <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                      5-Digit Reset Code (OTP) *
-                    </label>
                     <input
+                      ref={totpInputRef}
+                      id="signin-totp"
                       type="text"
-                      required
-                      placeholder="Enter 5-digit code"
                       inputMode="numeric"
                       autoComplete="one-time-code"
-                      maxLength={5}
-                      pattern="\d{5}"
-                      value={resetOtp}
-                      onChange={(e) => setResetOtp(digitsOnly(e.target.value, 5))}
-                      className="w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100"
+                      maxLength={6}
+                      placeholder="6-digit code from your app"
+                      value={totpCode}
+                      onChange={(e) => setTotpCode(digitsOnly(e.target.value, 6))}
+                      className={totpCode ? 'tracking-[0.3em] tabular-nums' : undefined}
                     />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                      New Password *
-                    </label>
-                    <div className="relative">
-                      <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
-                      <input
-                        type={showResetPassword ? 'text' : 'password'}
-                        required
-                        minLength={6}
-                        placeholder="Min 6 characters"
-                        value={resetNewPassword}
-                        onChange={(e) => setResetNewPassword(e.target.value)}
-                        className="w-full pl-10 pr-10 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowResetPassword(!showResetPassword)}
-                        aria-label={showResetPassword ? 'Hide password' : 'Show password'}
-                        aria-pressed={showResetPassword}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400"
-                      >
-                        {showResetPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                      Confirm New Password *
-                    </label>
-                    <input
-                      type="password"
-                      required
-                      placeholder="Re-enter password"
-                      value={resetConfirmPassword}
-                      onChange={(e) => setResetConfirmPassword(e.target.value)}
-                      className="w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100"
-                    />
-                  </div>
-
+                  </Field>
+                ) : (
                   <button
-                    type="submit"
-                    disabled={isResetPasswordLoading || !resetOtp || !resetNewPassword || resetNewPassword !== resetConfirmPassword}
-                    className="w-full py-3.5 rounded-lg bg-navy-900 hover:bg-navy-800 text-white text-sm font-bold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    type="button"
+                    onClick={() => { setShowTotp(true); requestAnimationFrame(() => totpInputRef.current?.focus()); }}
+                    className="kh-link self-start pb-px text-sm font-extrabold cursor-pointer"
                   >
-                    {isResetPasswordLoading ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Updating Password...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Save & Proceed to Sign In</span>
-                        <CheckCircle2 className="w-4 h-4" />
-                      </>
-                    )}
+                    Use two-step sign-in? Add your code
                   </button>
-                </form>
-              </div>
-            )}
+                )}
+                <button type="submit" disabled={isLoginLoading || !signInIdentifier.trim() || !signInPassword || (showTotp && totpCode.length > 0 && totpCode.length !== 6)} className={primaryBtn}>
+                  {submitLabel(isLoginLoading, 'Sign in', 'Signing in…')}
+                </button>
+                <p className="text-[13px] leading-normal font-medium" style={{ color: C.muted }}>
+                  By signing in you agree to KaziHub’s{' '}
+                  <button type="button" onClick={() => openTermsWithTab('terms')} className="font-bold underline underline-offset-2 cursor-pointer" style={{ color: C.navy }}>Terms</button>.
+                </p>
+              </form>
+            </>
+          )}
 
-          </div>
-        </section>
+          {/* ═════════ Sign up ═════════ */}
+          {currentView === 'signup' && (
+            <>
+              <Heading title="Create your account" sub="Takes a minute. We’ll email you a 5-digit code to confirm it’s you." />
+              <form onSubmit={handleSignUpSubmit} className="flex flex-col gap-4" noValidate>
+                <fieldset className="flex flex-col gap-2">
+                  <legend className="mb-2 text-sm font-extrabold">I’m joining to…</legend>
+                  <div className="flex gap-2.5">
+                    <RoleCard selected={selectedRole === 'client'} onSelect={() => setSelectedRole('client')} icon="icon-quote" title="Hire an artisan" sub="Book and pay safely" />
+                    <RoleCard selected={selectedRole === 'artisan'} onSelect={() => setSelectedRole('artisan')} icon="spot-electrician" title="Find work" sub="Get jobs near you" />
+                  </div>
+                </fieldset>
 
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="First name" htmlFor="signup-first" error={touched.firstName && !firstName.trim() ? 'Required' : undefined}>
+                    <input id="signup-first" type="text" autoComplete="given-name" required placeholder="Babatunde" value={firstName} onBlur={() => markTouched('firstName')} onChange={(e) => setFirstName(sanitizeName(e.target.value))} />
+                  </Field>
+                  <Field label="Last name" htmlFor="signup-last" error={touched.lastName && !lastName.trim() ? 'Required' : undefined}>
+                    <input id="signup-last" type="text" autoComplete="family-name" required placeholder="Adebayo" value={lastName} onBlur={() => markTouched('lastName')} onChange={(e) => setLastName(sanitizeName(e.target.value))} />
+                  </Field>
+                </div>
+
+                <Field
+                  label="Email"
+                  htmlFor="signup-email"
+                  error={touched.email && !email ? 'Email is required' : touched.email && !emailIsValid(email) ? 'Enter a valid email, e.g. name@domain.com' : undefined}
+                >
+                  <input id="signup-email" type="email" autoComplete="email" autoCapitalize="none" spellCheck={false} required placeholder="you@example.com" value={email} onBlur={() => markTouched('email')} onChange={(e) => setEmail(e.target.value)} />
+                </Field>
+
+                <div className="flex flex-col gap-2">
+                  <Field
+                    label="Password"
+                    htmlFor="signup-password"
+                    error={touched.password && !password ? 'Password is required' : touched.password && !passwordIsValid ? 'Use at least 6 characters' : undefined}
+                  >
+                    <input id="signup-password" type={showSignUpPassword ? 'text' : 'password'} autoComplete="new-password" required minLength={6} placeholder="At least 6 characters" value={password} onBlur={() => markTouched('password')} onChange={(e) => setPassword(e.target.value)} />
+                    <EyeToggle shown={showSignUpPassword} onToggle={() => setShowSignUpPassword(!showSignUpPassword)} />
+                  </Field>
+                  {password && (
+                    <div className="flex items-center gap-3" aria-live="polite">
+                      <div className="flex-1 grid grid-cols-4 gap-1.5" aria-hidden="true">
+                        {[1, 2, 3, 4].map(step => (
+                          <span key={step} className="h-1.5 rounded-full transition-colors duration-200" style={{ background: strength.score >= step ? STRENGTH[strength.score] : C.line }} />
+                        ))}
+                      </div>
+                      <span className="text-xs font-extrabold" style={{ color: STRENGTH[strength.score] }}>{strength.label}</span>
+                    </div>
+                  )}
+                </div>
+
+                <Field
+                  label="Confirm password"
+                  htmlFor="signup-confirm"
+                  error={touched.confirmPassword && !confirmPassword ? 'Please confirm your password' : touched.confirmPassword && !passwordsMatch ? 'Passwords don’t match' : undefined}
+                >
+                  <input id="signup-confirm" type={showSignUpConfirmPassword ? 'text' : 'password'} autoComplete="new-password" required placeholder="Type it again" value={confirmPassword} onBlur={() => markTouched('confirmPassword')} onChange={(e) => setConfirmPassword(e.target.value)} />
+                  <EyeToggle shown={showSignUpConfirmPassword} onToggle={() => setShowSignUpConfirmPassword(!showSignUpConfirmPassword)} />
+                </Field>
+
+                <div className="grid grid-cols-1 sm:grid-cols-[1.4fr_1fr] gap-3">
+                  <Field
+                    label="Phone number"
+                    htmlFor="signup-phone"
+                    error={touched.phone && (!phoneNumber || !phoneIsValid) ? 'Enter a valid Nigerian number, e.g. 802 345 6789' : undefined}
+                  >
+                    <span className="flex items-center gap-2 pr-3 h-7 shrink-0 border-r-2" style={{ borderColor: C.line }}>
+                      <svg width="22" height="16" viewBox="0 0 3 2" aria-hidden="true" className="rounded-[3px] shrink-0"><rect width="3" height="2" fill="#FFFFFF" /><rect width="1" height="2" fill="#008751" /><rect x="2" width="1" height="2" fill="#008751" /></svg>
+                      <span className="font-extrabold">+234</span>
+                    </span>
+                    <input id="signup-phone" type="tel" inputMode="tel" autoComplete="tel-national" required placeholder="802 345 6789" value={phoneNumber} onBlur={() => markTouched('phone')} onChange={(e) => setPhoneNumber(formatNigerianPhone(e.target.value))} />
+                  </Field>
+                  <div className="flex flex-col gap-2 min-w-0">
+                    <span id="signup-state-label" className="text-sm font-extrabold">State</span>
+                    <CustomDropdown
+                      value={state}
+                      onChange={(val) => setState(val)}
+                      options={NIGERIAN_STATES.map((st) => ({ value: st, label: st }))}
+                      className="w-full"
+                      buttonClassName="kh-auth-select !h-[54px] lg:!h-14 !px-4 !rounded-[14px] !border-2 !border-[#0B1B3A] !bg-white !text-[16px] !font-semibold !text-[#0B1B3A] !shadow-none"
+                    />
+                  </div>
+                </div>
+
+                <Field
+                  label="NIN"
+                  htmlFor="signup-nin"
+                  aside={<span className="text-[13px] font-bold" style={{ color: C.muted }}>{selectedRole === 'artisan' ? 'Needed for the Verified badge' : 'Optional'}</span>}
+                  error={touched.nin && !ninIsValid ? 'Your NIN is exactly 11 digits' : undefined}
+                >
+                  <input id="signup-nin" type="text" inputMode="numeric" maxLength={11} placeholder="11-digit National Identity Number" value={nin} onBlur={() => { if (nin) markTouched('nin'); }} onChange={(e) => setNin(e.target.value.replace(/[^0-9]/g, ''))} />
+                </Field>
+
+                <Checkbox id="signup-terms" required checked={termsAccepted} onChange={setTermsAccepted} className="pt-1 text-sm font-medium leading-normal">
+                  I agree to KaziHub’s{' '}
+                  <button type="button" onClick={() => openTermsWithTab('terms')} className="font-bold underline underline-offset-2 cursor-pointer">Terms</button>
+                  {' '}and{' '}
+                  <button type="button" onClick={() => openTermsWithTab('privacy')} className="font-bold underline underline-offset-2 cursor-pointer">Privacy Policy</button>.
+                </Checkbox>
+
+                <button type="submit" disabled={isRegisterLoading || !termsAccepted} className={primaryBtn}>
+                  {submitLabel(isRegisterLoading, 'Create account', 'Creating your account…')}
+                </button>
+              </form>
+            </>
+          )}
+
+          {/* ═════════ Verify email ═════════ */}
+          {currentView === 'verify' && (
+            <>
+              <BackLink onClick={() => goTo('signup')}>Back</BackLink>
+              <Heading
+                title="Check your email"
+                sub={<>We sent a 5-digit code to <strong style={{ color: C.navy }}>{pendingEmail || email || signInIdentifier || 'your email'}</strong>.{' '}<button type="button" onClick={() => goTo('signup')} className="font-extrabold underline underline-offset-2 cursor-pointer" style={{ color: C.navy }}>Change</button></>}
+              />
+              <form onSubmit={handleVerifyOtpSubmit} className="flex flex-col gap-5">
+                <div className="flex gap-2 sm:gap-2.5">
+                  {otpDigits.map((digit, index) => (
+                    <input
+                      key={index}
+                      ref={(el) => { otpInputsRef.current[index] = el; }}
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete={index === 0 ? 'one-time-code' : 'off'}
+                      aria-label={`Digit ${index + 1}`}
+                      maxLength={5}
+                      value={digit}
+                      onChange={(e) => handleOtpChange(index, e.target.value)}
+                      onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                      className={`kh-otp w-[52px] h-[62px] sm:w-[58px] sm:h-[68px] text-center ${display} text-[28px] sm:text-[30px]`}
+                    />
+                  ))}
+                </div>
+                <p className="text-[15px] font-semibold" style={{ color: C.body }}>
+                  Didn’t get it?{' '}
+                  {resendTimer > 0 ? (
+                    <>Resend in <strong className="tabular-nums" style={{ color: C.navy }}>{resendClock}</strong></>
+                  ) : (
+                    <button type="button" onClick={handleResendOtpCode} disabled={isResendOtpLoading} className="kh-link pb-px font-extrabold cursor-pointer disabled:opacity-50" style={{ color: C.navy }}>
+                      {isResendOtpLoading ? 'Sending…' : 'Send a new code'}
+                    </button>
+                  )}
+                </p>
+                <button type="submit" disabled={isVerifyLoading || otpDigits.some(d => !d)} className={primaryBtn}>
+                  {submitLabel(isVerifyLoading, 'Verify', 'Verifying…')}
+                </button>
+              </form>
+              {selectedRole === 'artisan' && (
+                <div className="flex gap-3 items-start p-4 rounded-2xl text-sm leading-[1.45] font-semibold" style={{ background: C.peach }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0 mt-0.5"><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
+                  <span>Signing up as an artisan? Once you’re in, you’ll verify your government ID and a live selfie to get the Verified badge.</span>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ═════════ Forgot password ═════════ */}
+          {currentView === 'forgot' && (
+            <>
+              <BackLink onClick={() => goTo('signin')}>Back to sign in</BackLink>
+              <Heading title="Reset your password" sub="Enter the email on your account and we’ll send you a 5-digit code to set a new password." />
+              <form onSubmit={handleForgotPasswordSubmit} className="flex flex-col gap-4">
+                <Field label="Email" htmlFor="forgot-email">
+                  <input id="forgot-email" type="email" autoComplete="email" autoCapitalize="none" spellCheck={false} required placeholder="you@example.com" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} />
+                </Field>
+                <button type="submit" disabled={isForgotPasswordLoading || !emailIsValid(forgotEmail)} className={primaryBtn}>
+                  {submitLabel(isForgotPasswordLoading, 'Send reset code', 'Sending code…')}
+                </button>
+              </form>
+            </>
+          )}
+
+          {/* ═════════ Reset password ═════════ */}
+          {currentView === 'reset' && (
+            <>
+              <BackLink onClick={() => goTo('forgot')}>Back</BackLink>
+              <Heading
+                title="Set a new password"
+                sub={(pendingEmail || forgotEmail)
+                  ? <>Enter the 5-digit code we sent to <strong style={{ color: C.navy }}>{pendingEmail || forgotEmail}</strong>, then choose a new password.</>
+                  : 'Enter the 5-digit code from your email, then choose a new password.'}
+              />
+              <form onSubmit={handleResetPasswordSubmit} className="flex flex-col gap-4">
+                <Field label="Reset code" htmlFor="reset-code">
+                  <input
+                    id="reset-code"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    required
+                    maxLength={5}
+                    pattern="\d{5}"
+                    placeholder="5-digit code"
+                    value={resetOtp}
+                    onChange={(e) => setResetOtp(digitsOnly(e.target.value, 5))}
+                    className={resetOtp ? 'tracking-[0.3em] tabular-nums' : undefined}
+                  />
+                </Field>
+                <Field label="New password" htmlFor="reset-password">
+                  <input id="reset-password" type={showResetPassword ? 'text' : 'password'} autoComplete="new-password" required minLength={6} placeholder="At least 6 characters" value={resetNewPassword} onChange={(e) => setResetNewPassword(e.target.value)} />
+                  <EyeToggle shown={showResetPassword} onToggle={() => setShowResetPassword(!showResetPassword)} />
+                </Field>
+                <Field label="Confirm new password" htmlFor="reset-confirm" error={resetMismatch ? 'Passwords don’t match' : undefined}>
+                  <input id="reset-confirm" type={showResetPassword ? 'text' : 'password'} autoComplete="new-password" required placeholder="Type it again" value={resetConfirmPassword} onChange={(e) => setResetConfirmPassword(e.target.value)} />
+                </Field>
+                <button type="submit" disabled={isResetPasswordLoading || resetOtp.length !== 5 || resetNewPassword.length < 6 || resetNewPassword !== resetConfirmPassword} className={primaryBtn}>
+                  {submitLabel(isResetPasswordLoading, 'Save new password', 'Saving…')}
+                </button>
+              </form>
+            </>
+          )}
+
+          {currentView !== 'forgot' && <p className="lg:hidden pt-1 text-center text-[15px] font-semibold" style={{ color: C.body }}>
+            {switchLink.text}{' '}
+            <button type="button" onClick={() => goTo(switchLink.view)} className="kh-link pb-px font-extrabold cursor-pointer" style={{ color: C.navy }}>{switchLink.cta}</button>
+          </p>}
+        </div>
       </main>
 
-      {/* Full-Width Sticky Footer spanning edge-to-edge across the page */}
-      <footer className="w-full h-11 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-6 lg:px-12 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 z-20 shrink-0 select-none">
-        <div className="flex items-center gap-2">
-          <span>© {new Date().getFullYear()} KaziHub Nigeria</span>
-        </div>
-        <div className="flex items-center gap-3 sm:gap-4 text-[11px]">
-          <button
-            type="button"
-            onClick={() => openTermsWithTab('terms')}
-            className="hover:text-brand-orange-600 dark:hover:text-brand-orange-400 transition-colors font-medium cursor-pointer"
-          >
-            Terms of Service
-          </button>
-        </div>
-      </footer>
-
-      {/* Comprehensive Terms, Escrow & Privacy Modal */}
-      <TermsAndPrivacyModal
-        isOpen={isTermsOpen}
-        onClose={() => setIsTermsOpen(false)}
-        initialTab={termsModalTab}
-      />
+      <TermsAndPrivacyModal isOpen={isTermsOpen} onClose={() => setIsTermsOpen(false)} initialTab={termsModalTab} />
     </div>
   );
 };
+
+/* ───────── Page pieces ───────── */
+
+// The public pages' own palette (see LandingPage), independent of the app theme.
+const C = {
+  navy: '#0B1B3A',
+  cream: '#FFF6EC',
+  peach: '#FFE3CC',
+  body: '#3A4458',
+  muted: '#5A6478',
+  line: '#E6DED3',
+  error: '#D93A2B',
+  success: '#1F9D5B',
+};
+const display = "font-['Bricolage_Grotesque',sans-serif] font-extrabold";
+const primaryBtn = 'kh-btn w-full h-14 lg:h-[58px] rounded-2xl flex items-center justify-center gap-2 text-[17px] font-extrabold cursor-pointer disabled:cursor-not-allowed disabled:opacity-50';
+const STRENGTH: Record<number, string> = { 0: C.error, 1: C.error, 2: '#C98500', 3: '#3B35C9', 4: C.success };
+
+type PanelArt = React.CSSProperties;
+const STEP_ART_D: PanelArt = { left: '6.5%', bottom: -14, width: '87%' };
+const STEP_ART_M: PanelArt = { right: -8, bottom: -8, width: 200 };
+const PANELS: Record<'signin' | 'signupClient' | 'signupArtisan' | 'verify' | 'forgot' | 'reset', {
+  bg: string; fg: string; title: string; text: string; art: string; desktopArt: PanelArt; mobileArt: PanelArt;
+}> = {
+  signin: { bg: '#9BF0C4', fg: C.navy, title: 'Welcome back. Wetin need fixing?', text: 'Your quotes, bookings and payments are right where you left them.', art: 'step-1', desktopArt: STEP_ART_D, mobileArt: STEP_ART_M },
+  signupClient: { bg: '#F7B8D2', fg: C.navy, title: 'Get person wey sabi, and pay when the job is done.', text: 'Checked artisans near you. Your money waits in escrow until you confirm.', art: 'mosaic-quotes', desktopArt: { left: '8%', bottom: -30, width: '84%' }, mobileArt: { right: -20, bottom: -22, width: 230 } },
+  signupArtisan: { bg: '#3B35C9', fg: C.cream, title: 'You do the work. The money don already land.', text: 'Requests from people near you, and payment secured before you start.', art: 'artisan', desktopArt: { left: '18%', bottom: -20, width: '65%' }, mobileArt: { right: 0, bottom: -14, width: 175 } },
+  verify: { bg: '#FFB020', fg: C.navy, title: 'One quick check, then you’re in.', text: 'Your email keeps your bookings, quotes and escrow payments tied to you.', art: 'step-3', desktopArt: STEP_ART_D, mobileArt: STEP_ART_M },
+  forgot: { bg: '#3B35C9', fg: C.cream, title: 'It happens. Let’s get you back in.', text: 'Your escrow payments stay safe while you reset.', art: 'step-4', desktopArt: STEP_ART_D, mobileArt: STEP_ART_M },
+  reset: { bg: '#3B35C9', fg: C.cream, title: 'It happens. Let’s get you back in.', text: 'Your escrow payments stay safe while you reset.', art: 'step-4', desktopArt: STEP_ART_D, mobileArt: STEP_ART_M },
+};
+
+const Arrow = () => <span className="kh-arrow" aria-hidden="true">→</span>;
+
+const Heading: React.FC<{ title: string; sub: React.ReactNode }> = ({ title, sub }) => (
+  <div className="flex flex-col gap-2.5">
+    <h1 className={`${display} text-[36px] lg:text-[46px] leading-[0.92] tracking-[-0.05em]`}>{title}</h1>
+    <p className="text-[15px] lg:text-base leading-normal font-medium" style={{ color: C.body }}>{sub}</p>
+  </div>
+);
+
+const BackLink: React.FC<{ onClick: () => void; children: React.ReactNode }> = ({ onClick, children }) => (
+  <button type="button" onClick={onClick} className="kh-link self-start inline-flex items-center gap-2 pb-px text-[15px] font-extrabold cursor-pointer">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M19 12H5" /><path d="m11 18-6-6 6-6" /></svg>
+    {children}
+  </button>
+);
+
+/** A labelled input box. Children go inside the bordered box (the input, plus any prefix or eye toggle). */
+const Field: React.FC<{ label: string; htmlFor: string; aside?: React.ReactNode; error?: string; children: React.ReactNode }> = ({ label, htmlFor, aside, error, children }) => (
+  <div className="flex flex-col gap-2 min-w-0">
+    <div className="flex items-baseline justify-between gap-3">
+      <label htmlFor={htmlFor} className="text-sm font-extrabold">{label}</label>
+      {aside}
+    </div>
+    <div className="kh-input h-[54px] lg:h-14 box-border flex items-center gap-3 px-4 rounded-[14px] border-2 bg-white text-base font-semibold" data-invalid={error ? 'true' : undefined}>
+      {children}
+    </div>
+    {error && <p className="text-[13px] font-semibold" style={{ color: C.error }}>{error}</p>}
+  </div>
+);
+
+const EyeToggle: React.FC<{ shown: boolean; onToggle: () => void }> = ({ shown, onToggle }) => (
+  <button type="button" onClick={onToggle} aria-label={shown ? 'Hide password' : 'Show password'} aria-pressed={shown} className="shrink-0 -mr-1 p-1 flex cursor-pointer">
+    {shown ? <EyeOff className="w-5 h-5" aria-hidden="true" /> : <Eye className="w-5 h-5" aria-hidden="true" />}
+  </button>
+);
+
+const RoleCard: React.FC<{ selected: boolean; onSelect: () => void; icon: string; title: string; sub: string }> = ({ selected, onSelect, icon, title, sub }) => (
+  <button
+    type="button"
+    onClick={onSelect}
+    aria-pressed={selected}
+    className="kh-role relative flex-1 min-w-0 box-border p-4 rounded-[18px] border-2 flex flex-col gap-2.5 text-left cursor-pointer"
+    data-selected={selected ? 'true' : undefined}
+  >
+    <img src={`/landing/${icon}.svg`} alt="" className="w-10 h-10 lg:w-11 lg:h-11" />
+    <span className={`${display} text-[19px] lg:text-[21px] leading-none tracking-[-0.03em]`}>{title}</span>
+    <span className="text-[13px] leading-snug font-semibold opacity-85">{sub}</span>
+    {selected && (
+      <span aria-hidden="true" className="absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center" style={{ background: '#9BF0C4', color: C.navy }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+      </span>
+    )}
+  </button>
+);

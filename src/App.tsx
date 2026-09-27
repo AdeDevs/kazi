@@ -10,7 +10,7 @@ import { BuyGigSheet } from './components/BuyGigSheet';
 import { AuthPage } from './components/AuthPage';
 import { LandingPage } from './components/LandingPage';
 import { hasPendingSearch } from './lib/pendingSearch';
-import { RequireAuth } from './components/RequireAuth';
+import { RequireAuth, markSigningOut } from './components/RequireAuth';
 import { RequireRole } from './components/RequireRole';
 import { NotFound } from './components/NotFound';
 import { useAuth } from './context/AuthContext';
@@ -34,10 +34,14 @@ import { ProfessionalDashboard } from './components/ProfessionalDashboard';
 import { ProfileView } from './components/ProfileView';
 import { SettingsView } from './components/SettingsView';
 import { ProfessionalNotifications } from './components/ProfessionalNotifications';
+
 import {
   listProfiles, getProfileDetail, getMyProfile, saveMyProfile, listMyServices, listMyPortfolio,
   isBrowsableProfile, profileToProfessional, profileDetailToProfessional, mapService, mapPortfolioItem,
 } from './lib/profilesApi';
+
+// Pages with their own light palette; the saved dark theme applies only inside the app.
+const PUBLIC_PATHS = new Set(['/', '/signin', '/signup', '/verify-email', '/forgot-password', '/reset-password']);
 
 // Tiny route-param readers, kept at module scope (not defined inside App()) so they're stable
 // component identities across renders -- defining them inline inside App() would make React treat
@@ -752,6 +756,7 @@ export default function App() {
 
   const handleLogout = () => {
     setProfessionals(prev => prev.map(p => p.id === activeProId ? { ...p, is_available_now: false } : p));
+    markSigningOut();
     authLogout();
     navigate('/', { replace: true });
   };
@@ -812,20 +817,27 @@ export default function App() {
     localStorage.setItem('kazihub_ng_messages_v10', JSON.stringify(messages));
   }, [messages]);
 
+  // The public pages (landing, sign-in/up) have their own light palette, so the saved dark theme
+  // only applies inside the app; their shared controls (dropdowns, checkboxes) would otherwise
+  // render dark on a cream page.
+  const onPublicPage = PUBLIC_PATHS.has(location.pathname);
+  const darkApplied = darkMode && !onPublicPage;
   useEffect(() => {
     localStorage.setItem('kazihub_dark_mode_v2', darkMode ? 'true' : 'false');
-    if (darkMode) {
+  }, [darkMode]);
+  useEffect(() => {
+    if (darkApplied) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
     // Dark mode here is a manual toggle, not the OS's prefers-color-scheme, so the status-bar
     // color (theme-color) has to follow this state directly rather than a media query.
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', darkMode ? '#09090b' : '#fafafa');
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', darkApplied ? '#09090b' : '#fafafa');
     // Same for native form chrome (autofill, scrollbars, date pickers): left as "light dark", the
     // browser follows the OS and paints dark autofill onto the light theme.
-    document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', darkMode ? 'dark' : 'light');
-  }, [darkMode]);
+    document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', darkApplied ? 'dark' : 'light');
+  }, [darkApplied]);
 
   // Handlers
   const errorText = (err: unknown, fallback: string) => (err instanceof Error && err.message ? err.message : fallback);
