@@ -319,7 +319,7 @@ export const KYCVerificationModal: React.FC<KYCVerificationModalProps> = ({
               <button
                 type="button"
                 onClick={() => setStep('document')}
-                className="px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs shadow-xs cursor-pointer flex items-center gap-2"
+                className="px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white font-bold text-xs shadow-xs cursor-pointer flex items-center gap-2"
               >
                 <span>Start Verification</span>
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -459,7 +459,7 @@ export const KYCVerificationModal: React.FC<KYCVerificationModalProps> = ({
                 onClick={() => setStep('liveness')}
                 disabled={!docImage || !docNumberValid}
                 title={!docImage ? 'Add a photo of your ID first' : !docNumberValid ? 'Enter a valid ID number first' : undefined}
-                className="px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs shadow-xs cursor-pointer flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 disabled:hover:bg-navy-800 disabled:hover:text-white text-white font-bold text-xs shadow-xs cursor-pointer flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span>Continue to Facial Check</span>
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -627,7 +627,7 @@ export const KYCVerificationModal: React.FC<KYCVerificationModalProps> = ({
                       <button
                         type="button"
                         onClick={startCamera}
-                        className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center gap-2 focus:ring-2 focus:ring-navy-400"
+                        className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center gap-2 focus:ring-2 focus:ring-navy-400"
                         aria-label="Open device camera and start verification"
                       >
                         <Camera className="w-4 h-4" />
@@ -694,7 +694,7 @@ export const KYCVerificationModal: React.FC<KYCVerificationModalProps> = ({
                 type="button"
                 disabled={!livenessImage || !consent}
                 onClick={handleSubmitForVerification}
-                className="disabled:opacity-50 disabled:cursor-not-allowed px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs shadow-xs cursor-pointer flex items-center gap-2 focus:ring-2 focus:ring-navy-400"
+                className="disabled:opacity-50 disabled:cursor-not-allowed px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 disabled:hover:bg-navy-800 disabled:hover:text-white text-white font-bold text-xs shadow-xs cursor-pointer flex items-center gap-2 focus:ring-2 focus:ring-navy-400"
               >
                 <span>Submit for Verification</span>
                 <ShieldCheck className="w-4 h-4" />
@@ -747,7 +747,7 @@ export const KYCVerificationModal: React.FC<KYCVerificationModalProps> = ({
                 onSuccess();
                 onClose();
               }}
-              className="w-full py-3 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs shadow-xs cursor-pointer focus:ring-2 focus:ring-navy-600"
+              className="w-full py-3 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white font-bold text-xs shadow-xs cursor-pointer focus:ring-2 focus:ring-navy-600"
             >
               Done
             </button>

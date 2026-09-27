@@ -362,7 +362,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                         <button
                           type="button"
                           onClick={() => onOpenBooking(professional, svc.name)}
-                          className="px-3 py-1.5 rounded-lg bg-navy-800 hover:bg-navy-900 text-white text-[11px] font-bold transition-colors cursor-pointer shadow-xs"
+                          className="px-3 py-1.5 rounded-lg bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white text-[11px] font-bold transition-colors cursor-pointer shadow-xs"
                         >
                           Request Service
                         </button>
@@ -386,7 +386,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                 ) : (
                   <div className="flex sm:grid sm:grid-cols-2 gap-3 sm:gap-4 overflow-x-auto sm:overflow-visible overscroll-x-contain no-scrollbar snap-x snap-mandatory scroll-pl-3.5 sm:scroll-pl-0 -mx-3.5 px-3.5 sm:mx-0 sm:px-0 pb-1 sm:pb-0">
                     {professional.portfolio.map((item) => (
-                      <div key={item.id} className="shrink-0 w-56 snap-start sm:w-auto sm:shrink border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden bg-white dark:bg-slate-900 shadow-xs hover:shadow-md transition-shadow flex flex-col">
+                      <div key={item.id} className="shrink-0 w-56 snap-start sm:w-auto sm:shrink border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden bg-white dark:bg-slate-900 shadow-xs flex flex-col">
                         <img src={item.image_url} alt={item.title} className="w-full aspect-video object-cover" />
                         <div className="p-3.5 flex-1 flex flex-col justify-between">
                           <div>
@@ -435,7 +435,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                       <button
                         type="button"
                         onClick={() => onBuyGig(gig, professional)}
-                        className="min-h-10 py-2 rounded-xl bg-navy-800 hover:bg-navy-900 text-white text-xs font-bold transition-[background-color,transform] duration-150 active:scale-[0.97] cursor-pointer shadow-xs whitespace-nowrap"
+                        className="min-h-10 py-2 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white text-xs font-bold transition-[background-color,transform] duration-150 active:scale-[0.97] cursor-pointer shadow-xs whitespace-nowrap"
                       >
                         Buy This Gig
                       </button>
@@ -466,7 +466,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                   <button
                     type="button"
                     onClick={() => setShowWriteReview(true)}
-                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition-all self-stretch sm:self-auto"
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition-all self-stretch sm:self-auto"
                   >
                     <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 flex-shrink-0" />
                     <span>Leave Review</span>
@@ -572,7 +572,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                         setNewComment('');
                         setSelectedTags([]);
                       }}
-                      className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-extrabold text-xs shadow-xs cursor-pointer"
+                      className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white font-extrabold text-xs shadow-xs cursor-pointer"
                     >
                       Publish Review
                     </button>
@@ -626,7 +626,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
             </button>
             <button
               onClick={() => onOpenBooking(professional)}
-              className="px-4 sm:px-6 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white text-xs sm:text-sm font-bold shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
+              className="px-4 sm:px-6 py-2.5 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white text-xs sm:text-sm font-bold shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
             >
               <Calendar className="w-4 h-4 flex-shrink-0" />
               <span>Request Service</span>

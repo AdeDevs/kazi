@@ -225,7 +225,7 @@ export const LandingPage: React.FC = () => {
   return (
     <div className="kh-landing min-h-dvh overflow-x-clip font-['Plus_Jakarta_Sans',system-ui,sans-serif]" style={{ background: C.cream, color: C.navy }}>
       {/* ───────── Hero: Ibadan skyline ───────── */}
-      <section className="relative overflow-hidden flex flex-col lg:block lg:h-[1230px]" style={{ background: C.orange }}>
+      <section className="relative overflow-hidden flex flex-col lg:block lg:h-[1000px]" style={{ background: C.orange }}>
         <svg viewBox="0 0 1440 300" aria-hidden="true" className="hidden lg:block absolute left-1/2 -translate-x-1/2 top-0 w-[1440px] h-[300px]">
           <g fill={C.cream} opacity="0.22">
             <path d="M -40 200 q 0 -70 70 -70 q 20 -80 110 -80 q 90 0 110 80 q 70 0 70 70 z" />
@@ -234,14 +234,14 @@ export const LandingPage: React.FC = () => {
         </svg>
 
         <div className="relative z-10 px-5 lg:px-[72px] flex flex-col items-center gap-5 lg:gap-0 max-w-[1440px] mx-auto w-full box-border">
-          <header ref={menuRef} className="kh-fade relative z-30 self-stretch h-[68px] lg:h-24 flex items-center justify-between">
-            <Link to="/" aria-label="KaziHub home" className={`${display} text-[26px] lg:text-[32px] tracking-[-0.04em]`}>KaziHub</Link>
-            <nav aria-label="Sections" className="hidden lg:flex gap-8 text-base font-bold">
+          <header ref={menuRef} className="kh-fade relative z-30 self-stretch h-16 lg:h-[84px] flex items-center justify-between">
+            <Link to="/" aria-label="KaziHub home" className={`${display} text-[24px] lg:text-[28px] tracking-[-0.04em]`}>KaziHub</Link>
+            <nav aria-label="Sections" className="hidden lg:flex gap-7 text-[15px] font-bold">
               {sections.map(s => <a key={s.href} href={s.href} className="kh-link">{s.label}</a>)}
             </nav>
             <div className="flex items-center gap-2 lg:gap-3">
-              <Link to="/signin" className="kh-link hidden lg:inline mx-3 py-1 text-base font-extrabold">Sign in</Link>
-              <Link to={CLIENT_SIGNUP} className="kh-btn px-4 lg:px-[22px] py-3 lg:py-3.5 rounded-xl lg:rounded-[14px] text-[15px] font-extrabold" style={{ background: C.navy, color: C.cream }}>
+              <Link to="/signin" className="kh-link hidden lg:inline mx-3 py-1 text-[15px] font-extrabold">Sign in</Link>
+              <Link to={CLIENT_SIGNUP} className="kh-btn kh-btn-on-orange px-4 lg:px-5 py-2.5 lg:py-3 rounded-xl text-sm lg:text-[15px] font-extrabold">
                 Get started
               </Link>
               <button
@@ -250,10 +250,9 @@ export const LandingPage: React.FC = () => {
                 aria-label={menuOpen ? 'Close menu' : 'Open menu'}
                 aria-expanded={menuOpen}
                 aria-controls="kh-menu"
-                className="kh-round lg:hidden w-11 h-11 rounded-xl border-2 flex items-center justify-center cursor-pointer"
-                style={{ borderColor: C.navy }}
+                className="kh-menu-btn lg:hidden w-11 h-11 rounded-xl border-2 flex items-center justify-center cursor-pointer"
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.navy} strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
                   {menuOpen
                     ? <><path d="M6 6l12 12" /><path d="M18 6L6 18" /></>
                     : <><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" /></>}
@@ -275,10 +274,10 @@ export const LandingPage: React.FC = () => {
             )}
           </header>
 
-          <h1 className={`kh-rise mt-7 lg:mt-14 text-center ${display} text-[54px] lg:text-[104px] leading-[0.92] lg:leading-[0.88] tracking-[-0.055em]`} style={{ animationDelay: '60ms' }}>
+          <h1 className={`kh-rise mt-6 lg:mt-12 text-center ${display} text-[48px] lg:text-[88px] leading-[0.92] lg:leading-[0.88] tracking-[-0.055em]`} style={{ animationDelay: '60ms' }}>
             Light don off?<br />Get person<br className="lg:hidden" /> wey sabi.
           </h1>
-          <p className="kh-rise lg:mt-6 lg:mb-8 max-w-[330px] lg:max-w-[660px] text-center text-base lg:text-[21px] leading-normal font-semibold" style={{ animationDelay: '160ms' }}>
+          <p className="kh-rise lg:mt-5 lg:mb-7 max-w-[320px] lg:max-w-[600px] text-center text-[15px] lg:text-[19px] leading-normal font-semibold" style={{ animationDelay: '160ms' }}>
             ID-verified artisans near you. Your money stays in escrow until the job is done, and you say so.
           </p>
 
@@ -286,7 +285,7 @@ export const LandingPage: React.FC = () => {
             onSubmit={handleSearch}
             role="search"
             aria-label="Find an artisan"
-            className="kh-rise kh-search self-stretch lg:self-auto lg:w-[820px] h-16 lg:h-20 box-border flex items-center gap-2.5 lg:gap-3.5 py-1.5 lg:py-2 pr-1.5 lg:pr-2 pl-[18px] lg:pl-[30px] bg-white rounded-full"
+            className="kh-rise kh-search self-stretch lg:self-auto lg:w-[720px] h-[58px] lg:h-[68px] box-border flex items-center gap-2.5 lg:gap-3 py-[5px] lg:py-1.5 pr-[5px] lg:pr-1.5 pl-4 lg:pl-6 bg-white rounded-full"
             style={{ animationDelay: '260ms' }}
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={C.navy} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0">
@@ -300,15 +299,14 @@ export const LandingPage: React.FC = () => {
                 onChange={(e) => setQuery(e.target.value.slice(0, 80))}
                 enterKeyHint="search"
                 placeholder={isDesktop ? 'What needs fixing? e.g. a leaking tap' : 'What needs fixing?'}
-                className="w-full bg-transparent outline-none text-[17px] lg:text-lg font-medium placeholder:text-[#5A6478]"
+                className="w-full bg-transparent outline-none text-base lg:text-[17px] font-medium placeholder:text-[#5A6478]"
                 style={{ color: C.navy }}
               />
             </label>
             <button
               type="submit"
               aria-label="Find artisans"
-              className="kh-btn-solid shrink-0 w-[52px] lg:w-auto h-[52px] lg:h-16 lg:px-8 rounded-full flex items-center justify-center text-lg font-extrabold cursor-pointer"
-              style={{ background: C.navy, color: C.cream }}
+              className="kh-btn shrink-0 w-12 lg:w-auto h-12 lg:h-14 lg:px-7 rounded-full flex items-center justify-center text-[17px] font-extrabold cursor-pointer"
             >
               <span className="hidden lg:inline">Find artisans</span>
               <span className="kh-arrow lg:hidden flex">
@@ -321,15 +319,15 @@ export const LandingPage: React.FC = () => {
         </div>
 
         {/* Phone: cropped to Cocoa House and the cherry-picker */}
-        <div className="kh-rise lg:hidden relative h-[310px] mt-4 overflow-hidden" style={{ animationDuration: '1100ms', animationDelay: '300ms' }}>
-          <Skyline className="bottom-0 w-[893px]" style={{ left: 'calc(50% - 575px)' }}>
+        <div className="kh-rise lg:hidden relative h-[260px] mt-4 overflow-hidden" style={{ animationDuration: '1100ms', animationDelay: '300ms' }}>
+          <Skyline className="bottom-0 w-[749px]" style={{ left: 'calc(50% - 482px)' }}>
             <Bubble x={1000} y={140} scale={1.5} left={-204} width={238} dot={C.indigo} text="AC repair · Working" delay={900} floatDelay={1.7} />
             <Bubble x={1170} y={236} scale={1.5} left={-279} width={313} dot={C.mint} done text={JOB_DONE} delay={1400} floatDelay={2.2} />
           </Skyline>
         </div>
         {/* Desktop: the full skyline across the bottom of the hero */}
-        <div className="kh-rise hidden lg:block absolute inset-x-0 bottom-0 h-[650px]" style={{ animationDuration: '1100ms', animationDelay: '300ms' }}>
-          <Skyline className="bottom-0 left-1/2 -translate-x-1/2 w-[max(1872px,100%)]">
+        <div className="kh-rise hidden lg:block absolute inset-x-0 bottom-0 h-[520px]" style={{ animationDuration: '1100ms', animationDelay: '300ms' }}>
+          <Skyline className="bottom-0 left-1/2 -translate-x-1/2 w-[max(1500px,100%)]">
             <Bubble x={452} y={328} left={-124} width={248} dot={C.orange} text="Plumber · On the way" delay={900} floatDelay={1.7} />
             <Bubble x={362} y={132} left={-34} width={220} dot={C.indigo} text="Painter · Working" delay={1300} floatDelay={2.1} />
             <Bubble x={1152} y={254} left={-279} width={313} dot={C.mint} done text={JOB_DONE} delay={1700} floatDelay={2.5} />
@@ -338,8 +336,8 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* ───────── Marquee ───────── */}
-      <section aria-label="KaziHub at a glance" className="h-14 lg:h-[76px] overflow-hidden flex items-center" style={{ background: C.navy, color: C.cream }}>
-        <div className={`kh-marquee flex w-max ${display} text-[17px] lg:text-[22px] tracking-[-0.02em]`}>
+      <section aria-label="KaziHub at a glance" className="kh-marquee-wrap h-[52px] lg:h-16 overflow-hidden flex items-center" style={{ background: C.navy, color: C.cream }}>
+        <div className={`kh-marquee flex w-max ${display} text-[15px] lg:text-[19px] tracking-[-0.02em]`}>
           {[0, 1].map(copy => (
             <div key={copy} aria-hidden={copy === 1 || undefined} className="flex">
               {MARQUEE.map(m => (
@@ -354,71 +352,71 @@ export const LandingPage: React.FC = () => {
 
       <main className="max-w-[1440px] mx-auto">
         {/* ───────── Illustrated mosaic ───────── */}
-        <section aria-label="Why KaziHub" className="px-5 lg:px-[72px] pt-10 lg:pt-24 grid grid-cols-2 lg:grid-cols-12 lg:grid-rows-2 gap-2.5 lg:gap-4 lg:h-[696px]">
-          <div className="kh-card kh-rise relative overflow-hidden h-[250px] lg:h-auto lg:col-span-5 lg:row-span-2 rounded-[22px] lg:rounded-[28px]" style={{ background: C.pink, animationDelay: '360ms' }}>
+        <section aria-label="Why KaziHub" className="px-5 lg:px-[72px] pt-10 lg:pt-20 grid grid-cols-2 lg:grid-cols-12 lg:grid-rows-2 gap-2.5 lg:gap-3.5 lg:h-[600px]">
+          <div className="kh-rise relative overflow-hidden h-[230px] lg:h-auto lg:col-span-5 lg:row-span-2 rounded-[22px] lg:rounded-[28px]" style={{ background: C.pink, animationDelay: '360ms' }}>
             <div className="relative z-10 px-4 lg:px-[30px] pt-4 lg:pt-[26px] flex flex-col items-start gap-1.5 lg:gap-2.5">
-              <img src={`${ART}/icon-quote.svg`} alt="" className="hidden lg:block w-[52px] h-[52px]" />
-              <h3 className={`${display} text-[22px] lg:text-[40px] leading-[0.95] tracking-[-0.04em]`}>Quotes before work</h3>
-              <p className="text-[13px] lg:text-[17px] leading-snug lg:leading-[1.45] font-semibold lg:font-medium lg:max-w-[360px]">
+              <img src={`${ART}/icon-quote.svg`} alt="" className="hidden lg:block w-11 h-11" />
+              <h3 className={`${display} text-[20px] lg:text-[34px] leading-[0.95] tracking-[-0.04em]`}>Quotes before work</h3>
+              <p className="text-[13px] lg:text-base leading-snug lg:leading-[1.45] font-semibold lg:font-medium lg:max-w-[360px]">
                 <span className="lg:hidden">Agree a written quote before work starts.</span>
                 <span className="hidden lg:inline">Chat with the artisan and agree a written quote before any work starts.</span>
               </p>
             </div>
-            <img src={`${ART}/mosaic-quotes.svg`} alt="" className="absolute left-0 -bottom-4 lg:-bottom-[30px] w-full h-auto" />
+            <img src={`${ART}/mosaic-quotes.svg`} alt="" className="absolute left-0 -bottom-4 lg:-bottom-[64px] w-full h-auto" />
           </div>
-          <div className="kh-card kh-rise relative overflow-hidden h-[250px] lg:h-auto lg:col-span-4 rounded-[22px] lg:rounded-[28px]" style={{ background: C.mint, animationDelay: '430ms' }}>
+          <div className="kh-rise relative overflow-hidden h-[230px] lg:h-auto lg:col-span-4 rounded-[22px] lg:rounded-[28px]" style={{ background: C.mint, animationDelay: '430ms' }}>
             <div className="relative z-10 px-4 lg:px-[30px] pt-4 lg:pt-[26px] flex flex-col items-start gap-1.5 lg:gap-2.5">
-              <h3 className={`${display} text-[22px] lg:text-[30px] leading-[0.95] tracking-[-0.04em]`}>People near you</h3>
-              <p className="text-[13px] lg:text-[17px] leading-snug lg:leading-[1.45] font-semibold lg:font-medium lg:max-w-[320px]">
+              <h3 className={`${display} text-[20px] lg:text-[26px] leading-[0.95] tracking-[-0.04em]`}>People near you</h3>
+              <p className="text-[13px] lg:text-base leading-snug lg:leading-[1.45] font-semibold lg:font-medium lg:max-w-[320px]">
                 <span className="lg:hidden">Verified artisans close by, so help comes fast.</span>
                 <span className="hidden lg:inline">Verified artisans in your area, so help arrives fast.</span>
               </p>
             </div>
-            <img src={`${ART}/mosaic-near.svg`} alt="" className="absolute -left-6 lg:left-0 -bottom-1.5 lg:-bottom-3.5 w-[220px] lg:w-full h-auto" />
+            <img src={`${ART}/mosaic-near.svg`} alt="" className="absolute -left-6 lg:left-0 -bottom-1.5 lg:-bottom-12 w-[220px] lg:w-full h-auto" />
           </div>
-          <div className="kh-card kh-rise relative overflow-hidden h-[250px] lg:h-auto lg:col-span-3 lg:row-span-2 rounded-[22px] lg:rounded-[28px]" style={{ background: C.yellow, animationDelay: '500ms' }}>
+          <div className="kh-rise relative overflow-hidden h-[230px] lg:h-auto lg:col-span-3 lg:row-span-2 rounded-[22px] lg:rounded-[28px]" style={{ background: C.yellow, animationDelay: '500ms' }}>
             <div className="relative z-10 px-4 lg:px-[30px] pt-4 lg:pt-[26px] flex flex-col items-start gap-1.5 lg:gap-2.5">
-              <img src={`${ART}/icon-paid.svg`} alt="" className="hidden lg:block w-[52px] h-[52px]" />
-              <h3 className={`${display} text-[22px] lg:text-[40px] leading-[0.95] tracking-[-0.04em]`}>Paid when done</h3>
-              <p className="text-[13px] lg:text-[17px] leading-snug lg:leading-[1.45] font-semibold lg:font-medium">
+              <img src={`${ART}/icon-paid.svg`} alt="" className="hidden lg:block w-11 h-11" />
+              <h3 className={`${display} text-[20px] lg:text-[34px] leading-[0.95] tracking-[-0.04em]`}>Paid when done</h3>
+              <p className="text-[13px] lg:text-base leading-snug lg:leading-[1.45] font-semibold lg:font-medium">
                 <span className="lg:hidden">Money waits in escrow till you confirm.</span>
                 <span className="hidden lg:inline">Your money waits in escrow and moves only when you confirm.</span>
               </p>
             </div>
             <img src={`${ART}/mosaic-paid.svg`} alt="" className="absolute -right-1 lg:right-auto lg:left-0 -bottom-[22px] lg:-bottom-10 w-[124px] lg:w-full h-auto" />
           </div>
-          <div className="kh-card kh-rise relative overflow-hidden h-[250px] lg:h-auto lg:col-start-6 lg:col-span-4 lg:row-start-2 rounded-[22px] lg:rounded-[28px] px-4 pt-4 lg:px-[30px] lg:py-[26px] flex flex-col lg:flex-row lg:items-center gap-1.5 lg:gap-[22px]" style={{ background: C.indigo, color: C.cream, animationDelay: '570ms' }}>
-            <h3 className={`lg:hidden ${display} text-[22px] leading-[0.95] tracking-[-0.04em]`}>Every artisan checked</h3>
+          <div className="kh-rise relative overflow-hidden h-[230px] lg:h-auto lg:col-start-6 lg:col-span-4 lg:row-start-2 rounded-[22px] lg:rounded-[28px] px-4 pt-4 lg:px-[30px] lg:py-[26px] flex flex-col lg:flex-row lg:items-center gap-1.5 lg:gap-[22px]" style={{ background: C.indigo, color: C.cream, animationDelay: '570ms' }}>
+            <h3 className={`lg:hidden ${display} text-[20px] leading-[0.95] tracking-[-0.04em]`}>Every artisan checked</h3>
             <p className="lg:hidden text-[13px] leading-snug font-semibold">Government ID and a live selfie, before any job.</p>
-            <span aria-hidden="true" className={`absolute lg:static left-4 bottom-1.5 ${display} text-[76px] lg:text-[64px] leading-none tracking-[-0.06em] lg:tracking-[-0.05em]`} style={{ color: C.mint }}>ID+</span>
-            <span className="hidden lg:block text-[17px] leading-[1.45] font-semibold">Every artisan checked with a government ID and a live selfie before the Verified badge.</span>
+            <span aria-hidden="true" className={`absolute lg:static left-4 bottom-1.5 ${display} text-[64px] lg:text-[56px] leading-none tracking-[-0.06em] lg:tracking-[-0.05em]`} style={{ color: C.mint }}>ID+</span>
+            <span className="hidden lg:block text-base leading-[1.45] font-semibold">Every artisan checked with a government ID and a live selfie before the Verified badge.</span>
           </div>
         </section>
 
         {/* ───────── How it works ───────── */}
-        <section id="how" className="scroll-mt-4 pt-16 lg:pt-[120px] lg:px-[72px] flex flex-col gap-5 lg:gap-11">
+        <section id="how" className="scroll-mt-4 pt-14 lg:pt-[104px] lg:px-[72px] flex flex-col gap-5 lg:gap-11">
           <div className="px-5 lg:px-0 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3 lg:gap-10">
             <div className="flex flex-col gap-3 lg:gap-4">
               <p className={eyebrow}>How it works</p>
-              <h2 className={`${display} text-[44px] lg:text-[72px] leading-[0.92] tracking-[-0.055em]`}>Book it. We hold the money.<br className="hidden lg:block" /> You say when it’s done.</h2>
+              <h2 className={`${display} text-[40px] lg:text-[60px] leading-[0.92] tracking-[-0.055em]`}>Book it. We hold the money.<br className="hidden lg:block" /> You say when it’s done.</h2>
             </div>
-            <p className="lg:mb-1.5 lg:max-w-[360px] text-[15px] lg:text-lg leading-normal font-medium">
+            <p className="lg:mb-1.5 lg:max-w-[340px] text-[15px] lg:text-[17px] leading-normal font-medium">
               Four steps, and your money is protected at every one<span className="hidden lg:inline"> of them</span>.<span className="lg:hidden"> Swipe through.</span>
             </p>
           </div>
-          <ol className="kh-snap flex lg:grid lg:grid-cols-4 gap-2.5 lg:gap-4 px-5 lg:px-0 overflow-x-auto lg:overflow-visible snap-x snap-mandatory scroll-pl-5 lg:h-[470px]">
+          <ol className="kh-snap flex lg:grid lg:grid-cols-4 gap-2.5 lg:gap-4 px-5 lg:px-0 overflow-x-auto lg:overflow-visible snap-x snap-mandatory scroll-pl-5 lg:h-[410px]">
             {STEPS.map((s, i) => (
               <li
                 key={s.title}
-                className="kh-card kh-rise relative overflow-hidden shrink-0 basis-[272px] lg:basis-auto h-[400px] lg:h-auto snap-start rounded-[22px] lg:rounded-[26px]"
+                className="kh-rise relative overflow-hidden shrink-0 basis-[256px] lg:basis-auto h-[360px] lg:h-auto snap-start rounded-[22px] lg:rounded-[26px]"
                 style={{ background: s.bg, color: s.fg, animationDelay: `${200 + i * 90}ms` }}
               >
                 <div className="relative z-10 px-5 lg:px-[26px] pt-5 lg:pt-[26px] flex flex-col items-start gap-2.5 lg:gap-3">
                   <span className="px-[11px] lg:px-3 py-[5px] lg:py-1.5 rounded-full text-xs lg:text-[13px] font-extrabold tracking-[0.04em]" style={{ background: s.fg, color: s.bg === C.indigo ? C.navy : C.cream }}>
                     Step {i + 1}<span className="lg:hidden"> of 4</span>
                   </span>
-                  <h3 className={`mt-0.5 lg:mt-1 ${display} text-[26px] lg:text-[30px] leading-[0.98] tracking-[-0.04em]`}>{s.title}</h3>
-                  <p className="text-sm lg:text-base leading-[1.45] font-medium">{s.body}</p>
+                  <h3 className={`mt-0.5 lg:mt-1 ${display} text-[24px] lg:text-[26px] leading-[0.98] tracking-[-0.04em]`}>{s.title}</h3>
+                  <p className="text-sm lg:text-[15px] leading-[1.45] font-medium">{s.body}</p>
                 </div>
                 <img src={`${ART}/step-${i + 1}.svg`} alt="" className="absolute left-0 -bottom-2 lg:-bottom-2.5 w-full h-auto" />
               </li>
@@ -428,12 +426,12 @@ export const LandingPage: React.FC = () => {
         </section>
 
         {/* ───────── Trades: expanding cards (desktop) / accordion (phone) ───────── */}
-        <section id="trades" className="scroll-mt-4 px-5 lg:px-[72px] pt-16 lg:pt-[104px] flex flex-col gap-[22px] lg:gap-9">
+        <section id="trades" className="scroll-mt-4 px-5 lg:px-[72px] pt-14 lg:pt-[92px] flex flex-col gap-5 lg:gap-8">
           <div className="flex items-end justify-between gap-10">
-            <h2 className={`${display} text-[52px] lg:text-[84px] leading-[0.9] tracking-[-0.055em]`}>The trades people<br className="hidden lg:block" /> book most.</h2>
+            <h2 className={`${display} text-[44px] lg:text-[72px] leading-[0.9] tracking-[-0.055em]`}>The trades people<br className="hidden lg:block" /> book most.</h2>
             <Link to={CLIENT_SIGNUP} className="kh-link hidden lg:inline pb-0.5 text-[17px] font-extrabold">See all trades <Arrow /></Link>
           </div>
-          <ul className="flex flex-col lg:flex-row gap-2.5 lg:gap-3.5 lg:h-[610px]">
+          <ul className="flex flex-col lg:flex-row gap-2.5 lg:gap-3 lg:h-[520px]">
             {TRADES.map((t, i) => {
               const open = i === openTrade;
               return (
@@ -446,7 +444,7 @@ export const LandingPage: React.FC = () => {
                     color: t.fg,
                     ...(isDesktop
                       ? { flexGrow: open ? 3.8 : 1, flexBasis: 0, transition: `flex-grow 620ms ${EASE}` }
-                      : { height: open ? 430 : 76, transition: `height 520ms ${EASE}` }),
+                      : { height: open ? 380 : 68, transition: `height 520ms ${EASE}` }),
                   }}
                 >
                   {isDesktop ? (
@@ -457,19 +455,19 @@ export const LandingPage: React.FC = () => {
                         </div>
                         <div className="kh-fade relative px-[30px] pt-[26px] flex flex-col gap-3.5" style={{ animationDuration: '420ms', animationDelay: '120ms' }}>
                           <div className="flex items-center justify-between">
-                            <img src={`${ART}/${t.spot}.svg`} alt="" className="w-14 h-14" />
+                            <img src={`${ART}/${t.spot}.svg`} alt="" className="w-12 h-12" />
                             <button
                               type="button"
                               onClick={() => seeTrade(t.search)}
                               aria-label={`See ${t.lower}`}
-                              className="kh-round w-12 h-12 rounded-full flex items-center justify-center cursor-pointer"
+                              className="kh-turn w-11 h-11 rounded-full flex items-center justify-center cursor-pointer"
                               style={{ background: t.fg, color: t.bg }}
                             >
                               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 17 17 7" /><path d="M8 7h9v9" /></svg>
                             </button>
                           </div>
-                          <h3 className={`mt-1.5 ${display} text-[clamp(2.75rem,4.2vw,3.75rem)] leading-[0.92] tracking-[-0.05em]`}>{t.name}</h3>
-                          <p className="max-w-[440px] text-lg leading-[1.45] font-medium">{t.desc}</p>
+                          <h3 className={`mt-1.5 ${display} text-[clamp(2.5rem,3.6vw,3.25rem)] leading-[0.92] tracking-[-0.05em]`}>{t.name}</h3>
+                          <p className="max-w-[420px] text-[17px] leading-[1.45] font-medium">{t.desc}</p>
                         </div>
                       </>
                     ) : (
@@ -481,7 +479,7 @@ export const LandingPage: React.FC = () => {
                         aria-label={t.name}
                         className="absolute inset-0 w-full box-border px-[22px] py-6 flex flex-col justify-end items-start text-left cursor-pointer"
                       >
-                        <span className={`[writing-mode:vertical-rl] rotate-180 ${display} text-[46px] leading-[0.95] tracking-[-0.04em] whitespace-nowrap`}>{t.name}</span>
+                        <span className={`[writing-mode:vertical-rl] rotate-180 ${display} text-[40px] leading-[0.95] tracking-[-0.04em] whitespace-nowrap`}>{t.name}</span>
                       </button>
                     )
                   ) : (
@@ -491,12 +489,12 @@ export const LandingPage: React.FC = () => {
                         type="button"
                         onClick={() => setOpenTrade(open ? -1 : i)}
                         aria-expanded={open}
-                        className="relative z-10 w-full h-[76px] box-border pl-5 pr-3.5 flex items-center gap-3 text-left cursor-pointer"
+                        className="relative z-10 w-full h-[68px] box-border pl-5 pr-3 flex items-center gap-3 text-left cursor-pointer"
                       >
-                        <span className={`flex-1 ${display} text-[28px] leading-none tracking-[-0.04em]`}>{t.name}</span>
+                        <span className={`flex-1 ${display} text-[25px] leading-none tracking-[-0.04em]`}>{t.name}</span>
                         <span
                           aria-hidden="true"
-                          className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center"
+                          className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center"
                           style={{ background: t.fg, color: t.bg, transform: `rotate(${open ? 45 : 0}deg)`, transition: `transform 460ms ${EASE}` }}
                         >
                           <PlusIcon size={16} />
@@ -520,46 +518,46 @@ export const LandingPage: React.FC = () => {
         </section>
 
         {/* ───────── For clients: tiles rise in on first view ───────── */}
-        <section id="clients" ref={why.ref} className="scroll-mt-4 px-5 lg:px-[72px] pt-16 lg:pt-28 grid grid-cols-2 lg:grid-cols-12 lg:grid-rows-3 gap-2.5 lg:gap-3.5 lg:h-[880px]">
+        <section id="clients" ref={why.ref} className="scroll-mt-4 px-5 lg:px-[72px] pt-14 lg:pt-24 grid grid-cols-2 lg:grid-cols-12 lg:grid-rows-[auto_1fr_1fr] gap-2.5 lg:gap-3 lg:h-[780px]">
           <div className="col-span-2 lg:col-span-5 rounded-[22px] lg:rounded-[26px] bg-white border-2 p-[22px] lg:p-[30px] flex flex-col justify-between items-start gap-4" style={{ borderColor: C.navy, ...reveal(0) }}>
             <div className="flex flex-col gap-3 lg:gap-3">
               <p className={eyebrow}>For clients</p>
-              <h2 className={`${display} text-[44px] lg:text-[56px] leading-[0.92] tracking-[-0.05em]`}>Hire without the wahala.</h2>
+              <h2 className={`${display} text-[40px] lg:text-[48px] leading-[0.92] tracking-[-0.05em]`}>Hire without the wahala.</h2>
             </div>
-            <Link to={CLIENT_SIGNUP} className="kh-btn px-5 lg:px-6 py-3.5 lg:py-4 rounded-[14px] text-[15px] lg:text-base font-extrabold" style={{ background: C.navy, color: C.cream }}>
+            <Link to={CLIENT_SIGNUP} className="kh-btn px-5 lg:px-6 py-3.5 lg:py-4 rounded-[14px] text-[15px] lg:text-base font-extrabold">
               Find an artisan <Arrow />
             </Link>
           </div>
-          <div className="relative overflow-hidden h-[170px] lg:h-auto lg:col-span-7 rounded-[22px] lg:rounded-[26px] p-[18px] lg:p-[30px] flex flex-col justify-between" style={{ background: C.indigo, color: C.cream, ...reveal(1) }}>
+          <div className="relative overflow-hidden h-[156px] lg:h-auto lg:col-span-7 rounded-[22px] lg:rounded-[26px] p-[18px] lg:p-[30px] flex flex-col justify-between" style={{ background: C.indigo, color: C.cream, ...reveal(1) }}>
             <Swoosh viewBox="0 0 150 130" d="M20 20 C 20 120, 120 120, 120 20" color={C.mint} width={26} className="lg:hidden w-[150px] -right-20 -bottom-[70px]" />
             <Swoosh viewBox="0 0 420 300" d="M60 40 C 60 260, 250 260, 250 110 S 400 -20, 400 200" color={C.mint} width={56} className="hidden lg:block w-[420px] -right-[150px] -top-[70px]" />
-            <span className={`relative ${display} text-[44px] lg:text-[100px] leading-[0.86] lg:leading-[0.8] tracking-[-0.06em]`}>2<br className="lg:hidden" /> checks</span>
+            <span className={`relative ${display} text-[40px] lg:text-[84px] leading-[0.86] lg:leading-[0.8] tracking-[-0.06em]`}>2<br className="lg:hidden" /> checks</span>
             <span className="relative text-[13px] lg:text-base font-semibold leading-snug lg:max-w-[340px]">
               <span className="lg:hidden">Government ID and a live selfie</span>
               <span className="hidden lg:inline">A government ID and a live selfie, before any artisan gets the Verified badge.</span>
             </span>
           </div>
-          <div className="h-[170px] lg:h-auto lg:col-span-6 rounded-[22px] lg:rounded-[26px] p-[18px] lg:p-[30px] flex flex-col justify-between bg-[#F7B8D2] lg:bg-[#FF6A2B]" style={reveal(2)}>
-            <span className={`${display} text-[64px] lg:text-[120px] leading-[0.8] tracking-[-0.06em]`}>₦0</span>
+          <div className="h-[156px] lg:h-auto lg:col-span-6 rounded-[22px] lg:rounded-[26px] p-[18px] lg:p-[30px] flex flex-col justify-between bg-[#F7B8D2] lg:bg-[#FF6A2B]" style={reveal(2)}>
+            <span className={`${display} text-[56px] lg:text-[100px] leading-[0.8] tracking-[-0.06em]`}>₦0</span>
             <span className="text-[13px] lg:text-base font-bold leading-snug lg:max-w-[380px]">
               <span className="lg:hidden">to the artisan until you confirm</span>
               <span className="hidden lg:inline">reaches the artisan until you confirm the job is done. It waits in escrow.</span>
             </span>
           </div>
-          <div className="relative overflow-hidden col-span-2 lg:col-span-6 h-[170px] lg:h-auto rounded-[22px] lg:rounded-[26px] p-5 lg:p-[30px] flex flex-col justify-between bg-[#FF6A2B] lg:bg-[#F7B8D2]" style={reveal(3)}>
+          <div className="relative overflow-hidden col-span-2 lg:col-span-6 h-[156px] lg:h-auto rounded-[22px] lg:rounded-[26px] p-5 lg:p-[30px] flex flex-col justify-between bg-[#FF6A2B] lg:bg-[#F7B8D2]" style={reveal(3)}>
             <Swoosh viewBox="0 0 200 170" d="M30 160 C 30 40, 170 40, 170 150" color={C.orangeSoft} width={40} className="lg:hidden w-[200px] -right-[30px] -bottom-[60px]" />
-            <span className={`relative ${display} text-[64px] lg:text-[104px] leading-[0.8] tracking-[-0.06em]`}>Quote first</span>
+            <span className={`relative ${display} text-[52px] lg:text-[88px] leading-[0.8] tracking-[-0.06em]`}>Quote first</span>
             <span className="relative text-sm lg:text-base font-bold max-w-[260px] lg:max-w-[380px]">
               The price is agreed in writing<span className="hidden lg:inline">, in chat,</span> before anyone picks up a tool.
             </span>
           </div>
           <div className="relative overflow-hidden hidden lg:flex lg:col-span-7 rounded-[26px] p-[30px] items-center justify-center" style={{ background: C.mint, ...reveal(4) }}>
             <Swoosh viewBox="0 0 260 260" d="M30 30 C 30 200, 200 230, 230 60" color={C.indigo} width={50} className="w-[260px] -left-[60px] -bottom-20" />
-            <p className={`relative text-center ${display} text-[44px] leading-none tracking-[-0.04em]`}>Checked pros, clear quotes,<br />and a record of every job</p>
+            <p className={`relative text-center ${display} text-[38px] leading-none tracking-[-0.04em]`}>Checked pros, clear quotes,<br />and a record of every job</p>
           </div>
           <div className="relative overflow-hidden col-span-2 lg:col-span-5 rounded-[22px] lg:rounded-[26px] p-[22px] lg:p-[30px] flex flex-col justify-between gap-3" style={{ background: C.navy, color: C.cream, ...reveal(5) }}>
             <Swoosh viewBox="0 0 220 240" d="M190 20 C 40 20, 40 220, 190 220" color={C.orange} width={48} className="hidden lg:block w-[220px] -right-[50px] -top-10" />
-            <span className={`relative ${display} text-[34px] lg:text-[44px] leading-[0.95] tracking-[-0.04em]`}>Reviews from<br className="hidden lg:block" /> real jobs only</span>
+            <span className={`relative ${display} text-[30px] lg:text-[38px] leading-[0.95] tracking-[-0.04em]`}>Reviews from<br className="hidden lg:block" /> real jobs only</span>
             <span className="relative text-sm leading-relaxed lg:hidden" style={{ color: C.muted }}>Only after a paid, completed booking. No friends, no fakes.</span>
             <ul className="relative hidden lg:block pl-[18px] list-disc text-sm leading-[1.7]" style={{ color: C.muted }}>
               <li>Only after a paid, completed booking</li>
@@ -569,25 +567,25 @@ export const LandingPage: React.FC = () => {
         </section>
 
         {/* ───────── For artisans ───────── */}
-        <section id="artisans" className="scroll-mt-4 mx-5 lg:mx-[72px] mt-16 lg:mt-28 rounded-[28px] lg:rounded-[32px] overflow-hidden flex flex-col lg:grid lg:grid-cols-12 gap-5 lg:gap-6 px-[22px] pt-[26px] pb-[22px] lg:p-0 lg:h-[640px]" style={{ background: C.peach }}>
-          <div className="contents lg:flex lg:col-span-7 lg:p-14 lg:pr-0 lg:flex-col lg:justify-between lg:items-start">
+        <section id="artisans" className="scroll-mt-4 mx-5 lg:mx-[72px] mt-14 lg:mt-24 rounded-[28px] lg:rounded-[32px] overflow-hidden flex flex-col lg:grid lg:grid-cols-12 gap-5 lg:gap-6 px-[22px] pt-[26px] pb-[22px] lg:p-0 lg:h-[560px]" style={{ background: C.peach }}>
+          <div className="contents lg:flex lg:col-span-7 lg:p-12 lg:pr-0 lg:flex-col lg:justify-between lg:items-start">
             <div className="flex flex-col gap-3 lg:gap-4">
               <p className={eyebrow}>For artisans</p>
-              <h2 className={`${display} text-[44px] lg:text-[76px] leading-[0.9] tracking-[-0.055em]`}>You do the work. The money don already land.</h2>
+              <h2 className={`${display} text-[40px] lg:text-[64px] leading-[0.9] tracking-[-0.055em]`}>You do the work. The money don already land.</h2>
             </div>
-            <div className="lg:hidden h-60 rounded-[20px] overflow-hidden flex items-end justify-center" style={{ background: C.indigo }}>
+            <div className="lg:hidden h-52 rounded-[20px] overflow-hidden flex items-end justify-center" style={{ background: C.indigo }}>
               <img src={`${ART}/artisan.svg`} alt="An artisan receiving a job request, with payment already secured in escrow" className="w-full h-full object-contain object-bottom" />
             </div>
             <ul className="flex flex-col lg:grid lg:grid-cols-2 gap-3 lg:gap-x-7 lg:gap-y-4 lg:self-stretch">
               {ARTISAN_POINTS.map(p => (
-                <li key={p} className="flex items-center gap-2.5 lg:gap-3 text-[15px] lg:text-[17px] font-bold leading-tight">
+                <li key={p} className="flex items-center gap-2.5 lg:gap-3 text-[15px] lg:text-base font-bold leading-tight">
                   <span className="lg:hidden"><Check size={24} /></span>
                   <span className="hidden lg:inline"><Check size={28} /></span>
                   {p}
                 </li>
               ))}
             </ul>
-            <Link to={ARTISAN_SIGNUP} className="kh-btn text-center p-[19px] lg:px-7 lg:py-5 rounded-2xl text-[17px] font-extrabold" style={{ background: C.navy, color: C.cream }}>
+            <Link to={ARTISAN_SIGNUP} className="kh-btn text-center p-[17px] lg:px-6 lg:py-[18px] rounded-2xl text-base font-extrabold">
               Join as an artisan <Arrow />
             </Link>
           </div>
@@ -597,10 +595,10 @@ export const LandingPage: React.FC = () => {
         </section>
 
         {/* ───────── FAQ: one answer open at a time ───────── */}
-        <section id="faq" className="scroll-mt-4 px-5 lg:px-[72px] pt-16 lg:pt-28 flex flex-col lg:grid lg:grid-cols-12 gap-5 lg:gap-6 lg:items-start">
+        <section id="faq" className="scroll-mt-4 px-5 lg:px-[72px] pt-14 lg:pt-24 flex flex-col lg:grid lg:grid-cols-12 gap-5 lg:gap-6 lg:items-start">
           <div className="lg:col-span-4 flex flex-col gap-3 lg:gap-[18px]">
             <p className={eyebrow}>FAQ</p>
-            <h2 className={`${display} text-[44px] lg:text-[76px] leading-[0.9] tracking-[-0.055em]`}>Questions, answered.</h2>
+            <h2 className={`${display} text-[40px] lg:text-[64px] leading-[0.9] tracking-[-0.055em]`}>Questions, answered.</h2>
           </div>
           <ul className="lg:col-start-6 lg:col-span-7 flex flex-col gap-2 lg:gap-2.5">
             {FAQS.map((f, i) => {
@@ -611,20 +609,24 @@ export const LandingPage: React.FC = () => {
                     type="button"
                     onClick={() => setOpenFaq(open ? -1 : i)}
                     aria-expanded={open}
-                    className="w-full min-h-16 lg:min-h-[72px] box-border py-3 lg:py-4 pr-3 lg:pr-4 pl-[18px] lg:pl-[26px] flex items-center justify-between gap-3.5 lg:gap-5 text-left cursor-pointer"
+                    aria-controls={`faq-${i}`}
+                    className="w-full min-h-[60px] lg:min-h-16 box-border py-3 lg:py-4 pr-3 lg:pr-4 pl-[18px] lg:pl-[26px] flex items-center justify-between gap-3.5 lg:gap-5 text-left cursor-pointer"
                   >
-                    <span className={`${display} text-lg lg:text-[22px] leading-[1.15] tracking-[-0.02em]`}>{f.q}</span>
+                    <span className={`${display} text-[17px] lg:text-[20px] leading-[1.15] tracking-[-0.02em]`}>{f.q}</span>
                     <span
                       aria-hidden="true"
                       className="shrink-0 w-9 h-9 lg:w-10 lg:h-10 rounded-full flex items-center justify-center"
-                      style={{ background: C.navy, color: C.cream, transform: `rotate(${open ? 45 : 0}deg)`, transition: `transform 360ms ${EASE}` }}
+                      style={{ background: C.navy, color: C.cream, transform: `rotate(${open ? 45 : 0}deg)`, transition: `transform 220ms ${EASE}` }}
                     >
                       <PlusIcon />
                     </span>
                   </button>
-                  {open && (
-                    <p className="kh-fade px-[18px] lg:pl-[26px] lg:pr-[84px] pb-[18px] lg:pb-6 text-[15px] lg:text-[17px] leading-[1.55] font-medium" style={{ animationDuration: '300ms' }}>{f.a}</p>
-                  )}
+                  {/* Stays mounted so closing slides too: the row animates 0fr ↔ 1fr, no height measuring. */}
+                  <div id={`faq-${i}`} inert={!open} className="kh-collapse grid" style={{ gridTemplateRows: open ? '1fr' : '0fr', opacity: open ? 1 : 0 }}>
+                    <div className="min-h-0 overflow-hidden">
+                      <p className="px-[18px] lg:pl-[26px] lg:pr-[84px] pb-[18px] lg:pb-6 text-[15px] lg:text-base leading-[1.55] font-medium">{f.a}</p>
+                    </div>
+                  </div>
                 </li>
               );
             })}
@@ -637,8 +639,8 @@ export const LandingPage: React.FC = () => {
         <div className="max-w-[1440px] mx-auto px-5 lg:px-[72px] pt-12 lg:pt-20 flex flex-col gap-10 lg:gap-16">
           <div className="grid lg:grid-cols-12 gap-10 lg:gap-6">
             <div className="lg:col-span-5 flex flex-col items-start gap-[22px] lg:gap-7">
-              <p className={`${display} text-[32px] lg:text-[40px] leading-none tracking-[-0.04em]`}>Checked artisans. Money held until it’s done.</p>
-              <Link to={CLIENT_SIGNUP} className="kh-btn kh-btn-light px-6 lg:px-[26px] py-[17px] lg:py-[18px] rounded-2xl text-base font-extrabold" style={{ background: C.orange, color: C.navy }}>
+              <p className={`${display} text-[28px] lg:text-[36px] leading-none tracking-[-0.04em]`}>Checked artisans. Money held until it’s done.</p>
+              <Link to={CLIENT_SIGNUP} className="kh-btn kh-btn-orange px-6 lg:px-[26px] py-[17px] lg:py-[18px] rounded-2xl text-base font-extrabold">
                 Find an artisan <Arrow />
               </Link>
             </div>

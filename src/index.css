@@ -186,10 +186,18 @@ html.dark img {
 .kh-snap::-webkit-scrollbar { display: none; }
 .kh-search { transition: box-shadow 200ms ease; }
 .kh-search:focus-within { box-shadow: 0 0 0 5px rgba(11, 27, 58, 0.22); }
-.kh-btn, .kh-btn-solid, .kh-round, .kh-card {
-  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 200ms ease, background-color 180ms ease;
+/* Hover only on things you can click, and it says what the click does. Buttons swap to a
+   contrasting pair from the palette (never a shadow); the pair depends on the surface behind. */
+.kh-btn {
+  background-color: #0B1B3A;
+  color: #FFF6EC;
+  transition: background-color 150ms ease, color 150ms ease, transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
 }
-.kh-arrow { display: inline-block; transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1); }
+.kh-btn-orange { background-color: #FF6A2B; color: #0B1B3A; }
+.kh-btn:active { transform: scale(0.97); }
+.kh-menu-btn { color: #0B1B3A; border-color: #0B1B3A; transition: background-color 150ms ease, color 150ms ease; }
+.kh-turn svg { transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1); }
+.kh-arrow { display: inline-block; transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1); }
 .kh-link {
   text-decoration: none;
   background-image: linear-gradient(currentColor, currentColor);
@@ -198,20 +206,23 @@ html.dark img {
   background-position: 0 100%;
   transition: background-size 240ms cubic-bezier(0.22, 1, 0.36, 1);
 }
-.kh-btn:active, .kh-btn-solid:active { transform: translateY(1px) scale(0.98); }
 .kh-faq { transition: background-color 200ms ease; }
+.kh-collapse { transition: grid-template-rows 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms cubic-bezier(0.22, 1, 0.36, 1); }
 @media (hover: hover) and (pointer: fine) {
-  .kh-btn:hover { transform: translateY(-3px); box-shadow: 0 5px 0 #0B1B3A; }
-  .kh-btn-light:hover { box-shadow: 0 5px 0 #FFF6EC; }
-  .kh-btn-solid:hover { background-color: #22356B !important; }
-  .kh-btn:hover .kh-arrow, .kh-btn-solid:hover .kh-arrow, .kh-link:hover .kh-arrow { transform: translateX(4px); }
+  .kh-btn:hover { background-color: #FF6A2B; color: #0B1B3A; }
+  .kh-btn-on-orange:hover, .kh-btn-orange:hover { background-color: #FFF6EC; color: #0B1B3A; }
+  .kh-menu-btn:hover { background-color: #0B1B3A; color: #FFF6EC; }
+  /* The diagonal arrow turns flat: "go there" becomes "going". */
+  .kh-turn:hover svg { transform: rotate(45deg); }
+  .kh-btn:hover .kh-arrow, .kh-link:hover .kh-arrow { transform: translateX(4px); }
   .kh-link:hover { background-size: 100% 2px; }
-  .kh-round:hover { transform: scale(1.08); }
-  .kh-card:hover { transform: translateY(-6px); box-shadow: 0 8px 0 #0B1B3A; }
   .kh-faq:hover { background-color: #FFFFFF !important; }
+  /* Hold the strip still so a line can be read. */
+  .kh-marquee-wrap:hover .kh-marquee { animation-play-state: paused; }
 }
 @media (prefers-reduced-motion: reduce) {
   .kh-rise, .kh-fade, .kh-bubble, .kh-bubble-float, .kh-marquee { animation: none !important; }
+  .kh-collapse, .kh-turn svg, .kh-arrow, .kh-btn { transition-property: opacity, background-color, color; }
 }
 @media (prefers-reduced-motion: no-preference) {
   html:has(.kh-landing) { scroll-behavior: smooth; }

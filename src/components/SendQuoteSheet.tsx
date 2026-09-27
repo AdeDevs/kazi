@@ -111,7 +111,7 @@ export const SendQuoteSheet: React.FC<SendQuoteSheetProps> = ({ job, onClose, on
             </button>
             <button
               type="submit"
-              className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs shadow-xs cursor-pointer text-center"
+              className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white font-bold text-xs shadow-xs cursor-pointer text-center"
             >
               Send Quote
             </button>

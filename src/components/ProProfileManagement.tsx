@@ -621,7 +621,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
     <button
       type="button"
       onClick={startEditing}
-      className={`${size === 'sm' ? 'px-3.5 py-2 text-[11px]' : 'px-4 py-2 text-xs'} rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-extrabold shadow-xs transition-[background-color,transform] duration-150 active:scale-[0.97] cursor-pointer flex items-center justify-center gap-1.5 shrink-0`}
+      className={`${size === 'sm' ? 'px-3.5 py-2 text-[11px]' : 'px-4 py-2 text-xs'} rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white font-extrabold shadow-xs transition-[background-color,transform] duration-150 active:scale-[0.97] cursor-pointer flex items-center justify-center gap-1.5 shrink-0`}
     >
       <Edit3 className={size === 'sm' ? 'w-3 h-3' : 'w-3.5 h-3.5'} />
       <span>Edit profile</span>
@@ -1042,7 +1042,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
                 <button
                   type="submit"
                   disabled={isSavingBasicInfo || !isEditDirty}
-                  className="px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-extrabold text-xs shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-w-[7.5rem]"
+                  className="px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 disabled:hover:bg-navy-800 disabled:hover:text-white text-white font-extrabold text-xs shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-w-[7.5rem]"
                 >
                   {isSavingBasicInfo && (
                     <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -1069,7 +1069,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
           <button
             type="button"
             onClick={() => { setSection('portfolio'); handleOpenAddPortfolio(); }}
-            className="px-3 py-1.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs cursor-pointer shrink-0 self-start sm:self-auto"
+            className="px-3 py-1.5 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white font-bold text-xs cursor-pointer shrink-0 self-start sm:self-auto"
           >
             Add Portfolio
           </button>
@@ -1129,7 +1129,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
             <button
               type="button"
               onClick={handleOpenAddService}
-              className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-navy-800 hover:bg-navy-900 active:scale-95 text-white font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+              className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 active:scale-95 text-white font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
               title="Add Service"
               aria-label="Add Service"
             >
@@ -1230,7 +1230,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
             <button
               type="button"
               onClick={handleOpenAddPortfolio}
-              className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-navy-800 hover:bg-navy-900 active:scale-95 text-white font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+              className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 active:scale-95 text-white font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
               title="Add Project"
               aria-label="Add Project"
             >
@@ -1256,13 +1256,13 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
             {portfolio.map((item) => (
               <div
                 key={item.id}
-                className="shrink-0 w-64 snap-start sm:w-auto sm:shrink group rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col justify-between hover:shadow-xs transition-all"
+                className="shrink-0 w-64 snap-start sm:w-auto sm:shrink group rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col justify-between"
               >
                 <div className="relative aspect-video overflow-hidden bg-slate-900">
                   <img
                     src={item.image_url}
                     alt={item.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    className="w-full h-full object-cover"
                   />
                   <div className="absolute top-2 right-2 flex items-center gap-1">
                     <button
@@ -1401,7 +1401,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
             <button
               type="button"
               onClick={() => { if (!blockIfFrozen()) setShowKYCModal(true); }}
-              className="w-full sm:w-auto px-4 py-2 rounded-xl bg-navy-800 hover:bg-navy-900 active:scale-95 text-white font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center justify-center shrink-0"
+              className="w-full sm:w-auto px-4 py-2 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 active:scale-95 text-white font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center justify-center shrink-0"
             >
               {verificationState === 'rejected' ? 'Submit Again' : 'Get Verified'}
             </button>
@@ -1558,7 +1558,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
                 <button
                   type="submit"
                   disabled={isSavingService}
-                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs shadow-xs cursor-pointer text-center disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 disabled:hover:bg-navy-800 disabled:hover:text-white text-white font-bold text-xs shadow-xs cursor-pointer text-center disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {isSavingService ? 'Saving…' : 'Save Service'}
                 </button>
@@ -1701,7 +1701,7 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
                 <button
                   type="submit"
                   disabled={isSavingPortfolio || isUploadingPortfolioPhoto}
-                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs shadow-xs cursor-pointer text-center disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 disabled:hover:bg-navy-800 disabled:hover:text-white text-white font-bold text-xs shadow-xs cursor-pointer text-center disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {isSavingPortfolio ? 'Saving…' : 'Save Project'}
                 </button>

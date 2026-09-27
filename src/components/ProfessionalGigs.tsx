@@ -93,7 +93,7 @@ export const ProfessionalGigs: React.FC<ProfessionalGigsProps> = ({ professional
         </div>
         <button
           onClick={() => navigate('/gigs/new')}
-          className="px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-sm shadow-md transition-all flex items-center gap-2 justify-center shrink-0"
+          className="px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white font-bold text-sm shadow-md transition-all flex items-center gap-2 justify-center shrink-0"
         >
           <Plus className="w-4 h-4" />
           <span>Create New Gig</span>

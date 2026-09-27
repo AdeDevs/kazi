@@ -84,7 +84,7 @@ export const HelpSupportSection: React.FC = () => {
         <button
           type="button"
           onClick={() => setShowContactSupport(true)}
-          className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+          className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
         >
           <MessageSquare className="w-3.5 h-3.5" />
           <span>Contact Support</span>
@@ -161,7 +161,7 @@ export const HelpSupportSection: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs"
+                  className="px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs"
                 >
                   <Send className="w-3.5 h-3.5" />
                   <span>Submit Ticket</span>

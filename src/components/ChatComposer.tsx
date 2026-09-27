@@ -222,7 +222,7 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
           disabled={!canSend}
           aria-label={isRecording ? 'Send voice note' : 'Send message'}
           className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center transition-[background-color,color,transform] duration-200 active:scale-[0.94] ${
-            canSend || recording?.sending ? 'bg-navy-800 hover:bg-navy-900 text-white cursor-pointer' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
+            canSend || recording?.sending ? 'bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white cursor-pointer' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
           }`}
         >
           {recording?.sending

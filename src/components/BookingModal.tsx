@@ -281,7 +281,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               </button>
               <button
                 type="submit"
-                className="w-full sm:w-auto px-5 py-2.5 bg-navy-800 hover:bg-navy-900 text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-[0.98]"
+                className="w-full sm:w-auto px-5 py-2.5 bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-[0.98]"
               >
                 <span>Review {fixed ? 'Booking' : 'Request'}</span>
                 <ArrowRight className="w-4 h-4" />
@@ -340,7 +340,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 type="button"
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                className="w-full sm:w-auto px-5 py-2.5 bg-navy-800 hover:bg-navy-900 text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-wait"
+                className="w-full sm:w-auto px-5 py-2.5 bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 disabled:hover:bg-navy-800 disabled:hover:text-white text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-wait"
               >
                 {isSubmitting ? (
                   <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
@@ -386,7 +386,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 <button
                   type="button"
                   onClick={() => { handleReset(); onViewBookings(); }}
-                  className="w-full sm:w-auto px-5 py-2.5 bg-navy-800 hover:bg-navy-900 text-white rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer text-center"
+                  className="w-full sm:w-auto px-5 py-2.5 bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer text-center"
                 >
                   View My Bookings
                 </button>

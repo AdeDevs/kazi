@@ -378,7 +378,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                               onOpenBooking(p);
                               setIsSearchFocused(false);
                             }}
-                            className="px-3 py-1 rounded-lg bg-navy-800 hover:bg-navy-900 text-white font-bold text-[11px] shrink-0 cursor-pointer shadow-xs"
+                            className="px-3 py-1 rounded-lg bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white font-bold text-[11px] shrink-0 cursor-pointer shadow-xs"
                           >
                             Book Now
                           </button>
@@ -542,19 +542,19 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                   onSelectCategoryFilter('All');
                   setSearchTerm('');
                 }}
-                className="px-6 py-2.5 bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer"
+                className="px-6 py-2.5 bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer"
               >
                 Reset Filters
               </button>
             </div>
           ) : (
             filteredProfessionals.map(pro => (
-              <div key={pro.id} onClick={() => onSelectProForProfile(pro)} className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-xs flex flex-col justify-between group cursor-pointer hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md transition-all active:scale-[0.99]">
+              <div key={pro.id} onClick={() => onSelectProForProfile(pro)} className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-xs flex flex-col justify-between group cursor-pointer hover:border-navy-800/40 dark:hover:border-slate-500 transition-[border-color,transform] duration-150 active:scale-[0.99]">
                 <div className="space-y-3">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
                       <div className="relative">
-                        <img src={pro.profile_picture} alt={pro.name} className="w-14 h-14 rounded-2xl object-cover shadow-xs group-hover:scale-105 transition-transform" />
+                        <img src={pro.profile_picture} alt={pro.name} className="w-14 h-14 rounded-2xl object-cover shadow-xs" />
                       </div>
                       <div>
                         <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 hover:text-navy-800 dark:hover:text-navy-400 flex items-center gap-1.5">
@@ -588,7 +588,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <button onClick={(e) => { e.stopPropagation(); onOpenChat(pro); }} className="py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">Chat</button>
-                    <button onClick={(e) => { e.stopPropagation(); onOpenBooking(pro); }} className="py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-xs font-bold text-white shadow-xs cursor-pointer transition-colors">Book Now</button>
+                    <button onClick={(e) => { e.stopPropagation(); onOpenBooking(pro); }} className="py-2.5 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-xs font-bold text-white shadow-xs cursor-pointer transition-colors">Book Now</button>
                   </div>
                 </div>
               </div>
@@ -742,7 +742,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     setBookingsCategoryFilter('All');
                     setBookingFilter('all');
                   }}
-                  className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl text-xs font-bold bg-navy-800 hover:bg-navy-900 text-white shadow-xs transition-colors cursor-pointer shrink-0 text-center"
+                  className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl text-xs font-bold bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white shadow-xs transition-colors cursor-pointer shrink-0 text-center"
                   title="Reset Filters"
                 >
                   Reset
@@ -825,7 +825,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
               <button
                 type="button"
                 onClick={() => onTabChange('home')}
-                className="px-5 py-2.5 bg-navy-800 hover:bg-navy-900 dark:bg-navy-700 dark:hover:bg-navy-600 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer transition-all flex items-center gap-1.5"
+                className="px-5 py-2.5 bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 dark:bg-navy-700 dark:hover:bg-navy-600 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer transition-all flex items-center gap-1.5"
               >
                 <span>Explore Verified Artisans</span>
               </button>
@@ -1040,7 +1040,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                         <button
                           type="button"
                           onClick={() => onAcceptQuote?.(b.id)}
-                          className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs cursor-pointer shrink-0"
+                          className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs cursor-pointer shrink-0"
                         >
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           <span>Accept Quote</span>
@@ -1211,7 +1211,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                                 onUpdateBookingStatus(b.id, 'paid_out', { completedAt: new Date().toISOString() });
                               }
                             }}
-                            className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer transition-all"
+                            className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer transition-all"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             <span>Confirm & Release Escrow</span>
@@ -1245,9 +1245,9 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                                 onTabChange('home');
                               }
                             }}
-                            className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer transition-all"
+                            className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer transition-all"
                           >
-                            <RotateCcw className="w-3.5 h-3.5 text-white" />
+                            <RotateCcw className="w-3.5 h-3.5" />
                             <span>Rehire Artisan</span>
                             {(pro?.is_available_now || (professionals.find(p => p.id === b.artisan_id || p.user_id === b.artisan_id)?.is_available_now)) && (
                               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-0.5" title="Available Now" aria-label="Available Now" />
@@ -1654,7 +1654,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     setSavedCategoryFilter('All');
                     setSavedNeighborhoodFilter('All');
                   }}
-                  className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl text-xs font-bold bg-navy-800 hover:bg-navy-900 text-white shadow-xs transition-colors cursor-pointer shrink-0 text-center"
+                  className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl text-xs font-bold bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white shadow-xs transition-colors cursor-pointer shrink-0 text-center"
                   title="Reset Filters"
                 >
                   Reset
@@ -1704,7 +1704,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredSavedPros.map(pro => (
-              <div key={pro.id} onClick={() => onSelectProForProfile(pro)} className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-xs cursor-pointer hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md transition-all active:scale-[0.99]">
+              <div key={pro.id} onClick={() => onSelectProForProfile(pro)} className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-xs cursor-pointer hover:border-navy-800/40 dark:hover:border-slate-500 transition-[border-color,transform] duration-150 active:scale-[0.99]">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     <img src={pro.profile_picture} alt={pro.name} className="w-14 h-14 rounded-2xl object-cover" />
@@ -1727,7 +1727,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <button onClick={(e) => { e.stopPropagation(); onOpenChat(pro); }} className="py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">Chat</button>
-                  <button onClick={(e) => { e.stopPropagation(); onOpenBooking(pro); }} className="py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-xs font-bold text-white shadow-xs cursor-pointer transition-colors">Book Now</button>
+                  <button onClick={(e) => { e.stopPropagation(); onOpenBooking(pro); }} className="py-2.5 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-xs font-bold text-white shadow-xs cursor-pointer transition-colors">Book Now</button>
                 </div>
               </div>
             ))}
@@ -1851,7 +1851,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     setNotificationsSearchTerm('');
                     setNotificationsFilterType('All');
                   }}
-                  className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl text-xs font-bold bg-navy-800 hover:bg-navy-900 text-white shadow-xs transition-colors cursor-pointer shrink-0 text-center"
+                  className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl text-xs font-bold bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white shadow-xs transition-colors cursor-pointer shrink-0 text-center"
                   title="Reset Filters"
                 >
                   Reset
@@ -2081,7 +2081,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     setSearchAvailabilityOnly(false);
                     setProViewFilter('all');
                   }}
-                  className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl text-xs font-bold bg-navy-800 hover:bg-navy-900 text-white shadow-xs transition-colors cursor-pointer shrink-0 text-center"
+                  className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl text-xs font-bold bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white shadow-xs transition-colors cursor-pointer shrink-0 text-center"
                   title="Clear Search & Filter State" aria-label="Clear Search & Filter State"
                 >
                   Reset
@@ -2212,7 +2212,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 setSearchAvailabilityOnly(false);
                 setProViewFilter('all');
               }}
-              className="px-4 py-2 rounded-xl bg-navy-800 text-white text-xs font-bold hover:bg-navy-900 transition-colors cursor-pointer"
+              className="px-4 py-2 rounded-xl bg-navy-800 text-white text-xs font-bold hover:bg-brand-orange-500 hover:text-navy-950 transition-colors cursor-pointer"
             >
               Reset All Filters
             </button>
@@ -2223,7 +2223,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
               <div
                 key={pro.id}
                 onClick={() => onSelectProForProfile(pro)}
-                className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/90 dark:border-slate-800 flex flex-col justify-between shadow-xs cursor-pointer hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md transition-all active:scale-[0.99] group"
+                className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/90 dark:border-slate-800 flex flex-col justify-between shadow-xs cursor-pointer hover:border-navy-800/40 dark:hover:border-slate-500 transition-[border-color,transform] duration-150 active:scale-[0.99] group"
               >
                 <div className="space-y-2.5">
                   {/* Top card header */}
@@ -2233,7 +2233,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                         <img
                           src={pro.profile_picture}
                           alt={pro.name}
-                          className="w-12 h-12 rounded-2xl object-cover border border-slate-200 dark:border-slate-700 shadow-xs group-hover:scale-102 transition-transform"
+                          className="w-12 h-12 rounded-2xl object-cover border border-slate-200 dark:border-slate-700 shadow-xs"
                         />
                         {pro.is_available_now && (
                           <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900" title="Available for immediate dispatch" aria-label="Available for immediate dispatch" />
@@ -2310,7 +2310,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                         e.stopPropagation();
                         onOpenBooking(pro);
                       }}
-                      className="px-3.5 py-2 rounded-xl bg-navy-800 hover:bg-navy-900 text-xs font-extrabold text-white shadow-xs transition-colors cursor-pointer flex items-center gap-1"
+                      className="px-3.5 py-2 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-xs font-extrabold text-white shadow-xs transition-colors cursor-pointer flex items-center gap-1"
                     >
                       Book Now
                     </button>

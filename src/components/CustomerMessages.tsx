@@ -380,7 +380,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
           {onOpenBooking && (
             <button
               onClick={() => onOpenBooking(activeConversation.professional)}
-              className="px-3.5 py-2 rounded-xl bg-navy-800 hover:bg-navy-900 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+              className="px-3.5 py-2 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
             >
               <Calendar className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Book Job</span>
@@ -687,10 +687,10 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
               <div
                 key={conv.proId}
                 onClick={() => selectProId(conv.proId)}
-                className={`p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border transition-all cursor-pointer shadow-xs active:scale-[0.99] flex items-start justify-between gap-3 sm:gap-4 hover:shadow-sm ${
+                className={`p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border transition-[border-color,transform] duration-150 cursor-pointer shadow-xs active:scale-[0.99] flex items-start justify-between gap-3 sm:gap-4 hover:border-navy-800/40 dark:hover:border-slate-500 ${
                   hasUnread
-                    ? 'border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600'
-                    : 'border-slate-200/90 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                    ? 'border-slate-300 dark:border-slate-700'
+                    : 'border-slate-200/90 dark:border-slate-800'
                 }`}
               >
                 {/* Left: Top-Aligned Avatar & Info */}

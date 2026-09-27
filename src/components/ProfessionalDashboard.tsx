@@ -416,14 +416,14 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                       ) : job.status === 'quote_requested' ? (
                         <button
                           onClick={() => setQuotingJob(job)}
-                          className="px-4 py-2.5 bg-navy-800 hover:bg-navy-900 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer w-full sm:w-auto shadow-xs"
+                          className="px-4 py-2.5 bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer w-full sm:w-auto shadow-xs"
                         >
                           Send Quote
                         </button>
                       ) : (
                         <button
                           onClick={() => handleOptimisticUpdateStatus(job.id, 'accepted')}
-                          className="px-4 py-2.5 bg-navy-800 hover:bg-navy-900 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer w-full sm:w-auto shadow-xs"
+                          className="px-4 py-2.5 bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer w-full sm:w-auto shadow-xs"
                         >
                           Accept
                         </button>
@@ -671,7 +671,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                               onClick={() => {
                                 setCompletingJob(job);
                               }}
-                              className="col-span-2 min-h-11 sm:min-h-0 px-4 py-2 bg-navy-800 hover:bg-navy-900 text-white text-xs font-bold rounded-xl transition-[background-color,transform] duration-150 active:scale-[0.97] cursor-pointer shadow-xs flex items-center justify-center gap-1.5 whitespace-nowrap"
+                              className="col-span-2 min-h-11 sm:min-h-0 px-4 py-2 bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white text-xs font-bold rounded-xl transition-[background-color,transform] duration-150 active:scale-[0.97] cursor-pointer shadow-xs flex items-center justify-center gap-1.5 whitespace-nowrap"
                             >
                               <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                               <span>Complete Job</span>
@@ -866,7 +866,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
               <div className="flex justify-end pt-2">
                 <button
                   onClick={() => openBookingDetails(null)}
-                  className="px-6 py-2.5 rounded-xl bg-navy-800 text-white font-bold text-xs hover:bg-navy-900 cursor-pointer"
+                  className="px-6 py-2.5 rounded-xl bg-navy-800 text-white font-bold text-xs hover:bg-brand-orange-500 hover:text-navy-950 cursor-pointer"
                 >
                   Close Details
                 </button>
@@ -922,7 +922,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                     });
                     setCompletingJob(null);
                   }}
-                  className="px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs shadow-xs transition-[background-color,transform] duration-150 active:scale-[0.97] cursor-pointer flex items-center gap-1.5"
+                  className="px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white font-bold text-xs shadow-xs transition-[background-color,transform] duration-150 active:scale-[0.97] cursor-pointer flex items-center gap-1.5"
                 >
                   <CheckCircle2 className="w-4 h-4" />
                   <span>Mark as done</span>
@@ -969,12 +969,12 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
           {/* Card 1 — Today's Jobs */}
           <div
             onClick={() => setHomeSubTab('overview')}
-            className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition-all cursor-pointer group flex flex-col justify-between hover:-translate-y-0.5"
+            className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs hover:border-navy-800/40 dark:hover:border-slate-500 transition-[border-color,transform] duration-150 cursor-pointer group flex flex-col justify-between"
           >
             <div>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Today's Jobs</span>
-                <div className="w-7 h-7 min-[350px]:w-8 min-[350px]:h-8 rounded-xl bg-navy-800/10 dark:bg-navy-800/30 text-navy-800 dark:text-navy-300 flex items-center justify-center transition-transform group-hover:scale-110">
+                <div className="w-7 h-7 min-[350px]:w-8 min-[350px]:h-8 rounded-xl bg-navy-800/10 dark:bg-navy-800/30 text-navy-800 dark:text-navy-300 flex items-center justify-center">
                   <Calendar className="w-3.5 h-3.5 min-[350px]:w-4 min-[350px]:h-4" />
                 </div>
               </div>
@@ -1001,12 +1001,12 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
               setJobsSubTab('requests');
               onTabChange && onTabChange('jobs');
             }}
-            className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition-all cursor-pointer group flex flex-col justify-between hover:-translate-y-0.5"
+            className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs hover:border-navy-800/40 dark:hover:border-slate-500 transition-[border-color,transform] duration-150 cursor-pointer group flex flex-col justify-between"
           >
             <div>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Pending Requests</span>
-                <div className="w-7 h-7 min-[350px]:w-8 min-[350px]:h-8 rounded-xl bg-brand-orange-500/10 text-brand-orange-600 dark:text-brand-orange-400 flex items-center justify-center transition-transform group-hover:scale-110">
+                <div className="w-7 h-7 min-[350px]:w-8 min-[350px]:h-8 rounded-xl bg-brand-orange-500/10 text-brand-orange-600 dark:text-brand-orange-400 flex items-center justify-center">
                   <ClipboardList className="w-3.5 h-3.5 min-[350px]:w-4 min-[350px]:h-4" />
                 </div>
               </div>
@@ -1030,12 +1030,12 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
           {/* Card 3 — Unread Messages */}
           <div
             onClick={() => onTabChange && onTabChange('messages')}
-            className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition-all cursor-pointer group flex flex-col justify-between hover:-translate-y-0.5"
+            className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs hover:border-navy-800/40 dark:hover:border-slate-500 transition-[border-color,transform] duration-150 cursor-pointer group flex flex-col justify-between"
           >
             <div>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Unread Messages</span>
-                <div className="w-7 h-7 min-[350px]:w-8 min-[350px]:h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center transition-transform group-hover:scale-110">
+                <div className="w-7 h-7 min-[350px]:w-8 min-[350px]:h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                   <MessageSquare className="w-3.5 h-3.5 min-[350px]:w-4 min-[350px]:h-4" />
                 </div>
               </div>
@@ -1057,12 +1057,12 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
           {/* Card 4 — Average Rating */}
           <div
             onClick={() => onTabChange && onTabChange('profile')}
-            className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition-all cursor-pointer group flex flex-col justify-between hover:-translate-y-0.5"
+            className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs hover:border-navy-800/40 dark:hover:border-slate-500 transition-[border-color,transform] duration-150 cursor-pointer group flex flex-col justify-between"
           >
             <div>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Average Rating</span>
-                <div className="w-7 h-7 min-[350px]:w-8 min-[350px]:h-8 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center transition-transform group-hover:scale-110">
+                <div className="w-7 h-7 min-[350px]:w-8 min-[350px]:h-8 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
                   <Star className="w-3.5 h-3.5 min-[350px]:w-4 min-[350px]:h-4 fill-amber-500" />
                 </div>
               </div>
@@ -1161,7 +1161,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                     {job.status === 'pending' ? (
                       <button
                         onClick={() => handleOptimisticUpdateStatus(job.id, 'accepted')}
-                        className="px-4 py-2 bg-navy-800 hover:bg-navy-900 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer w-full sm:w-auto shadow-xs"
+                        className="px-4 py-2 bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer w-full sm:w-auto shadow-xs"
                       >
                         Accept
                       </button>
@@ -1174,7 +1174,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                         onClick={() => {
                           setCompletingJob(job);
                         }}
-                        className="px-4 py-2 bg-navy-800 hover:bg-navy-900 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer w-full sm:w-auto shadow-xs flex items-center justify-center gap-1.5"
+                        className="px-4 py-2 bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer w-full sm:w-auto shadow-xs flex items-center justify-center gap-1.5"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         <span>Complete Job</span>
@@ -1203,7 +1203,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
             <button
               type="button"
               onClick={() => onManagePortfolio ? onManagePortfolio() : onTabChange && onTabChange('profile')}
-              className="px-5 py-2.5 bg-navy-800 hover:bg-navy-900 text-white font-bold text-sm rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-2 justify-center shrink-0"
+              className="px-5 py-2.5 bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white font-bold text-sm rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-2 justify-center shrink-0"
             >
               <Layers className="w-4 h-4" />
               <span>Manage Portfolio</span>

@@ -118,7 +118,7 @@ export const BuyGigSheet: React.FC<BuyGigSheetProps> = ({ target, onClose, onBuy
             <button
               type="submit"
               disabled={isBuying}
-              className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs shadow-xs cursor-pointer text-center disabled:opacity-70 disabled:cursor-wait"
+              className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 disabled:hover:bg-navy-800 disabled:hover:text-white text-white font-bold text-xs shadow-xs cursor-pointer text-center disabled:opacity-70 disabled:cursor-wait"
             >
               {isBuying ? 'Buying…' : `Buy for ${formatCurrency(gig.price)}`}
             </button>

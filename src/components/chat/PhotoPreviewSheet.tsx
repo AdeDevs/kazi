@@ -87,7 +87,7 @@ export const PhotoPreviewSheet: React.FC<PhotoPreviewSheetProps> = ({ photo, rec
           </button>
           <button
             type="submit"
-            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-900 text-white font-bold text-xs transition-transform active:scale-95 cursor-pointer text-center flex items-center justify-center gap-2"
+            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white font-bold text-xs transition-transform active:scale-95 cursor-pointer text-center flex items-center justify-center gap-2"
           >
             <SendHorizontal className="w-3.5 h-3.5" />
             <span>Send photo</span>

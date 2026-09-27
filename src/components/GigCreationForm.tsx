@@ -267,7 +267,7 @@ export const GigCreationForm: React.FC<GigCreationFormProps> = ({ professionalId
           <button
             type="submit"
             disabled={loading || isUploadingPhoto}
-            className="px-8 py-3 rounded-xl font-bold text-sm bg-navy-800 hover:bg-navy-900 text-white shadow-md flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-8 py-3 rounded-xl font-bold text-sm bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 disabled:hover:bg-navy-800 disabled:hover:text-white text-white shadow-md flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
             {loading ? 'Creating Gig...' : 'Create Gig'}
