@@ -11,6 +11,11 @@ export default defineConfig(() => {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    build: {
+      // Bundle the landing/auth illustrations into the JS (see src/assets/landing/index.ts) so they
+      // draw with the page on slow connections instead of arriving as separate requests.
+      assetsInlineLimit: (filePath: string) => (filePath.includes('/src/assets/landing/') ? true : undefined),
+    },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.

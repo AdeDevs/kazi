@@ -208,6 +208,9 @@ html.dark img {
 }
 .kh-faq { transition: background-color 200ms ease; }
 .kh-menu-item { transition: background-color 150ms ease, color 150ms ease; }
+.kh-rev-prev { border-color: #FFF6EC; color: #FFF6EC; background-color: transparent; transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, transform 160ms cubic-bezier(0.22, 1, 0.36, 1); }
+.kh-rev-next { border-color: #FF6A2B; background-color: #FF6A2B; color: #0B1B3A; transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, transform 160ms cubic-bezier(0.22, 1, 0.36, 1); }
+.kh-rev-prev:active, .kh-rev-next:active { transform: scale(0.94); }
 .kh-menu-item:active { background-color: #FF6A2B; color: #0B1B3A; }
 .kh-collapse { transition: grid-template-rows 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms cubic-bezier(0.22, 1, 0.36, 1); }
 @media (hover: hover) and (pointer: fine) {
@@ -215,6 +218,7 @@ html.dark img {
   .kh-btn-on-orange:hover, .kh-btn-orange:hover { background-color: #FFF6EC; color: #0B1B3A; }
   .kh-menu-btn:hover { background-color: #0B1B3A; color: #FFF6EC; }
   .kh-menu-item:hover { background-color: #FF6A2B; color: #0B1B3A; }
+  .kh-rev-prev:hover, .kh-rev-next:hover { background-color: #FFF6EC; border-color: #FFF6EC; color: #0B1B3A; }
   /* The diagonal arrow turns flat: "go there" becomes "going". */
   .kh-turn:hover svg { transform: rotate(45deg); }
   .kh-btn:hover .kh-arrow, .kh-link:hover .kh-arrow { transform: translateX(4px); }

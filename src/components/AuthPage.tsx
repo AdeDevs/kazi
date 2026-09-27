@@ -8,6 +8,7 @@ import { UserCreate } from '../types/auth';
 import { useDocumentMeta } from '../hooks/useDocumentMeta';
 import { TermsAndPrivacyModal } from './ui/TermsAndPrivacyModal';
 import { CustomDropdown } from './CustomDropdown';
+import { art } from '../assets/landing';
 
 
 export type AuthPageView = 'signin' | 'signup' | 'verify' | 'forgot' | 'reset';
@@ -385,8 +386,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({
             <p className="hidden lg:block text-base leading-normal font-semibold">{panel.text}</p>
           </div>
         </div>
-        <img key={`${panel.art}-m`} src={`/landing/${panel.art}.svg`} alt="" className="kh-fade lg:hidden absolute h-auto" style={panel.mobileArt} />
-        <img key={`${panel.art}-d`} src={`/landing/${panel.art}.svg`} alt="" className="kh-fade hidden lg:block absolute h-auto" style={panel.desktopArt} />
+        <img key={`${panel.art}-m`} src={art(panel.art)} alt="" className="kh-fade lg:hidden absolute h-auto" style={panel.mobileArt} />
+        <img key={`${panel.art}-d`} src={art(panel.art)} alt="" className="kh-fade hidden lg:block absolute h-auto" style={panel.desktopArt} />
       </aside>
 
       {/* ───────── Form column ───────── */}
@@ -800,7 +801,7 @@ const RoleCard: React.FC<{ selected: boolean; onSelect: () => void; icon: string
     className="kh-role relative flex-1 min-w-0 box-border p-4 rounded-[18px] border-2 flex flex-col gap-2.5 text-left cursor-pointer"
     data-selected={selected ? 'true' : undefined}
   >
-    <img src={`/landing/${icon}.svg`} alt="" className="w-10 h-10 lg:w-11 lg:h-11" />
+    <img src={art(icon)} alt="" className="w-10 h-10 lg:w-11 lg:h-11" />
     <span className={`${display} text-[19px] lg:text-[21px] leading-none tracking-[-0.03em]`}>{title}</span>
     <span className="text-[13px] leading-snug font-semibold opacity-85">{sub}</span>
     {selected && (

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { TermsAndPrivacyModal } from './ui/TermsAndPrivacyModal';
 import { savePendingSearch } from '../lib/pendingSearch';
 import { formatCurrency } from '../utils';
+import { art } from '../assets/landing';
 
 // The landing page keeps its own palette (from the design canvas, direction E "Ibadan hero,
 // illustrated"), separate from the app's theme and independent of dark mode.
@@ -22,7 +23,8 @@ const C = {
 const CLIENT_SIGNUP = '/signup?role=client';
 const ARTISAN_SIGNUP = '/signup?role=artisan';
 const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
-const ART = '/landing';
+// Preloaded from index.html on the landing page; the name is versioned so it can be cached for good.
+const SKYLINE = '/landing/ibadan-skyline-1.svg';
 
 const display = "font-['Bricolage_Grotesque',sans-serif] font-extrabold";
 const eyebrow = 'text-[13px] lg:text-sm font-extrabold uppercase tracking-[0.08em]';
@@ -102,6 +104,23 @@ const FAQS = [
   { q: 'When do artisans get paid?', a: 'As soon as the customer confirms the job is done, the payment in escrow is released to the artisan.' },
   { q: 'How do I join as an artisan?', a: 'Sign up, verify your ID and selfie, add your trade and the areas you cover, and you’ll start getting requests from people nearby.' },
 ];
+// SAMPLE reviews, shown until real ones exist (backend ask 40: a public featured-reviews endpoint).
+// The section labels them as samples; replace this list with real, consented reviews before relying
+// on it, and never present these as genuine.
+const SAMPLE_REVIEWS = [
+  { quote: 'My socket was sparking at night. The electrician came the next morning, sent the quote in chat, and I only released the money after testing every switch.', name: 'Tolu A.', meta: 'Bodija, Ibadan · Electrician job' },
+  { quote: 'I have been burnt by plumbers before. This time the money sat in escrow until the leak was actually fixed. Na so e suppose be.', name: 'Chinedu O.', meta: 'Yaba, Lagos · Plumber job' },
+  { quote: 'The installer sized the panels for what we actually use, not what he wanted to sell. The quote did not change once.', name: 'Aisha B.', meta: 'Akobo, Ibadan · Solar job' },
+];
+const REVIEW_CARDS = [
+  { bg: C.orange, art: 'review-1' },
+  { bg: C.pink, art: 'review-2' },
+  { bg: C.mint, art: 'review-3' },
+];
+// Fanned stack: front, middle, back. Desktop cards are larger, so they fan wider.
+const FAN_DESKTOP = ['translate(0px, 0px) rotate(-4deg)', 'translate(86px, 6px) rotate(5deg) scale(0.93)', 'translate(158px, 14px) rotate(13deg) scale(0.86)'];
+const FAN_PHONE = ['translate(0px, 0px) rotate(-4deg)', 'translate(62px, 4px) rotate(5deg) scale(0.93)', 'translate(118px, 12px) rotate(13deg) scale(0.86)'];
+
 const FAQ_VERIFIED = 1;
 const FAQ_PAID = 4;
 
@@ -163,12 +182,30 @@ const Bubble: React.FC<{
 const JOB_DONE = `Job done · ${formatCurrency(18500)} released`;
 
 /** The illustrated Ibadan skyline (Cocoa House, Bower's Tower, Mapo Hall) with its bubbles on top. */
-const Skyline: React.FC<{ className: string; style?: React.CSSProperties; children: React.ReactNode }> = ({ className, style, children }) => (
-  <div className={`absolute aspect-[1440/500] ${className}`} style={style}>
-    <img src={`${ART}/ibadan-skyline.svg`} alt="" className="absolute inset-0 w-full h-full" />
-    <svg viewBox="0 0 1440 500" aria-hidden="true" className="absolute inset-0 w-full h-full overflow-visible">{children}</svg>
-  </div>
-);
+const Skyline: React.FC<{ className: string; style?: React.CSSProperties; children: React.ReactNode }> = ({ className, style, children }) => {
+  // Fades in once downloaded rather than popping in on a slow connection. A cached copy can finish
+  // before React attaches onLoad, so `complete` is checked on mount too.
+  const [loaded, setLoaded] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+  useEffect(() => {
+    if (imgRef.current?.complete) setLoaded(true);
+  }, []);
+  return (
+    <div className={`absolute aspect-[1440/500] ${className}`} style={style}>
+      <img
+        ref={imgRef}
+        src={SKYLINE}
+        alt=""
+        fetchPriority="high"
+        decoding="async"
+        onLoad={() => setLoaded(true)}
+        className="absolute inset-0 w-full h-full transition-opacity duration-500 ease-out motion-reduce:transition-none"
+        style={{ opacity: loaded ? 1 : 0 }}
+      />
+      <svg viewBox="0 0 1440 500" aria-hidden="true" className="absolute inset-0 w-full h-full overflow-visible">{children}</svg>
+    </div>
+  );
+};
 
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
@@ -176,6 +213,7 @@ export const LandingPage: React.FC = () => {
   const [query, setQuery] = useState('');
   const [openTrade, setOpenTrade] = useState(0);
   const [openFaq, setOpenFaq] = useState(0);
+  const [review, setReview] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [legal, setLegal] = useState<null | 'terms' | 'escrow' | 'privacy'>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -355,14 +393,14 @@ export const LandingPage: React.FC = () => {
         <section aria-label="Why KaziHub" className="px-5 lg:px-[72px] pt-10 lg:pt-20 grid grid-cols-2 lg:grid-cols-12 lg:grid-rows-2 gap-2.5 lg:gap-3.5 lg:h-[600px]">
           <div className="kh-rise relative overflow-hidden h-[230px] lg:h-auto lg:col-span-5 lg:row-span-2 rounded-[22px] lg:rounded-[28px]" style={{ background: C.pink, animationDelay: '360ms' }}>
             <div className="relative z-10 px-4 lg:px-[30px] pt-4 lg:pt-[26px] flex flex-col items-start gap-1.5 lg:gap-2.5">
-              <img src={`${ART}/icon-quote.svg`} alt="" className="hidden lg:block w-11 h-11" />
+              <img src={art('icon-quote')} alt="" className="hidden lg:block w-11 h-11" />
               <h3 className={`${display} text-[20px] lg:text-[34px] leading-[0.95] tracking-[-0.04em]`}>Quotes before work</h3>
               <p className="text-[13px] lg:text-base leading-snug lg:leading-[1.45] font-semibold lg:font-medium lg:max-w-[360px]">
                 <span className="lg:hidden">Agree a written quote before work starts.</span>
                 <span className="hidden lg:inline">Chat with the artisan and agree a written quote before any work starts.</span>
               </p>
             </div>
-            <img src={`${ART}/mosaic-quotes.svg`} alt="" className="absolute left-0 -bottom-4 lg:-bottom-[64px] w-full h-auto" />
+            <img src={art('mosaic-quotes')} alt="" className="absolute left-0 -bottom-4 lg:-bottom-[64px] w-full h-auto" />
           </div>
           <div className="kh-rise relative overflow-hidden h-[230px] lg:h-auto lg:col-span-4 rounded-[22px] lg:rounded-[28px]" style={{ background: C.mint, animationDelay: '430ms' }}>
             <div className="relative z-10 px-4 lg:px-[30px] pt-4 lg:pt-[26px] flex flex-col items-start gap-1.5 lg:gap-2.5">
@@ -372,18 +410,18 @@ export const LandingPage: React.FC = () => {
                 <span className="hidden lg:inline">Verified artisans in your area, so help arrives fast.</span>
               </p>
             </div>
-            <img src={`${ART}/mosaic-near.svg`} alt="" className="absolute -left-6 lg:left-0 -bottom-1.5 lg:-bottom-12 w-[220px] lg:w-full h-auto" />
+            <img src={art('mosaic-near')} alt="" className="absolute -left-6 lg:left-0 -bottom-1.5 lg:-bottom-12 w-[220px] lg:w-full h-auto" />
           </div>
           <div className="kh-rise relative overflow-hidden h-[230px] lg:h-auto lg:col-span-3 lg:row-span-2 rounded-[22px] lg:rounded-[28px]" style={{ background: C.yellow, animationDelay: '500ms' }}>
             <div className="relative z-10 px-4 lg:px-[30px] pt-4 lg:pt-[26px] flex flex-col items-start gap-1.5 lg:gap-2.5">
-              <img src={`${ART}/icon-paid.svg`} alt="" className="hidden lg:block w-11 h-11" />
+              <img src={art('icon-paid')} alt="" className="hidden lg:block w-11 h-11" />
               <h3 className={`${display} text-[20px] lg:text-[34px] leading-[0.95] tracking-[-0.04em]`}>Paid when done</h3>
               <p className="text-[13px] lg:text-base leading-snug lg:leading-[1.45] font-semibold lg:font-medium">
                 <span className="lg:hidden">Money waits in escrow till you confirm.</span>
                 <span className="hidden lg:inline">Your money waits in escrow and moves only when you confirm.</span>
               </p>
             </div>
-            <img src={`${ART}/mosaic-paid.svg`} alt="" className="absolute -right-1 lg:right-auto lg:left-0 -bottom-[22px] lg:-bottom-10 w-[124px] lg:w-full h-auto" />
+            <img src={art('mosaic-paid')} alt="" className="absolute -right-1 lg:right-auto lg:left-0 -bottom-[22px] lg:-bottom-10 w-[124px] lg:w-full h-auto" />
           </div>
           <div className="kh-rise relative overflow-hidden h-[230px] lg:h-auto lg:col-start-6 lg:col-span-4 lg:row-start-2 rounded-[22px] lg:rounded-[28px] px-4 pt-4 lg:px-[30px] lg:py-[26px] flex flex-col lg:flex-row lg:items-center gap-1.5 lg:gap-[22px]" style={{ background: C.indigo, color: C.cream, animationDelay: '570ms' }}>
             <h3 className={`lg:hidden ${display} text-[20px] leading-[0.95] tracking-[-0.04em]`}>Every artisan checked</h3>
@@ -418,7 +456,7 @@ export const LandingPage: React.FC = () => {
                   <h3 className={`mt-0.5 lg:mt-1 ${display} text-[24px] lg:text-[26px] leading-[0.98] tracking-[-0.04em]`}>{s.title}</h3>
                   <p className="text-sm lg:text-[15px] leading-[1.45] font-medium">{s.body}</p>
                 </div>
-                <img src={`${ART}/step-${i + 1}.svg`} alt="" className="absolute left-0 -bottom-2 lg:-bottom-2.5 w-full h-auto" />
+                <img src={art(`step-${i + 1}`)} alt="" className="absolute left-0 -bottom-2 lg:-bottom-2.5 w-full h-auto" />
               </li>
             ))}
             <li aria-hidden="true" className="lg:hidden shrink-0 basis-2.5" />
@@ -451,11 +489,11 @@ export const LandingPage: React.FC = () => {
                     open ? (
                       <>
                         <div className="kh-rise absolute inset-x-0 -bottom-14" style={{ animationDuration: '620ms', animationDelay: '180ms' }}>
-                          <img src={`${ART}/${t.img}.svg`} alt="" className="block w-full h-auto" />
+                          <img src={art(t.img)} alt="" className="block w-full h-auto" />
                         </div>
                         <div className="kh-fade relative px-[30px] pt-[26px] flex flex-col gap-3.5" style={{ animationDuration: '420ms', animationDelay: '120ms' }}>
                           <div className="flex items-center justify-between">
-                            <img src={`${ART}/${t.spot}.svg`} alt="" className="w-12 h-12" />
+                            <img src={art(t.spot)} alt="" className="w-12 h-12" />
                             <button
                               type="button"
                               onClick={() => seeTrade(t.search)}
@@ -484,7 +522,7 @@ export const LandingPage: React.FC = () => {
                     )
                   ) : (
                     <>
-                      {open && <img src={`${ART}/${t.img}.svg`} alt="" className="kh-rise absolute left-0 -bottom-[26px] w-full h-auto" style={{ animationDuration: '560ms', animationDelay: '160ms' }} />}
+                      {open && <img src={art(t.img)} alt="" className="kh-rise absolute left-0 -bottom-[26px] w-full h-auto" style={{ animationDuration: '560ms', animationDelay: '160ms' }} />}
                       <button
                         type="button"
                         onClick={() => setOpenTrade(open ? -1 : i)}
@@ -573,7 +611,7 @@ export const LandingPage: React.FC = () => {
               <h2 className={`${display} text-[40px] lg:text-[64px] leading-[0.9] tracking-[-0.055em]`}>You do the work. The money don already land.</h2>
             </div>
             <div className="lg:hidden h-52 rounded-[20px] overflow-hidden flex items-end justify-center" style={{ background: C.indigo }}>
-              <img src={`${ART}/artisan.svg`} alt="An artisan receiving a job request, with payment already secured in escrow" className="w-full h-full object-contain object-bottom" />
+              <img src={art('artisan')} alt="An artisan receiving a job request, with payment already secured in escrow" className="w-full h-full object-contain object-bottom" />
             </div>
             <ul className="flex flex-col lg:grid lg:grid-cols-2 gap-3 lg:gap-x-7 lg:gap-y-4 lg:self-stretch">
               {ARTISAN_POINTS.map(p => (
@@ -589,7 +627,56 @@ export const LandingPage: React.FC = () => {
             </Link>
           </div>
           <div className="hidden lg:flex lg:col-start-9 lg:col-span-4 my-5 mr-5 rounded-3xl overflow-hidden items-end justify-center" style={{ background: C.indigo }}>
-            <img src={`${ART}/artisan.svg`} alt="An artisan receiving a job request, with payment already secured in escrow" className="w-full h-full object-contain object-bottom" />
+            <img src={art('artisan')} alt="An artisan receiving a job request, with payment already secured in escrow" className="w-full h-full object-contain object-bottom" />
+          </div>
+        </section>
+
+        {/* ───────── Reviews: fanned illustrated cards + quote (samples until real reviews exist) ───────── */}
+        <section aria-label="Customer reviews" className="px-5 lg:px-[72px] pt-14 lg:pt-24">
+          <div className="rounded-[28px] lg:rounded-[32px] overflow-hidden flex flex-col lg:grid lg:grid-cols-12 gap-[22px] lg:gap-6 px-[22px] pt-[26px] pb-[22px] lg:px-14 lg:py-12 lg:h-[410px]" style={{ background: C.navy, color: C.cream }}>
+            <p className={`lg:hidden ${eyebrow}`} style={{ color: C.mint }}>Sample reviews</p>
+            <div className="relative h-[240px] lg:h-auto lg:col-span-5" aria-hidden="true">
+              {REVIEW_CARDS.map((c, i) => {
+                const pos = (i - review + 3) % 3;
+                return (
+                  <div
+                    key={c.art}
+                    className="absolute left-1.5 top-2 lg:left-0 lg:top-1 w-[180px] h-[220px] lg:w-[240px] lg:h-[295px] rounded-[20px] lg:rounded-3xl overflow-hidden motion-reduce:transition-none"
+                    style={{
+                      background: c.bg,
+                      zIndex: 3 - pos,
+                      transform: (isDesktop ? FAN_DESKTOP : FAN_PHONE)[pos],
+                      transformOrigin: '30% 100%',
+                      transition: `transform 640ms ${EASE}`,
+                      boxShadow: '0 18px 36px rgba(0, 0, 0, 0.3)',
+                    }}
+                  >
+                    <img src={art(c.art)} alt="" className="block w-full h-full object-cover" />
+                  </div>
+                );
+              })}
+            </div>
+            <div className="lg:col-start-6 lg:col-span-7 flex flex-col justify-between gap-[22px] lg:gap-6">
+              <p className={`hidden lg:block ${eyebrow}`} style={{ color: C.mint }}>Sample reviews</p>
+              <figure key={review} className="kh-fade flex flex-col gap-[22px] lg:gap-6" style={{ animationDuration: '300ms' }} aria-live="polite">
+                <blockquote className={`${display} !font-bold text-[21px] lg:text-[30px] leading-[1.15] lg:leading-[1.12] tracking-[-0.03em]`}>“{SAMPLE_REVIEWS[review].quote}”</blockquote>
+                <figcaption className="flex flex-col gap-1">
+                  <span className="text-base lg:text-[17px] font-extrabold">{SAMPLE_REVIEWS[review].name}</span>
+                  <span className="text-sm font-medium" style={{ color: C.muted }}>{SAMPLE_REVIEWS[review].meta}</span>
+                </figcaption>
+              </figure>
+              <div className="flex items-center justify-between lg:justify-end gap-3">
+                <span className="lg:mr-1.5 text-sm font-bold tabular-nums" style={{ color: C.muted }}>{review + 1} / {SAMPLE_REVIEWS.length}</span>
+                <div className="flex gap-2.5 lg:gap-3">
+                  <button type="button" onClick={() => setReview(r => (r + SAMPLE_REVIEWS.length - 1) % SAMPLE_REVIEWS.length)} aria-label="Previous review" className="kh-rev-prev w-12 h-12 rounded-full border-2 flex items-center justify-center cursor-pointer">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M19 12H5" /><path d="m11 18-6-6 6-6" /></svg>
+                  </button>
+                  <button type="button" onClick={() => setReview(r => (r + 1) % SAMPLE_REVIEWS.length)} aria-label="Next review" className="kh-rev-next w-12 h-12 rounded-full border-2 flex items-center justify-center cursor-pointer">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m13 6 6 6-6 6" /></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 

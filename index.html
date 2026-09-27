@@ -6,6 +6,15 @@
     <meta name="theme-color" content="#fafafa" />
     <meta name="color-scheme" content="light" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script>
+      // The landing page's hero skyline is its largest image. Start downloading it alongside the
+      // app's JavaScript instead of after it; other pages don't need it, so only on "/".
+      if (location.pathname === '/') {
+        var l = document.createElement('link');
+        l.rel = 'preload'; l.as = 'image'; l.href = '/landing/ibadan-skyline-1.svg'; l.fetchPriority = 'high';
+        document.head.appendChild(l);
+      }
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700..800&family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet" />
