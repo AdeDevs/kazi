@@ -267,9 +267,9 @@ export const LandingPage: React.FC = () => {
                 style={{ background: C.cream, borderColor: C.navy, animationDuration: '180ms' }}
               >
                 {sections.map(s => (
-                  <a key={s.href} href={s.href} onClick={() => setMenuOpen(false)} className="px-3 py-3 rounded-xl active:bg-white">{s.label}</a>
+                  <a key={s.href} href={s.href} onClick={() => setMenuOpen(false)} className="kh-menu-item px-3 py-3 rounded-xl">{s.label}</a>
                 ))}
-                <Link to="/signin" className="px-3 py-3 rounded-xl font-extrabold active:bg-white">Sign in</Link>
+                <Link to="/signin" className="kh-menu-item px-3 py-3 rounded-xl font-extrabold">Sign in</Link>
               </nav>
             )}
           </header>
@@ -427,9 +427,9 @@ export const LandingPage: React.FC = () => {
 
         {/* ───────── Trades: expanding cards (desktop) / accordion (phone) ───────── */}
         <section id="trades" className="scroll-mt-4 px-5 lg:px-[72px] pt-14 lg:pt-[92px] flex flex-col gap-5 lg:gap-8">
-          <div className="flex items-end justify-between gap-10">
+          <div className="flex flex-col lg:flex-row items-start lg:items-end justify-between gap-3 lg:gap-10">
             <h2 className={`${display} text-[44px] lg:text-[72px] leading-[0.9] tracking-[-0.055em]`}>The trades people<br className="hidden lg:block" /> book most.</h2>
-            <Link to={CLIENT_SIGNUP} className="kh-link hidden lg:inline pb-0.5 text-[17px] font-extrabold">See all trades <Arrow /></Link>
+            <Link to={CLIENT_SIGNUP} className="kh-link pb-0.5 text-[15px] lg:text-[17px] font-extrabold">See all trades <Arrow /></Link>
           </div>
           <ul className="flex flex-col lg:flex-row gap-2.5 lg:gap-3 lg:h-[520px]">
             {TRADES.map((t, i) => {
@@ -514,7 +514,6 @@ export const LandingPage: React.FC = () => {
               );
             })}
           </ul>
-          <Link to={CLIENT_SIGNUP} className="kh-link lg:hidden self-start pb-0.5 text-[15px] font-extrabold">See all trades <Arrow /></Link>
         </section>
 
         {/* ───────── For clients: tiles rise in on first view ───────── */}
