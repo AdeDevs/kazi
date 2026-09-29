@@ -1,44 +1,51 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Compass, ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { art } from '../assets/landing';
 
-export const NotFound: React.FC = () => {
-  const navigate = useNavigate();
+const display = "font-['Bricolage_Grotesque',sans-serif] font-extrabold";
+
+/**
+ * "This page no dey." Uses the public pages' palette (cream, ink navy) in both themes. Standalone
+ * for unknown URLs; `embedded` drops its own header when it's shown inside the app's layout.
+ */
+export const NotFound: React.FC<{ embedded?: boolean }> = ({ embedded = false }) => {
   const { user } = useAuth();
   const homePath = user ? '/home' : '/';
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-5">
-      <div className="max-w-md w-full text-center space-y-6">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-navy-900 text-white shadow-lg">
-          <Compass className="w-8 h-8" strokeWidth={1.5} />
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-bold text-brand-orange-600 dark:text-brand-orange-400 tracking-wide uppercase">404</p>
-          <h1 className="text-2xl font-black text-navy-900 dark:text-zinc-100">Page not found</h1>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
-            The page you're looking for doesn't exist, or may have moved. Let's get you back on track.
-          </p>
-        </div>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors cursor-pointer flex items-center justify-center gap-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Go Back</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate(homePath)}
-            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-navy-900 hover:bg-navy-950 text-white font-bold text-sm shadow-xs transition-colors cursor-pointer"
-          >
-            {user ? 'Back to KaziHub' : 'Go to Sign In'}
-          </button>
-        </div>
-      </div>
+    <div
+      className={`kh-auth flex flex-col font-['Plus_Jakarta_Sans',system-ui,sans-serif] ${embedded ? 'min-h-full rounded-3xl' : 'min-h-dvh'}`}
+      style={{ background: '#FFF6EC', color: '#0B1B3A' }}
+    >
+      {!embedded && (
+        <header className="h-16 lg:h-24 shrink-0 px-5 lg:px-[72px] flex items-center">
+          <Link to={homePath} aria-label="KaziHub home" className={`${display} text-2xl lg:text-[32px] tracking-[-0.04em]`}>
+            <span style={{ color: '#3B35C9' }}>Kazi</span><span style={{ color: '#FF6A2B' }}>Hub</span>
+          </Link>
+        </header>
+      )}
+      <main className="flex-1 px-5 lg:px-6 pt-4 pb-12 lg:pb-20 flex flex-col items-center justify-center text-center gap-4 lg:gap-5">
+        <img
+          src={art('not-found')}
+          alt="An artisan shining a torch at a signpost that reads 404, with another sign pointing home"
+          className="kh-fade block w-full max-w-[350px] lg:max-w-[500px] h-auto"
+          style={{ animationDuration: '700ms' }}
+        />
+        <p className="text-sm font-extrabold uppercase tracking-[0.08em]">Error 404</p>
+        <h1 className={`kh-rise ${display} text-[44px] lg:text-[72px] leading-[0.9] tracking-[-0.055em]`} style={{ animationDuration: '700ms' }}>
+          This page no dey.
+        </h1>
+        <p className="max-w-[320px] lg:max-w-[460px] text-base lg:text-lg leading-normal font-medium" style={{ color: '#3A4458' }}>
+          We couldn’t find the page you’re looking for. It may have moved, or the link is broken.
+        </p>
+        <Link
+          to={homePath}
+          className="kh-btn mt-2 self-stretch sm:self-auto px-7 py-[17px] lg:py-[18px] rounded-2xl text-[17px] font-extrabold"
+        >
+          Back to home <span className="kh-arrow" aria-hidden="true">→</span>
+        </Link>
+      </main>
     </div>
   );
 };

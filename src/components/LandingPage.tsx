@@ -1,9 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { TermsAndPrivacyModal } from './ui/TermsAndPrivacyModal';
 import { savePendingSearch } from '../lib/pendingSearch';
 import { formatCurrency } from '../utils';
 import { art } from '../assets/landing';
+import { Phone, MockQuote, MockNearYou, MockPayment, MockIdCheck, MockNewRequest, MockCheckout, MockWallet, ArtisanScene } from './landing/PhoneMocks';
 
 // The landing page keeps its own palette (from the design canvas, direction E "Ibadan hero,
 // illustrated"), separate from the app's theme and independent of dark mode.
@@ -24,7 +25,7 @@ const CLIENT_SIGNUP = '/signup?role=client';
 const ARTISAN_SIGNUP = '/signup?role=artisan';
 const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
 // Preloaded from index.html on the landing page; the name is versioned so it can be cached for good.
-const SKYLINE = '/landing/ibadan-skyline-1.svg';
+const SKYLINE = '/landing/ibadan-skyline-3.svg';
 
 const display = "font-['Bricolage_Grotesque',sans-serif] font-extrabold";
 const eyebrow = 'text-[13px] lg:text-sm font-extrabold uppercase tracking-[0.08em]';
@@ -52,31 +53,106 @@ function useInView<T extends HTMLElement>(threshold = 0.2) {
   return { ref, inView };
 }
 
-function useIsDesktop() {
-  const query = '(min-width: 1024px)';
+function useMediaQuery(query: string) {
   const [matches, setMatches] = useState(() => typeof window !== 'undefined' && window.matchMedia(query).matches);
   useEffect(() => {
     const mql = window.matchMedia(query);
     const onChange = () => setMatches(mql.matches);
+    onChange();
     mql.addEventListener('change', onChange);
     return () => mql.removeEventListener('change', onChange);
-  }, []);
+  }, [query]);
   return matches;
 }
 
+/** Where an element's bottom edge sits inside its offset parent, kept current as it resizes. */
+function useBottomEdge<T extends HTMLElement>() {
+  const ref = useRef<T>(null);
+  const [bottom, setBottom] = useState(0);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const read = () => setBottom(el.offsetTop + el.offsetHeight);
+    read();
+    const ro = new ResizeObserver(read);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return { ref, bottom };
+}
+
+/**
+ * A trade's illustration, sat on the card's bottom edge at full width. The drawings have empty
+ * space above them (`artTop` is that share of the height), so they may reach up behind the text,
+ * but their drawn part never does: the height is capped so the content starts `clearance` px down.
+ */
+const TradeArt: React.FC<{ src: string; artTop: number; clearance: number; className?: string; style?: React.CSSProperties }> = ({ src, artTop, clearance, className = '', style }) => (
+  <img
+    src={src}
+    alt=""
+    className={`absolute left-0 bottom-0 w-full h-auto object-contain object-bottom ${className}`}
+    style={{ maxHeight: `calc((100% - ${Math.round(clearance)}px) / ${1 - artTop})`, ...style }}
+  />
+);
+
 const TRADES = [
-  { name: 'Electricians', search: 'Electrician', lower: 'electricians', bg: C.orange, fg: C.navy, spot: 'spot-electrician', img: 'trade-electrician', desc: 'Sparking sockets, new wiring, inverter hook-ups and fault finding.' },
-  { name: 'Plumbers', search: 'Plumber', lower: 'plumbers', bg: C.indigo, fg: C.cream, spot: 'spot-plumber', img: 'trade-plumber', desc: 'Leaking taps, blocked drains, water heaters and new fittings.' },
-  { name: 'Mechanics', search: 'Mechanic', lower: 'mechanics', bg: C.pink, fg: C.navy, spot: 'spot-mechanic', img: 'trade-mechanic', desc: 'Diagnostics, servicing, brakes and roadside help.' },
-  { name: 'Solar installers', search: 'Solar', lower: 'solar installers', bg: C.mint, fg: C.navy, spot: 'spot-solar', img: 'trade-solar', desc: 'Panels, batteries and inverters sized for your home.' },
-  { name: 'AC technicians', search: 'AC', lower: 'AC technicians', bg: C.navy, fg: C.cream, spot: 'spot-ac', img: 'trade-ac', desc: 'Installs, gas top-ups, servicing and repairs.' },
+  { name: 'Electricians', search: 'Electrician', lower: 'electricians', bg: C.orange, fg: C.navy, spot: 'spot-electrician', img: 'trade-electrician', artTop: 0.34, desc: 'Sparking sockets, new wiring, inverter hook-ups and fault finding.' },
+  { name: 'Plumbers', search: 'Plumber', lower: 'plumbers', bg: C.indigo, fg: C.cream, spot: 'spot-plumber', img: 'trade-plumber', artTop: 0.48, desc: 'Leaking taps, blocked drains, water heaters and new fittings.' },
+  { name: 'Mechanics', search: 'Mechanic', lower: 'mechanics', bg: C.pink, fg: C.navy, spot: 'spot-mechanic', img: 'trade-mechanic', artTop: 0.48, desc: 'Diagnostics, servicing, brakes and roadside help.' },
+  { name: 'Solar installers', search: 'Solar', lower: 'solar installers', bg: C.mint, fg: C.navy, spot: 'spot-solar', img: 'trade-solar', artTop: 0.11, desc: 'Panels, batteries and inverters sized for your home.' },
+  { name: 'AC technicians', search: 'AC', lower: 'AC technicians', bg: C.navy, fg: C.cream, spot: 'spot-ac', img: 'trade-ac', artTop: 0.36, desc: 'Installs, gas top-ups, servicing and repairs.' },
 ];
 
+type Trade = (typeof TRADES)[number];
+
+/** Desktop: the open (widened) trade card's text, with its illustration kept clear of it. */
+const TradeOpenDesktop: React.FC<{ t: Trade; onSee: () => void }> = ({ t, onSee }) => {
+  const text = useBottomEdge<HTMLDivElement>();
+  return (
+    <>
+      <TradeArt src={art(t.img)} artTop={t.artTop} clearance={text.bottom + 16} className="kh-rise" style={{ animationDuration: '620ms', animationDelay: '180ms' }} />
+      <div ref={text.ref} className="kh-fade relative px-[30px] pt-[26px] flex flex-col gap-3.5" style={{ animationDuration: '420ms', animationDelay: '120ms' }}>
+        <div className="flex items-center justify-between">
+          <img src={art(t.spot)} alt="" className="w-12 h-12" />
+          <button
+            type="button"
+            onClick={onSee}
+            aria-label={`See ${t.lower}`}
+            className="kh-turn w-11 h-11 rounded-full flex items-center justify-center cursor-pointer"
+            style={{ background: t.fg, color: t.bg }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 17 17 7" /><path d="M8 7h9v9" /></svg>
+          </button>
+        </div>
+        <h3 className={`mt-1.5 ${display} text-[clamp(2.5rem,3.6vw,3.25rem)] leading-[0.92] tracking-[-0.05em]`}>{t.name}</h3>
+        <p className="max-w-[420px] text-[17px] leading-[1.45] font-medium">{t.desc}</p>
+      </div>
+    </>
+  );
+};
+
+/** Phones: the open accordion card's description and link, with the illustration kept clear of it. */
+const TradeOpenMobile: React.FC<{ t: Trade; onSee: () => void }> = ({ t, onSee }) => {
+  const text = useBottomEdge<HTMLDivElement>();
+  return (
+    <>
+      <TradeArt src={art(t.img)} artTop={t.artTop} clearance={text.bottom + 12} className="kh-rise" style={{ animationDuration: '560ms', animationDelay: '160ms' }} />
+      <div ref={text.ref} className="kh-fade relative z-10 px-5 flex flex-col items-start gap-2.5" style={{ animationDuration: '400ms', animationDelay: '120ms' }}>
+        <p className="text-[15px] leading-[1.45] font-medium">{t.desc}</p>
+        <button type="button" onClick={onSee} className="kh-link pb-0.5 text-[15px] font-extrabold cursor-pointer">
+          See {t.lower} <Arrow />
+        </button>
+      </div>
+    </>
+  );
+};
+
+
 const STEPS = [
-  { title: 'Tell us what needs fixing', body: 'Search a trade or describe the problem. We show checked artisans near you.', bg: C.mint, fg: C.navy },
-  { title: 'Agree a quote', body: 'Chat with the artisan and accept a written price before any work starts.', bg: C.pink, fg: C.navy },
-  { title: 'Pay into escrow', body: 'Your money goes to KaziHub escrow, not the artisan. It stays there while the job is done.', bg: C.yellow, fg: C.navy },
-  { title: 'Confirm, and they get paid', body: 'Happy with the work? Confirm it and the payment is released to the artisan.', bg: C.indigo, fg: C.cream },
+  { title: 'Tell us what needs fixing', body: 'Search a trade or describe the problem. We show checked artisans near you.', bg: C.mint, fg: C.navy, screen: MockNewRequest },
+  { title: 'Agree a quote', body: 'Chat with the artisan and accept a written price before any work starts.', bg: C.pink, fg: C.navy, screen: null },
+  { title: 'Pay into escrow', body: 'Your money goes to KaziHub escrow, not the artisan. It stays there while the job is done.', bg: C.yellow, fg: C.navy, screen: MockCheckout },
+  { title: 'Confirm, and they get paid', body: 'Happy with the work? Confirm it and the payment is released to the artisan.', bg: C.indigo, fg: C.cream, screen: MockWallet },
 ];
 
 const MARQUEE = [
@@ -209,7 +285,9 @@ const Skyline: React.FC<{ className: string; style?: React.CSSProperties; childr
 
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
-  const isDesktop = useIsDesktop();
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
+  // Tablets (768px up) get their own layout: wider grids and the desktop's expanding trade cards.
+  const isTablet = useMediaQuery('(min-width: 768px)');
   const [query, setQuery] = useState('');
   const [openTrade, setOpenTrade] = useState(0);
   const [openFaq, setOpenFaq] = useState(0);
@@ -271,9 +349,9 @@ export const LandingPage: React.FC = () => {
           </g>
         </svg>
 
-        <div className="relative z-10 px-5 lg:px-[72px] flex flex-col items-center gap-5 lg:gap-0 max-w-[1440px] mx-auto w-full box-border">
-          <header ref={menuRef} className="kh-fade relative z-30 self-stretch h-16 lg:h-[84px] flex items-center justify-between">
-            <Link to="/" aria-label="KaziHub home" className={`${display} text-[24px] lg:text-[28px] tracking-[-0.04em]`}>KaziHub</Link>
+        <div className="relative z-10 px-5 md:px-10 lg:px-[72px] flex flex-col items-center gap-5 md:gap-0 max-w-[1440px] mx-auto w-full box-border">
+          <header ref={menuRef} className="kh-fade relative z-30 self-stretch h-16 md:h-[76px] lg:h-[84px] flex items-center justify-between">
+            <Link to="/" aria-label="KaziHub home" className={`${display} text-[24px] md:text-[26px] lg:text-[28px] tracking-[-0.04em]`}>KaziHub</Link>
             <nav aria-label="Sections" className="hidden lg:flex gap-7 text-[15px] font-bold">
               {sections.map(s => <a key={s.href} href={s.href} className="kh-link">{s.label}</a>)}
             </nav>
@@ -312,10 +390,10 @@ export const LandingPage: React.FC = () => {
             )}
           </header>
 
-          <h1 className={`kh-rise mt-6 lg:mt-12 text-center ${display} text-[48px] lg:text-[88px] leading-[0.92] lg:leading-[0.88] tracking-[-0.055em]`} style={{ animationDelay: '60ms' }}>
-            Light don off?<br />Get person<br className="lg:hidden" /> wey sabi.
+          <h1 className={`kh-rise mt-6 md:mt-10 lg:mt-12 text-center ${display} text-[48px] md:text-[72px] lg:text-[88px] leading-[0.92] md:leading-[0.9] lg:leading-[0.88] tracking-[-0.055em]`} style={{ animationDelay: '60ms' }}>
+            Light don off?<br />Get person<br className="md:hidden" /> wey sabi.
           </h1>
-          <p className="kh-rise lg:mt-5 lg:mb-7 max-w-[320px] lg:max-w-[600px] text-center text-[15px] lg:text-[19px] leading-normal font-semibold" style={{ animationDelay: '160ms' }}>
+          <p className="kh-rise md:mt-4 md:mb-6 lg:mt-5 lg:mb-7 max-w-[320px] md:max-w-[520px] lg:max-w-[600px] text-center text-[15px] md:text-lg lg:text-[19px] leading-normal font-semibold" style={{ animationDelay: '160ms' }}>
             ID-verified artisans near you. Your money stays in escrow until the job is done, and you say so.
           </p>
 
@@ -323,7 +401,7 @@ export const LandingPage: React.FC = () => {
             onSubmit={handleSearch}
             role="search"
             aria-label="Find an artisan"
-            className="kh-rise kh-search self-stretch lg:self-auto lg:w-[720px] h-[58px] lg:h-[68px] box-border flex items-center gap-2.5 lg:gap-3 py-[5px] lg:py-1.5 pr-[5px] lg:pr-1.5 pl-4 lg:pl-6 bg-white rounded-full"
+            className="kh-rise kh-search self-stretch md:self-auto md:w-[620px] lg:w-[720px] h-[58px] md:h-16 lg:h-[68px] box-border flex items-center gap-2.5 md:gap-3 py-[5px] md:py-1.5 pr-[5px] md:pr-1.5 pl-4 md:pl-6 bg-white rounded-full"
             style={{ animationDelay: '260ms' }}
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={C.navy} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0">
@@ -336,7 +414,7 @@ export const LandingPage: React.FC = () => {
                 value={query}
                 onChange={(e) => setQuery(e.target.value.slice(0, 80))}
                 enterKeyHint="search"
-                placeholder={isDesktop ? 'What needs fixing? e.g. a leaking tap' : 'What needs fixing?'}
+                placeholder={isTablet ? 'What needs fixing? e.g. a leaking tap' : 'What needs fixing?'}
                 className="w-full bg-transparent outline-none text-base lg:text-[17px] font-medium placeholder:text-[#5A6478]"
                 style={{ color: C.navy }}
               />
@@ -344,10 +422,10 @@ export const LandingPage: React.FC = () => {
             <button
               type="submit"
               aria-label="Find artisans"
-              className="kh-btn shrink-0 w-12 lg:w-auto h-12 lg:h-14 lg:px-7 rounded-full flex items-center justify-center text-[17px] font-extrabold cursor-pointer"
+              className="kh-btn shrink-0 w-12 md:w-auto h-12 md:h-[52px] lg:h-14 md:px-6 lg:px-7 rounded-full flex items-center justify-center text-[17px] font-extrabold cursor-pointer"
             >
-              <span className="hidden lg:inline">Find artisans</span>
-              <span className="kh-arrow lg:hidden flex">
+              <span className="hidden md:inline">Find artisans</span>
+              <span className="kh-arrow md:hidden flex">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M5 12h14" /><path d="m13 6 6 6-6 6" />
                 </svg>
@@ -357,8 +435,8 @@ export const LandingPage: React.FC = () => {
         </div>
 
         {/* Phone: cropped to Cocoa House and the cherry-picker */}
-        <div className="kh-rise lg:hidden relative h-[260px] mt-4 overflow-hidden" style={{ animationDuration: '1100ms', animationDelay: '300ms' }}>
-          <Skyline className="bottom-0 w-[749px]" style={{ left: 'calc(50% - 482px)' }}>
+        <div className="kh-rise lg:hidden relative h-[260px] sm:h-[340px] md:h-[350px] mt-4 md:mt-6 overflow-hidden" style={{ animationDuration: '1100ms', animationDelay: '300ms' }}>
+          <Skyline className="bottom-0 w-[749px] left-[calc(50%-482px)] sm:left-1/2 sm:-translate-x-1/2 sm:w-[max(980px,100%)]">
             <Bubble x={1000} y={140} scale={1.5} left={-204} width={238} dot={C.indigo} text="AC repair · Working" delay={900} floatDelay={1.7} />
             <Bubble x={1170} y={236} scale={1.5} left={-279} width={313} dot={C.mint} done text={JOB_DONE} delay={1400} floatDelay={2.2} />
           </Skyline>
@@ -374,8 +452,8 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* ───────── Marquee ───────── */}
-      <section aria-label="KaziHub at a glance" className="kh-marquee-wrap h-[52px] lg:h-16 overflow-hidden flex items-center" style={{ background: C.navy, color: C.cream }}>
-        <div className={`kh-marquee flex w-max ${display} text-[15px] lg:text-[19px] tracking-[-0.02em]`}>
+      <section aria-label="KaziHub at a glance" className="kh-marquee-wrap h-[52px] md:h-[58px] lg:h-16 overflow-hidden flex items-center" style={{ background: C.navy, color: C.cream }}>
+        <div className={`kh-marquee flex w-max ${display} text-[15px] md:text-[17px] lg:text-[19px] tracking-[-0.02em]`}>
           {[0, 1].map(copy => (
             <div key={copy} aria-hidden={copy === 1 || undefined} className="flex">
               {MARQUEE.map(m => (
@@ -389,125 +467,121 @@ export const LandingPage: React.FC = () => {
       </section>
 
       <main className="max-w-[1440px] mx-auto">
-        {/* ───────── Illustrated mosaic ───────── */}
-        <section aria-label="Why KaziHub" className="px-5 lg:px-[72px] pt-10 lg:pt-20 grid grid-cols-2 lg:grid-cols-12 lg:grid-rows-2 gap-2.5 lg:gap-3.5 lg:h-[600px]">
-          <div className="kh-rise relative overflow-hidden h-[230px] lg:h-auto lg:col-span-5 lg:row-span-2 rounded-[22px] lg:rounded-[28px]" style={{ background: C.pink, animationDelay: '360ms' }}>
-            <div className="relative z-10 px-4 lg:px-[30px] pt-4 lg:pt-[26px] flex flex-col items-start gap-1.5 lg:gap-2.5">
-              <img src={art('icon-quote')} alt="" className="hidden lg:block w-11 h-11" />
-              <h3 className={`${display} text-[20px] lg:text-[34px] leading-[0.95] tracking-[-0.04em]`}>Quotes before work</h3>
-              <p className="text-[13px] lg:text-base leading-snug lg:leading-[1.45] font-semibold lg:font-medium lg:max-w-[360px]">
-                <span className="lg:hidden">Agree a written quote before work starts.</span>
-                <span className="hidden lg:inline">Chat with the artisan and agree a written quote before any work starts.</span>
+        {/* ───────── Mosaic: each promise shown on an app screen ─────────
+            Phones: Quotes and Paid span the width, Near you and ID check side by side.
+            Tablets: Quotes tall on the left, Near you and ID check stacked right, Paid across the bottom.
+            Desktop: the design's 12-column arrangement. */}
+        <section aria-label="Why KaziHub" className="px-5 md:px-10 lg:px-[72px] pt-10 md:pt-14 lg:pt-20 grid grid-cols-2 md:grid-rows-[290px_290px_300px] lg:grid-cols-12 lg:grid-rows-2 gap-2.5 md:gap-3 lg:gap-3.5 lg:h-[600px]">
+          <div className="kh-rise relative overflow-hidden col-span-2 h-[196px] md:h-auto md:col-span-1 md:row-span-2 lg:col-span-5 lg:row-span-2 rounded-[22px] md:rounded-[26px] lg:rounded-[28px]" style={{ background: C.pink, animationDelay: '360ms' }}>
+            <div className="relative z-10 max-w-[132px] md:max-w-none px-[18px] md:px-7 lg:px-[30px] pt-[18px] md:pt-6 lg:pt-[26px] flex flex-col items-start gap-2 md:gap-2.5">
+              <h3 className={`${display} text-[23px] md:text-[32px] lg:text-[34px] leading-[0.95] tracking-[-0.04em]`}>Quotes before work</h3>
+              <p className="text-[13px] md:text-[15px] lg:text-base leading-snug md:leading-[1.45] font-semibold md:font-medium md:max-w-[360px]">
+                <span className="md:hidden">Agree a written quote with the artisan before any work starts.</span>
+                <span className="hidden md:inline">Chat with the artisan and agree a written quote before any work starts.</span>
               </p>
             </div>
-            <img src={art('mosaic-quotes')} alt="" className="absolute left-0 -bottom-4 lg:-bottom-[64px] w-full h-auto" />
+            <Phone w={300} h={560} scale={0.5} className="md:hidden absolute right-3.5 top-4"><MockQuote /></Phone>
+            <Phone w={300} h={450} scale={0.87} className="hidden md:block absolute left-1/2 -translate-x-1/2 top-[150px] lg:top-[162px]"><MockQuote /></Phone>
           </div>
-          <div className="kh-rise relative overflow-hidden h-[230px] lg:h-auto lg:col-span-4 rounded-[22px] lg:rounded-[28px]" style={{ background: C.mint, animationDelay: '430ms' }}>
-            <div className="relative z-10 px-4 lg:px-[30px] pt-4 lg:pt-[26px] flex flex-col items-start gap-1.5 lg:gap-2.5">
-              <h3 className={`${display} text-[20px] lg:text-[26px] leading-[0.95] tracking-[-0.04em]`}>People near you</h3>
-              <p className="text-[13px] lg:text-base leading-snug lg:leading-[1.45] font-semibold lg:font-medium lg:max-w-[320px]">
-                <span className="lg:hidden">Verified artisans close by, so help comes fast.</span>
-                <span className="hidden lg:inline">Verified artisans in your area, so help arrives fast.</span>
+          <div className="kh-rise relative overflow-hidden h-[230px] md:h-auto lg:col-span-4 rounded-[22px] md:rounded-[26px] lg:rounded-[28px]" style={{ background: C.mint, animationDelay: '430ms' }}>
+            <div className="relative z-10 px-4 md:px-6 lg:px-[30px] pt-4 md:pt-6 lg:pt-[26px] flex flex-col items-start gap-2 md:gap-2.5">
+              <h3 className={`${display} text-[20px] md:text-[26px] leading-[0.95] tracking-[-0.04em] md:max-w-[140px] lg:max-w-[150px]`}>People near you</h3>
+              <p className="text-[13px] md:text-[15px] lg:text-base leading-snug md:leading-[1.45] font-semibold md:font-medium md:max-w-[140px] lg:max-w-[150px]">
+                <span className="md:hidden">Verified artisans close by, so help comes fast.</span>
+                <span className="hidden md:inline">Verified artisans in your area, so help arrives fast.</span>
               </p>
             </div>
-            <img src={art('mosaic-near')} alt="" className="absolute -left-6 lg:left-0 -bottom-1.5 lg:-bottom-12 w-[220px] lg:w-full h-auto" />
+            <Phone w={280} h={450} scale={0.46} className="md:hidden absolute left-1/2 -translate-x-1/2 top-[124px]"><MockNearYou /></Phone>
+            <Phone w={286} h={440} scale={0.55} className="hidden md:block lg:hidden absolute right-3 top-[22px]"><MockNearYou /></Phone>
+            <Phone w={286} h={440} scale={0.61} className="hidden lg:block absolute right-3.5 top-[22px]"><MockNearYou /></Phone>
           </div>
-          <div className="kh-rise relative overflow-hidden h-[230px] lg:h-auto lg:col-span-3 lg:row-span-2 rounded-[22px] lg:rounded-[28px]" style={{ background: C.yellow, animationDelay: '500ms' }}>
-            <div className="relative z-10 px-4 lg:px-[30px] pt-4 lg:pt-[26px] flex flex-col items-start gap-1.5 lg:gap-2.5">
-              <img src={art('icon-paid')} alt="" className="hidden lg:block w-11 h-11" />
-              <h3 className={`${display} text-[20px] lg:text-[34px] leading-[0.95] tracking-[-0.04em]`}>Paid when done</h3>
-              <p className="text-[13px] lg:text-base leading-snug lg:leading-[1.45] font-semibold lg:font-medium">
-                <span className="lg:hidden">Money waits in escrow till you confirm.</span>
-                <span className="hidden lg:inline">Your money waits in escrow and moves only when you confirm.</span>
+          <div className="kh-rise relative overflow-hidden h-[230px] md:h-auto md:col-start-2 md:row-start-2 lg:col-start-6 lg:col-span-4 lg:row-start-2 rounded-[22px] md:rounded-[26px] lg:rounded-[28px]" style={{ background: C.indigo, color: C.cream, animationDelay: '500ms' }}>
+            <div className="relative z-10 px-4 md:px-6 lg:px-[30px] pt-4 md:pt-6 lg:pt-[26px] flex flex-col items-start gap-2 md:gap-2.5">
+              <h3 className={`${display} text-[20px] md:text-[26px] leading-[0.95] tracking-[-0.04em] md:max-w-[150px] lg:max-w-[180px]`}>Every artisan checked</h3>
+              <p className="text-[13px] md:text-[15px] leading-snug md:leading-[1.45] font-semibold md:font-medium md:max-w-[150px] lg:max-w-[170px]">
+                <span className="md:hidden">Government ID and a live selfie, before any job.</span>
+                <span className="hidden md:inline">Government ID and a live selfie before the Verified badge.</span>
               </p>
             </div>
-            <img src={art('mosaic-paid')} alt="" className="absolute -right-1 lg:right-auto lg:left-0 -bottom-[22px] lg:-bottom-10 w-[124px] lg:w-full h-auto" />
+            <Phone w={220} h={340} scale={0.5} className="md:hidden absolute left-1/2 -translate-x-1/2 top-[124px]"><MockIdCheck /></Phone>
+            <Phone w={180} h={320} scale={0.72} className="hidden md:block lg:hidden absolute right-4 top-[22px]"><MockIdCheck /></Phone>
+            <Phone w={180} h={320} scale={0.87} className="hidden lg:block absolute right-5 top-[22px]"><MockIdCheck /></Phone>
           </div>
-          <div className="kh-rise relative overflow-hidden h-[230px] lg:h-auto lg:col-start-6 lg:col-span-4 lg:row-start-2 rounded-[22px] lg:rounded-[28px] px-4 pt-4 lg:px-[30px] lg:py-[26px] flex flex-col lg:flex-row lg:items-center gap-1.5 lg:gap-[22px]" style={{ background: C.indigo, color: C.cream, animationDelay: '570ms' }}>
-            <h3 className={`lg:hidden ${display} text-[20px] leading-[0.95] tracking-[-0.04em]`}>Every artisan checked</h3>
-            <p className="lg:hidden text-[13px] leading-snug font-semibold">Government ID and a live selfie, before any job.</p>
-            <span aria-hidden="true" className={`absolute lg:static left-4 bottom-1.5 ${display} text-[64px] lg:text-[56px] leading-none tracking-[-0.06em] lg:tracking-[-0.05em]`} style={{ color: C.mint }}>ID+</span>
-            <span className="hidden lg:block text-base leading-[1.45] font-semibold">Every artisan checked with a government ID and a live selfie before the Verified badge.</span>
+          <div className="kh-rise relative overflow-hidden col-span-2 h-[196px] md:h-auto md:row-start-3 lg:col-start-10 lg:col-span-3 lg:row-start-1 lg:row-span-2 rounded-[22px] md:rounded-[26px] lg:rounded-[28px]" style={{ background: C.yellow, animationDelay: '570ms' }}>
+            <div className="relative z-10 max-w-[132px] md:max-w-[320px] lg:max-w-none ml-auto lg:ml-0 px-[18px] md:px-8 lg:px-[30px] pt-[18px] md:pt-10 lg:pt-[26px] flex flex-col items-start gap-2 md:gap-2.5">
+              <h3 className={`${display} text-[23px] md:text-[32px] lg:text-[34px] leading-[0.95] tracking-[-0.04em]`}>Paid when done</h3>
+              <p className="text-[13px] md:text-[15px] lg:text-base leading-snug md:leading-[1.45] font-semibold md:font-medium">Your money waits in escrow and moves only when you confirm.</p>
+            </div>
+            <Phone w={280} h={560} scale={0.5} className="md:hidden absolute left-3.5 top-4"><MockPayment /></Phone>
+            <Phone w={272} h={450} scale={0.68} className="hidden md:block lg:hidden absolute left-12 top-6"><MockPayment /></Phone>
+            <Phone w={272} h={450} scale={0.87} className="hidden lg:block absolute left-1/2 -translate-x-1/2 top-[202px]"><MockPayment /></Phone>
           </div>
         </section>
 
         {/* ───────── How it works ───────── */}
-        <section id="how" className="scroll-mt-4 pt-14 lg:pt-[104px] lg:px-[72px] flex flex-col gap-5 lg:gap-11">
-          <div className="px-5 lg:px-0 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3 lg:gap-10">
+        <section id="how" className="scroll-mt-4 pt-14 md:pt-20 lg:pt-[104px] md:px-10 lg:px-[72px] flex flex-col gap-5 md:gap-8 lg:gap-11">
+          <div className="px-5 md:px-0 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3 md:gap-4 lg:gap-10">
             <div className="flex flex-col gap-3 lg:gap-4">
               <p className={eyebrow}>How it works</p>
-              <h2 className={`${display} text-[40px] lg:text-[60px] leading-[0.92] tracking-[-0.055em]`}>Book it. We hold the money.<br className="hidden lg:block" /> You say when it’s done.</h2>
+              <h2 className={`${display} text-[40px] md:text-[52px] lg:text-[60px] leading-[0.92] tracking-[-0.055em]`}>Book it. We hold the money.<br className="hidden lg:block" /> You say when it’s done.</h2>
             </div>
-            <p className="lg:mb-1.5 lg:max-w-[340px] text-[15px] lg:text-[17px] leading-normal font-medium">
-              Four steps, and your money is protected at every one<span className="hidden lg:inline"> of them</span>.<span className="lg:hidden"> Swipe through.</span>
+            <p className="lg:mb-1.5 md:max-w-[520px] lg:max-w-[340px] text-[15px] md:text-base lg:text-[17px] leading-normal font-medium">
+              Four steps, and your money is protected at every one<span className="hidden md:inline"> of them</span>.<span className="md:hidden"> Swipe through.</span>
             </p>
           </div>
-          <ol className="kh-snap flex lg:grid lg:grid-cols-4 gap-2.5 lg:gap-4 px-5 lg:px-0 overflow-x-auto lg:overflow-visible snap-x snap-mandatory scroll-pl-5 lg:h-[410px]">
+          <ol className="kh-snap flex md:grid md:grid-cols-2 lg:grid-cols-4 gap-2.5 md:gap-3 lg:gap-4 px-5 md:px-0 overflow-x-auto md:overflow-visible snap-x snap-mandatory scroll-pl-5 lg:h-[410px]">
             {STEPS.map((s, i) => (
               <li
                 key={s.title}
-                className="kh-rise relative overflow-hidden shrink-0 basis-[256px] lg:basis-auto h-[360px] lg:h-auto snap-start rounded-[22px] lg:rounded-[26px]"
+                className="kh-rise relative overflow-hidden shrink-0 basis-[256px] md:basis-auto h-[384px] md:h-[400px] lg:h-auto snap-start rounded-[22px] md:rounded-[26px]"
                 style={{ background: s.bg, color: s.fg, animationDelay: `${200 + i * 90}ms` }}
               >
-                <div className="relative z-10 px-5 lg:px-[26px] pt-5 lg:pt-[26px] flex flex-col items-start gap-2.5 lg:gap-3">
-                  <span className="px-[11px] lg:px-3 py-[5px] lg:py-1.5 rounded-full text-xs lg:text-[13px] font-extrabold tracking-[0.04em]" style={{ background: s.fg, color: s.bg === C.indigo ? C.navy : C.cream }}>
-                    Step {i + 1}<span className="lg:hidden"> of 4</span>
+                <div className="relative z-10 px-5 md:px-[26px] pt-5 md:pt-[26px] flex flex-col items-start gap-2.5 md:gap-3">
+                  <span className="px-[11px] md:px-3 py-[5px] md:py-1.5 rounded-full text-xs md:text-[13px] font-extrabold tracking-[0.04em]" style={{ background: s.fg, color: s.bg === C.indigo ? C.navy : C.cream }}>
+                    Step {i + 1}<span className="md:hidden"> of 4</span>
                   </span>
-                  <h3 className={`mt-0.5 lg:mt-1 ${display} text-[24px] lg:text-[26px] leading-[0.98] tracking-[-0.04em]`}>{s.title}</h3>
-                  <p className="text-sm lg:text-[15px] leading-[1.45] font-medium">{s.body}</p>
+                  <h3 className={`mt-0.5 md:mt-1 ${display} text-[24px] md:text-[26px] leading-[0.98] tracking-[-0.04em]`}>{s.title}</h3>
+                  <p className="text-sm md:text-[15px] leading-[1.45] font-medium md:max-w-[300px] lg:max-w-none">{s.body}</p>
                 </div>
-                <img src={art(`step-${i + 1}`)} alt="" className="absolute left-0 -bottom-2 lg:-bottom-2.5 w-full h-auto" />
+                {s.screen ? (
+                  <>
+                    <Phone w={270} h={440} scale={0.63} className="md:hidden absolute left-1/2 -translate-x-1/2 top-[190px]"><s.screen /></Phone>
+                    <Phone w={270} h={440} scale={0.72} className="hidden md:block absolute left-1/2 -translate-x-1/2 top-[190px] lg:top-[206px]"><s.screen /></Phone>
+                  </>
+                ) : (
+                  <img src={art('step-2')} alt="An artisan sits on his toolbox and sends the quote from his phone" className="absolute left-0 -bottom-2 w-full h-auto" />
+                )}
               </li>
             ))}
-            <li aria-hidden="true" className="lg:hidden shrink-0 basis-2.5" />
+            <li aria-hidden="true" className="md:hidden shrink-0 basis-2.5" />
           </ol>
         </section>
 
         {/* ───────── Trades: expanding cards (desktop) / accordion (phone) ───────── */}
-        <section id="trades" className="scroll-mt-4 px-5 lg:px-[72px] pt-14 lg:pt-[92px] flex flex-col gap-5 lg:gap-8">
-          <div className="flex flex-col lg:flex-row items-start lg:items-end justify-between gap-3 lg:gap-10">
-            <h2 className={`${display} text-[44px] lg:text-[72px] leading-[0.9] tracking-[-0.055em]`}>The trades people<br className="hidden lg:block" /> book most.</h2>
-            <Link to={CLIENT_SIGNUP} className="kh-link pb-0.5 text-[15px] lg:text-[17px] font-extrabold">See all trades <Arrow /></Link>
+        <section id="trades" className="scroll-mt-4 px-5 md:px-10 lg:px-[72px] pt-14 md:pt-20 lg:pt-[92px] flex flex-col gap-5 md:gap-7 lg:gap-8">
+          <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-3 md:gap-10">
+            <h2 className={`${display} text-[44px] md:text-[56px] lg:text-[72px] leading-[0.9] tracking-[-0.055em]`}>The trades people<br className="hidden md:block" /> book most.</h2>
+            <Link to={CLIENT_SIGNUP} className="kh-link shrink-0 pb-0.5 text-[15px] md:text-base lg:text-[17px] font-extrabold">See all trades <Arrow /></Link>
           </div>
-          <ul className="flex flex-col lg:flex-row gap-2.5 lg:gap-3 lg:h-[520px]">
+          <ul className="flex flex-col md:flex-row gap-2.5 md:gap-3 md:h-[460px] lg:h-[520px]">
             {TRADES.map((t, i) => {
               const open = i === openTrade;
               return (
                 <li
                   key={t.name}
-                  onMouseEnter={isDesktop ? () => setOpenTrade(i) : undefined}
-                  className="relative box-border overflow-hidden rounded-[22px] lg:rounded-[26px] min-w-0"
+                  onMouseEnter={isTablet ? () => setOpenTrade(i) : undefined}
+                  className="relative box-border overflow-hidden rounded-[22px] md:rounded-[26px] min-w-0"
                   style={{
                     background: t.bg,
                     color: t.fg,
-                    ...(isDesktop
+                    ...(isTablet
                       ? { flexGrow: open ? 3.8 : 1, flexBasis: 0, transition: `flex-grow 620ms ${EASE}` }
                       : { height: open ? 380 : 68, transition: `height 520ms ${EASE}` }),
                   }}
                 >
-                  {isDesktop ? (
+                  {isTablet ? (
                     open ? (
-                      <>
-                        <div className="kh-rise absolute inset-x-0 -bottom-14" style={{ animationDuration: '620ms', animationDelay: '180ms' }}>
-                          <img src={art(t.img)} alt="" className="block w-full h-auto" />
-                        </div>
-                        <div className="kh-fade relative px-[30px] pt-[26px] flex flex-col gap-3.5" style={{ animationDuration: '420ms', animationDelay: '120ms' }}>
-                          <div className="flex items-center justify-between">
-                            <img src={art(t.spot)} alt="" className="w-12 h-12" />
-                            <button
-                              type="button"
-                              onClick={() => seeTrade(t.search)}
-                              aria-label={`See ${t.lower}`}
-                              className="kh-turn w-11 h-11 rounded-full flex items-center justify-center cursor-pointer"
-                              style={{ background: t.fg, color: t.bg }}
-                            >
-                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 17 17 7" /><path d="M8 7h9v9" /></svg>
-                            </button>
-                          </div>
-                          <h3 className={`mt-1.5 ${display} text-[clamp(2.5rem,3.6vw,3.25rem)] leading-[0.92] tracking-[-0.05em]`}>{t.name}</h3>
-                          <p className="max-w-[420px] text-[17px] leading-[1.45] font-medium">{t.desc}</p>
-                        </div>
-                      </>
+                      <TradeOpenDesktop t={t} onSee={() => seeTrade(t.search)} />
                     ) : (
                       <button
                         type="button"
@@ -522,7 +596,6 @@ export const LandingPage: React.FC = () => {
                     )
                   ) : (
                     <>
-                      {open && <img src={art(t.img)} alt="" className="kh-rise absolute left-0 -bottom-[26px] w-full h-auto" style={{ animationDuration: '560ms', animationDelay: '160ms' }} />}
                       <button
                         type="button"
                         onClick={() => setOpenTrade(open ? -1 : i)}
@@ -538,14 +611,7 @@ export const LandingPage: React.FC = () => {
                           <PlusIcon size={16} />
                         </span>
                       </button>
-                      {open && (
-                        <div className="kh-fade relative z-10 px-5 flex flex-col items-start gap-2.5" style={{ animationDuration: '400ms', animationDelay: '120ms' }}>
-                          <p className="text-[15px] leading-[1.45] font-medium">{t.desc}</p>
-                          <button type="button" onClick={() => seeTrade(t.search)} className="kh-link pb-0.5 text-[15px] font-extrabold cursor-pointer">
-                            See {t.lower} <Arrow />
-                          </button>
-                        </div>
-                      )}
+                      {open && <TradeOpenMobile t={t} onSee={() => seeTrade(t.search)} />}
                     </>
                   )}
                 </li>
@@ -555,46 +621,46 @@ export const LandingPage: React.FC = () => {
         </section>
 
         {/* ───────── For clients: tiles rise in on first view ───────── */}
-        <section id="clients" ref={why.ref} className="scroll-mt-4 px-5 lg:px-[72px] pt-14 lg:pt-24 grid grid-cols-2 lg:grid-cols-12 lg:grid-rows-[auto_1fr_1fr] gap-2.5 lg:gap-3 lg:h-[780px]">
-          <div className="col-span-2 lg:col-span-5 rounded-[22px] lg:rounded-[26px] bg-white border-2 p-[22px] lg:p-[30px] flex flex-col justify-between items-start gap-4" style={{ borderColor: C.navy, ...reveal(0) }}>
+        <section id="clients" ref={why.ref} className="scroll-mt-4 px-5 md:px-10 lg:px-[72px] pt-14 md:pt-20 lg:pt-24 grid grid-cols-2 lg:grid-cols-12 lg:grid-rows-[auto_1fr_1fr] gap-2.5 md:gap-3 lg:h-[780px]">
+          <div className="col-span-2 md:col-span-1 lg:col-span-5 rounded-[22px] md:rounded-[26px] bg-white border-2 p-[22px] md:p-7 lg:p-[30px] flex flex-col justify-between items-start gap-4 md:gap-6" style={{ borderColor: C.navy, ...reveal(0) }}>
             <div className="flex flex-col gap-3 lg:gap-3">
               <p className={eyebrow}>For clients</p>
-              <h2 className={`${display} text-[40px] lg:text-[48px] leading-[0.92] tracking-[-0.05em]`}>Hire without the wahala.</h2>
+              <h2 className={`${display} text-[40px] md:text-[44px] lg:text-[48px] leading-[0.92] tracking-[-0.05em]`}>Hire without the wahala.</h2>
             </div>
             <Link to={CLIENT_SIGNUP} className="kh-btn px-5 lg:px-6 py-3.5 lg:py-4 rounded-[14px] text-[15px] lg:text-base font-extrabold">
               Find an artisan <Arrow />
             </Link>
           </div>
-          <div className="relative overflow-hidden h-[156px] lg:h-auto lg:col-span-7 rounded-[22px] lg:rounded-[26px] p-[18px] lg:p-[30px] flex flex-col justify-between" style={{ background: C.indigo, color: C.cream, ...reveal(1) }}>
+          <div className="relative overflow-hidden h-[156px] md:h-auto md:min-h-[240px] lg:min-h-0 lg:col-span-7 rounded-[22px] md:rounded-[26px] p-[18px] md:p-7 lg:p-[30px] flex flex-col justify-between" style={{ background: C.indigo, color: C.cream, ...reveal(1) }}>
             <Swoosh viewBox="0 0 150 130" d="M20 20 C 20 120, 120 120, 120 20" color={C.mint} width={26} className="lg:hidden w-[150px] -right-20 -bottom-[70px]" />
             <Swoosh viewBox="0 0 420 300" d="M60 40 C 60 260, 250 260, 250 110 S 400 -20, 400 200" color={C.mint} width={56} className="hidden lg:block w-[420px] -right-[150px] -top-[70px]" />
-            <span className={`relative ${display} text-[40px] lg:text-[84px] leading-[0.86] lg:leading-[0.8] tracking-[-0.06em]`}>2<br className="lg:hidden" /> checks</span>
-            <span className="relative text-[13px] lg:text-base font-semibold leading-snug lg:max-w-[340px]">
-              <span className="lg:hidden">Government ID and a live selfie</span>
-              <span className="hidden lg:inline">A government ID and a live selfie, before any artisan gets the Verified badge.</span>
+            <span className={`relative ${display} text-[40px] md:text-[60px] lg:text-[84px] leading-[0.86] md:leading-[0.8] tracking-[-0.06em]`}>2<br className="md:hidden" /> checks</span>
+            <span className="relative text-[13px] md:text-[15px] lg:text-base font-semibold leading-snug md:max-w-[260px] lg:max-w-[340px]">
+              <span className="md:hidden">Government ID and a live selfie</span>
+              <span className="hidden md:inline">A government ID and a live selfie, before any artisan gets the Verified badge.</span>
             </span>
           </div>
-          <div className="h-[156px] lg:h-auto lg:col-span-6 rounded-[22px] lg:rounded-[26px] p-[18px] lg:p-[30px] flex flex-col justify-between bg-[#F7B8D2] lg:bg-[#FF6A2B]" style={reveal(2)}>
-            <span className={`${display} text-[56px] lg:text-[100px] leading-[0.8] tracking-[-0.06em]`}>₦0</span>
-            <span className="text-[13px] lg:text-base font-bold leading-snug lg:max-w-[380px]">
-              <span className="lg:hidden">to the artisan until you confirm</span>
-              <span className="hidden lg:inline">reaches the artisan until you confirm the job is done. It waits in escrow.</span>
+          <div className="h-[156px] md:h-[230px] lg:h-auto lg:col-span-6 rounded-[22px] md:rounded-[26px] p-[18px] md:p-7 lg:p-[30px] flex flex-col justify-between bg-[#F7B8D2] lg:bg-[#FF6A2B]" style={reveal(2)}>
+            <span className={`${display} text-[56px] md:text-[80px] lg:text-[100px] leading-[0.8] tracking-[-0.06em]`}>₦0</span>
+            <span className="text-[13px] md:text-[15px] lg:text-base font-bold leading-snug md:max-w-[280px] lg:max-w-[380px]">
+              <span className="md:hidden">to the artisan until you confirm</span>
+              <span className="hidden md:inline">reaches the artisan until you confirm the job is done. It waits in escrow.</span>
             </span>
           </div>
-          <div className="relative overflow-hidden col-span-2 lg:col-span-6 h-[156px] lg:h-auto rounded-[22px] lg:rounded-[26px] p-5 lg:p-[30px] flex flex-col justify-between bg-[#FF6A2B] lg:bg-[#F7B8D2]" style={reveal(3)}>
+          <div className="relative overflow-hidden col-span-2 md:col-span-1 lg:col-span-6 h-[156px] md:h-[230px] lg:h-auto rounded-[22px] md:rounded-[26px] p-5 md:p-7 lg:p-[30px] flex flex-col justify-between bg-[#FF6A2B] lg:bg-[#F7B8D2]" style={reveal(3)}>
             <Swoosh viewBox="0 0 200 170" d="M30 160 C 30 40, 170 40, 170 150" color={C.orangeSoft} width={40} className="lg:hidden w-[200px] -right-[30px] -bottom-[60px]" />
-            <span className={`relative ${display} text-[52px] lg:text-[88px] leading-[0.8] tracking-[-0.06em]`}>Quote first</span>
-            <span className="relative text-sm lg:text-base font-bold max-w-[260px] lg:max-w-[380px]">
-              The price is agreed in writing<span className="hidden lg:inline">, in chat,</span> before anyone picks up a tool.
+            <span className={`relative ${display} text-[52px] md:text-[54px] lg:text-[88px] leading-[0.8] tracking-[-0.06em]`}>Quote first</span>
+            <span className="relative text-sm md:text-[15px] lg:text-base font-bold max-w-[260px] lg:max-w-[380px]">
+              The price is agreed in writing<span className="hidden md:inline">, in chat,</span> before anyone picks up a tool.
             </span>
           </div>
           <div className="relative overflow-hidden hidden lg:flex lg:col-span-7 rounded-[26px] p-[30px] items-center justify-center" style={{ background: C.mint, ...reveal(4) }}>
             <Swoosh viewBox="0 0 260 260" d="M30 30 C 30 200, 200 230, 230 60" color={C.indigo} width={50} className="w-[260px] -left-[60px] -bottom-20" />
             <p className={`relative text-center ${display} text-[38px] leading-none tracking-[-0.04em]`}>Checked pros, clear quotes,<br />and a record of every job</p>
           </div>
-          <div className="relative overflow-hidden col-span-2 lg:col-span-5 rounded-[22px] lg:rounded-[26px] p-[22px] lg:p-[30px] flex flex-col justify-between gap-3" style={{ background: C.navy, color: C.cream, ...reveal(5) }}>
+          <div className="relative overflow-hidden col-span-2 lg:col-span-5 rounded-[22px] md:rounded-[26px] p-[22px] md:p-7 lg:p-[30px] flex flex-col md:flex-row lg:flex-col md:items-end lg:items-stretch justify-between gap-3 md:gap-8 lg:gap-3" style={{ background: C.navy, color: C.cream, ...reveal(5) }}>
             <Swoosh viewBox="0 0 220 240" d="M190 20 C 40 20, 40 220, 190 220" color={C.orange} width={48} className="hidden lg:block w-[220px] -right-[50px] -top-10" />
-            <span className={`relative ${display} text-[30px] lg:text-[38px] leading-[0.95] tracking-[-0.04em]`}>Reviews from<br className="hidden lg:block" /> real jobs only</span>
+            <span className={`relative ${display} text-[30px] md:text-[36px] lg:text-[38px] leading-[0.95] tracking-[-0.04em]`}>Reviews from<br className="hidden md:block" /> real jobs only</span>
             <span className="relative text-sm leading-relaxed lg:hidden" style={{ color: C.muted }}>Only after a paid, completed booking. No friends, no fakes.</span>
             <ul className="relative hidden lg:block pl-[18px] list-disc text-sm leading-[1.7]" style={{ color: C.muted }}>
               <li>Only after a paid, completed booking</li>
@@ -604,38 +670,39 @@ export const LandingPage: React.FC = () => {
         </section>
 
         {/* ───────── For artisans ───────── */}
-        <section id="artisans" className="scroll-mt-4 mx-5 lg:mx-[72px] mt-14 lg:mt-24 rounded-[28px] lg:rounded-[32px] overflow-hidden flex flex-col lg:grid lg:grid-cols-12 gap-5 lg:gap-6 px-[22px] pt-[26px] pb-[22px] lg:p-0 lg:h-[560px]" style={{ background: C.peach }}>
-          <div className="contents lg:flex lg:col-span-7 lg:p-12 lg:pr-0 lg:flex-col lg:justify-between lg:items-start">
+        <section id="artisans" className="scroll-mt-4 mx-5 md:mx-10 lg:mx-[72px] mt-14 md:mt-20 lg:mt-24 rounded-[28px] md:rounded-[32px] overflow-hidden flex flex-col md:grid md:grid-cols-12 gap-5 md:gap-6 px-[22px] pt-[26px] pb-[22px] md:p-0 lg:h-[560px]" style={{ background: C.peach }}>
+          <div className="contents md:flex md:col-span-7 md:p-10 lg:p-12 md:pr-0 lg:pr-0 md:flex-col md:justify-between md:items-start md:gap-7 lg:gap-0">
             <div className="flex flex-col gap-3 lg:gap-4">
               <p className={eyebrow}>For artisans</p>
-              <h2 className={`${display} text-[40px] lg:text-[64px] leading-[0.9] tracking-[-0.055em]`}>You do the work. The money don already land.</h2>
+              <h2 className={`${display} text-[40px] md:text-[46px] lg:text-[64px] leading-[0.9] tracking-[-0.055em]`}>You do the work. The money don already land.</h2>
             </div>
-            <div className="lg:hidden h-52 rounded-[20px] overflow-hidden flex items-end justify-center" style={{ background: C.indigo }}>
-              <img src={art('artisan')} alt="An artisan receiving a job request, with payment already secured in escrow" className="w-full h-full object-contain object-bottom" />
+            <div className="md:hidden h-[300px] rounded-[20px] overflow-hidden flex items-end justify-center" style={{ background: C.indigo }}>
+              <ArtisanScene scale={0.57} />
             </div>
             <ul className="flex flex-col lg:grid lg:grid-cols-2 gap-3 lg:gap-x-7 lg:gap-y-4 lg:self-stretch">
               {ARTISAN_POINTS.map(p => (
-                <li key={p} className="flex items-center gap-2.5 lg:gap-3 text-[15px] lg:text-base font-bold leading-tight">
-                  <span className="lg:hidden"><Check size={24} /></span>
-                  <span className="hidden lg:inline"><Check size={28} /></span>
+                <li key={p} className="flex items-center gap-2.5 md:gap-3 text-[15px] md:text-base font-bold leading-tight">
+                  <span className="md:hidden"><Check size={24} /></span>
+                  <span className="hidden md:inline"><Check size={28} /></span>
                   {p}
                 </li>
               ))}
             </ul>
-            <Link to={ARTISAN_SIGNUP} className="kh-btn text-center p-[17px] lg:px-6 lg:py-[18px] rounded-2xl text-base font-extrabold">
+            <Link to={ARTISAN_SIGNUP} className="kh-btn text-center p-[17px] md:px-6 md:py-[18px] rounded-2xl text-base font-extrabold">
               Join as an artisan <Arrow />
             </Link>
           </div>
-          <div className="hidden lg:flex lg:col-start-9 lg:col-span-4 my-5 mr-5 rounded-3xl overflow-hidden items-end justify-center" style={{ background: C.indigo }}>
-            <img src={art('artisan')} alt="An artisan receiving a job request, with payment already secured in escrow" className="w-full h-full object-contain object-bottom" />
+          <div className="hidden md:flex md:col-start-8 md:col-span-5 lg:col-start-9 lg:col-span-4 my-5 mr-5 rounded-3xl overflow-hidden items-end justify-center" style={{ background: C.indigo }}>
+            <ArtisanScene scale={0.8} className="lg:hidden" />
+            <ArtisanScene scale={0.98} className="hidden lg:block" />
           </div>
         </section>
 
         {/* ───────── Reviews: fanned illustrated cards + quote (samples until real reviews exist) ───────── */}
-        <section aria-label="Customer reviews" className="px-5 lg:px-[72px] pt-14 lg:pt-24">
-          <div className="rounded-[28px] lg:rounded-[32px] overflow-hidden flex flex-col lg:grid lg:grid-cols-12 gap-[22px] lg:gap-6 px-[22px] pt-[26px] pb-[22px] lg:px-14 lg:py-12 lg:h-[410px]" style={{ background: C.navy, color: C.cream }}>
-            <p className={`lg:hidden ${eyebrow}`} style={{ color: C.mint }}>Sample reviews</p>
-            <div className="relative h-[240px] lg:h-auto lg:col-span-5" aria-hidden="true">
+        <section aria-label="Customer reviews" className="px-5 md:px-10 lg:px-[72px] pt-14 md:pt-20 lg:pt-24">
+          <div className="rounded-[28px] md:rounded-[32px] overflow-hidden flex flex-col md:grid md:grid-cols-[310px_minmax(0,1fr)] lg:grid-cols-12 gap-[22px] md:gap-6 px-[22px] pt-[26px] pb-[22px] md:px-9 md:py-10 lg:px-14 lg:py-12 lg:h-[410px]" style={{ background: C.navy, color: C.cream }}>
+            <p className={`md:hidden ${eyebrow}`} style={{ color: C.mint }}>Sample reviews</p>
+            <div className="relative h-[240px] md:h-auto md:min-h-[250px] lg:col-span-5" aria-hidden="true">
               {REVIEW_CARDS.map((c, i) => {
                 const pos = (i - review + 3) % 3;
                 return (
@@ -656,17 +723,17 @@ export const LandingPage: React.FC = () => {
                 );
               })}
             </div>
-            <div className="lg:col-start-6 lg:col-span-7 flex flex-col justify-between gap-[22px] lg:gap-6">
-              <p className={`hidden lg:block ${eyebrow}`} style={{ color: C.mint }}>Sample reviews</p>
+            <div className="lg:col-start-6 lg:col-span-7 flex flex-col justify-between gap-[22px] md:gap-6">
+              <p className={`hidden md:block ${eyebrow}`} style={{ color: C.mint }}>Sample reviews</p>
               <figure key={review} className="kh-fade flex flex-col gap-[22px] lg:gap-6" style={{ animationDuration: '300ms' }} aria-live="polite">
-                <blockquote className={`${display} !font-bold text-[21px] lg:text-[30px] leading-[1.15] lg:leading-[1.12] tracking-[-0.03em]`}>“{SAMPLE_REVIEWS[review].quote}”</blockquote>
+                <blockquote className={`${display} !font-bold text-[21px] md:text-[24px] lg:text-[30px] leading-[1.15] lg:leading-[1.12] tracking-[-0.03em]`}>“{SAMPLE_REVIEWS[review].quote}”</blockquote>
                 <figcaption className="flex flex-col gap-1">
                   <span className="text-base lg:text-[17px] font-extrabold">{SAMPLE_REVIEWS[review].name}</span>
                   <span className="text-sm font-medium" style={{ color: C.muted }}>{SAMPLE_REVIEWS[review].meta}</span>
                 </figcaption>
               </figure>
-              <div className="flex items-center justify-between lg:justify-end gap-3">
-                <span className="lg:mr-1.5 text-sm font-bold tabular-nums" style={{ color: C.muted }}>{review + 1} / {SAMPLE_REVIEWS.length}</span>
+              <div className="flex items-center justify-between md:justify-end gap-3">
+                <span className="md:mr-1.5 text-sm font-bold tabular-nums" style={{ color: C.muted }}>{review + 1} / {SAMPLE_REVIEWS.length}</span>
                 <div className="flex gap-2.5 lg:gap-3">
                   <button type="button" onClick={() => setReview(r => (r + SAMPLE_REVIEWS.length - 1) % SAMPLE_REVIEWS.length)} aria-label="Previous review" className="kh-rev-prev w-12 h-12 rounded-full border-2 flex items-center justify-center cursor-pointer">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M19 12H5" /><path d="m11 18-6-6 6-6" /></svg>
@@ -681,12 +748,12 @@ export const LandingPage: React.FC = () => {
         </section>
 
         {/* ───────── FAQ: one answer open at a time ───────── */}
-        <section id="faq" className="scroll-mt-4 px-5 lg:px-[72px] pt-14 lg:pt-24 flex flex-col lg:grid lg:grid-cols-12 gap-5 lg:gap-6 lg:items-start">
-          <div className="lg:col-span-4 flex flex-col gap-3 lg:gap-[18px]">
+        <section id="faq" className="scroll-mt-4 px-5 md:px-10 lg:px-[72px] pt-14 md:pt-20 lg:pt-24 flex flex-col md:grid md:grid-cols-12 gap-5 md:gap-6 md:items-start">
+          <div className="md:col-span-4 flex flex-col gap-3 md:gap-4 lg:gap-[18px]">
             <p className={eyebrow}>FAQ</p>
-            <h2 className={`${display} text-[40px] lg:text-[64px] leading-[0.9] tracking-[-0.055em]`}>Questions, answered.</h2>
+            <h2 className={`${display} text-[40px] md:text-[44px] lg:text-[64px] leading-[0.9] tracking-[-0.055em]`}>Questions, answered.</h2>
           </div>
-          <ul className="lg:col-start-6 lg:col-span-7 flex flex-col gap-2 lg:gap-2.5">
+          <ul className="md:col-start-5 md:col-span-8 lg:col-start-6 lg:col-span-7 flex flex-col gap-2 md:gap-2.5">
             {FAQS.map((f, i) => {
               const open = i === openFaq;
               return (
@@ -696,9 +763,9 @@ export const LandingPage: React.FC = () => {
                     onClick={() => setOpenFaq(open ? -1 : i)}
                     aria-expanded={open}
                     aria-controls={`faq-${i}`}
-                    className="w-full min-h-[60px] lg:min-h-16 box-border py-3 lg:py-4 pr-3 lg:pr-4 pl-[18px] lg:pl-[26px] flex items-center justify-between gap-3.5 lg:gap-5 text-left cursor-pointer"
+                    className="w-full min-h-[60px] md:min-h-16 box-border py-3 md:py-4 pr-3 md:pr-4 pl-[18px] md:pl-6 lg:pl-[26px] flex items-center justify-between gap-3.5 md:gap-5 text-left cursor-pointer"
                   >
-                    <span className={`${display} text-[17px] lg:text-[20px] leading-[1.15] tracking-[-0.02em]`}>{f.q}</span>
+                    <span className={`${display} text-[17px] md:text-[19px] lg:text-[20px] leading-[1.15] tracking-[-0.02em]`}>{f.q}</span>
                     <span
                       aria-hidden="true"
                       className="shrink-0 w-9 h-9 lg:w-10 lg:h-10 rounded-full flex items-center justify-center"
@@ -710,7 +777,7 @@ export const LandingPage: React.FC = () => {
                   {/* Stays mounted so closing slides too: the row animates 0fr ↔ 1fr, no height measuring. */}
                   <div id={`faq-${i}`} inert={!open} className="kh-collapse grid" style={{ gridTemplateRows: open ? '1fr' : '0fr', opacity: open ? 1 : 0 }}>
                     <div className="min-h-0 overflow-hidden">
-                      <p className="px-[18px] lg:pl-[26px] lg:pr-[84px] pb-[18px] lg:pb-6 text-[15px] lg:text-base leading-[1.55] font-medium">{f.a}</p>
+                      <p className="px-[18px] md:pl-6 md:pr-16 lg:pl-[26px] lg:pr-[84px] pb-[18px] md:pb-6 text-[15px] md:text-base leading-[1.55] font-medium">{f.a}</p>
                     </div>
                   </div>
                 </li>
@@ -721,16 +788,16 @@ export const LandingPage: React.FC = () => {
       </main>
 
       {/* ───────── Footer ───────── */}
-      <footer className="mt-16 lg:mt-28 overflow-hidden" style={{ background: C.navy, color: C.cream }}>
-        <div className="max-w-[1440px] mx-auto px-5 lg:px-[72px] pt-12 lg:pt-20 flex flex-col gap-10 lg:gap-16">
-          <div className="grid lg:grid-cols-12 gap-10 lg:gap-6">
-            <div className="lg:col-span-5 flex flex-col items-start gap-[22px] lg:gap-7">
-              <p className={`${display} text-[28px] lg:text-[36px] leading-none tracking-[-0.04em]`}>Checked artisans. Money held until it’s done.</p>
+      <footer className="mt-16 md:mt-24 lg:mt-28 overflow-hidden" style={{ background: C.navy, color: C.cream }}>
+        <div className="max-w-[1440px] mx-auto px-5 md:px-10 lg:px-[72px] pt-12 md:pt-16 lg:pt-20 flex flex-col gap-10 md:gap-14 lg:gap-16">
+          <div className="grid md:grid-cols-12 gap-10 md:gap-6">
+            <div className="md:col-span-12 lg:col-span-5 flex flex-col md:flex-row lg:flex-col items-start md:items-end lg:items-start md:justify-between gap-[22px] md:gap-7">
+              <p className={`${display} text-[28px] md:text-[34px] lg:text-[36px] md:max-w-[440px] lg:max-w-none leading-none tracking-[-0.04em]`}>Checked artisans. Money held until it’s done.</p>
               <Link to={CLIENT_SIGNUP} className="kh-btn kh-btn-orange px-6 lg:px-[26px] py-[17px] lg:py-[18px] rounded-2xl text-base font-extrabold">
                 Find an artisan <Arrow />
               </Link>
             </div>
-            <div className="lg:col-start-7 lg:col-span-6 grid grid-cols-2 lg:grid-cols-3 gap-x-4 lg:gap-x-6 gap-y-7 text-[15px] font-semibold">
+            <div className="md:col-span-12 lg:col-start-7 lg:col-span-6 grid grid-cols-2 md:grid-cols-3 gap-x-4 md:gap-x-6 gap-y-7 text-[15px] font-semibold">
               <nav aria-label="Customers" className="flex flex-col items-start gap-1 lg:gap-1.5">
                 <span className="pb-1 text-[13px] lg:text-sm font-extrabold uppercase tracking-[0.08em]" style={{ color: C.mint }}>Customers</span>
                 <Link to={CLIENT_SIGNUP} className="kh-link py-2 lg:py-1">Find an artisan</Link>
@@ -744,8 +811,8 @@ export const LandingPage: React.FC = () => {
                 <a href="#faq" onClick={() => setOpenFaq(FAQ_VERIFIED)} className="kh-link py-2 lg:py-1">Getting verified</a>
                 <a href="#faq" onClick={() => setOpenFaq(FAQ_PAID)} className="kh-link py-2 lg:py-1">Getting paid</a>
               </nav>
-              <nav aria-label="KaziHub" className="col-span-2 lg:col-span-1 flex flex-row flex-wrap lg:flex-col items-start gap-x-5 gap-y-1 lg:gap-1.5">
-                <span className="hidden lg:block pb-1 text-sm font-extrabold uppercase tracking-[0.08em]" style={{ color: C.mint }}>KaziHub</span>
+              <nav aria-label="KaziHub" className="col-span-2 md:col-span-1 flex flex-row flex-wrap md:flex-col items-start gap-x-5 gap-y-1 md:gap-1.5">
+                <span className="hidden md:block pb-1 text-sm font-extrabold uppercase tracking-[0.08em]" style={{ color: C.mint }}>KaziHub</span>
                 <Link to="/signin" className="kh-link py-2 lg:py-1">Sign in</Link>
                 <button type="button" onClick={() => setLegal('terms')} className="kh-link py-2 lg:py-1 text-left cursor-pointer">Terms</button>
                 <button type="button" onClick={() => setLegal('escrow')} className="kh-link py-2 lg:py-1 text-left cursor-pointer">Escrow policy</button>
@@ -754,10 +821,10 @@ export const LandingPage: React.FC = () => {
             </div>
           </div>
           <div className="flex flex-col gap-[18px] lg:gap-7">
-            <div className="pt-[18px] lg:pt-6 border-t border-[#243A66] flex flex-col lg:flex-row lg:justify-between text-sm font-semibold" style={{ color: C.muted }}>
-              <span className="lg:hidden">Made in Ibadan · Payments held in escrow until you confirm</span>
-              <span className="hidden lg:inline">Made in Ibadan</span>
-              <span className="hidden lg:inline">Payments held in escrow until you confirm</span>
+            <div className="pt-[18px] md:pt-6 border-t border-[#243A66] flex flex-col md:flex-row md:justify-between text-sm font-semibold" style={{ color: C.muted }}>
+              <span className="md:hidden">Made in Ibadan · Payments held in escrow until you confirm</span>
+              <span className="hidden md:inline">Made in Ibadan</span>
+              <span className="hidden md:inline">Payments held in escrow until you confirm</span>
             </div>
             <span aria-hidden="true" className={`block -mb-[0.16em] ${display} text-[min(25.8vw,23.25rem)] leading-[0.8] tracking-[-0.065em] whitespace-nowrap text-[#1B3160]`}>KaziHub</span>
           </div>

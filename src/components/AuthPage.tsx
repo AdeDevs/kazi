@@ -9,6 +9,7 @@ import { useDocumentMeta } from '../hooks/useDocumentMeta';
 import { TermsAndPrivacyModal } from './ui/TermsAndPrivacyModal';
 import { CustomDropdown } from './CustomDropdown';
 import { art } from '../assets/landing';
+import { Phone, MockHome, MockNearYou, MockWallet, MockCodeMail, MockResetMail } from './landing/PhoneMocks';
 
 
 export type AuthPageView = 'signin' | 'signup' | 'verify' | 'forgot' | 'reset';
@@ -374,20 +375,31 @@ export const AuthPage: React.FC<AuthPageProps> = ({
 
   return (
     <div className="kh-auth min-h-dvh lg:h-dvh lg:overflow-hidden flex flex-col lg:flex-row font-['Plus_Jakarta_Sans',system-ui,sans-serif]" style={{ background: C.cream, color: C.navy }}>
-      {/* ───────── Illustrated panel: a header strip on phones, a rounded column on desktop ───────── */}
+      {/* ───────── Phones: a plain header with the two-colour logo and a way back to the landing page ───────── */}
+      <header className="lg:hidden h-16 shrink-0 px-5 flex items-center justify-between">
+        <Link to="/" aria-label="KaziHub home" className={`${display} text-2xl tracking-[-0.04em]`}>
+          <span style={{ color: '#3B35C9' }}>Kazi</span><span style={{ color: '#FF6A2B' }}>Hub</span>
+        </Link>
+        <Link to="/" aria-label="Close and go back to the home page" className="w-10 h-10 -mr-2.5 flex items-center justify-center">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12" /><path d="M18 6L6 18" /></svg>
+        </Link>
+      </header>
+
+      {/* ───────── Desktop: a rounded colour panel with the page's line and an app screen in a phone ───────── */}
       <aside
-        className="relative shrink-0 overflow-hidden h-[212px] rounded-b-[28px] px-5 py-[18px] lg:h-auto lg:w-[43%] lg:max-w-[620px] lg:m-5 lg:mr-0 lg:rounded-[32px] lg:p-0"
+        className="hidden lg:block relative shrink-0 overflow-hidden w-[43%] max-w-[620px] m-5 mr-0 rounded-[32px]"
         style={{ background: panel.bg, color: panel.fg, transition: 'background-color 360ms ease' }}
       >
-        <div className="relative z-10 flex flex-col gap-6 max-w-[190px] lg:max-w-[480px] lg:gap-12 lg:px-11 lg:pt-9">
-          <Link to="/" aria-label="KaziHub home" className={`${display} text-2xl lg:text-[28px] tracking-[-0.04em]`} style={{ color: panel.fg }}>KaziHub</Link>
+        <div className="relative z-10 flex flex-col gap-12 max-w-[480px] px-11 pt-9">
+          <Link to="/" aria-label="KaziHub home" className={`${display} text-[28px] tracking-[-0.04em]`} style={{ color: panel.fg }}>KaziHub</Link>
           <div className="flex flex-col gap-3.5">
-            <p className={`${display} text-2xl leading-[0.98] tracking-[-0.04em] lg:text-[48px] lg:leading-[0.92] lg:tracking-[-0.05em]`}>{panel.title}</p>
-            <p className="hidden lg:block text-base leading-normal font-semibold">{panel.text}</p>
+            <p className={`${display} text-[48px] leading-[0.92] tracking-[-0.05em]`}>{panel.title}</p>
+            <p className="text-base leading-normal font-semibold">{panel.text}</p>
           </div>
         </div>
-        <img key={`${panel.art}-m`} src={art(panel.art)} alt="" className="kh-fade lg:hidden absolute h-auto" style={panel.mobileArt} />
-        <img key={`${panel.art}-d`} src={art(panel.art)} alt="" className="kh-fade hidden lg:block absolute h-auto" style={panel.desktopArt} />
+        <Phone key={panel.key} w={250} h={520} scale={1.4} className="kh-fade absolute left-1/2 -translate-x-1/2 top-[370px]">
+          <panel.screen />
+        </Phone>
       </aside>
 
       {/* ───────── Form column ───────── */}
@@ -743,18 +755,15 @@ const display = "font-['Bricolage_Grotesque',sans-serif] font-extrabold";
 const primaryBtn = 'kh-btn w-full h-14 lg:h-[58px] rounded-2xl flex items-center justify-center gap-2 text-[17px] font-extrabold cursor-pointer disabled:cursor-not-allowed disabled:opacity-50';
 const STRENGTH: Record<number, string> = { 0: C.error, 1: C.error, 2: '#C98500', 3: '#3B35C9', 4: C.success };
 
-type PanelArt = React.CSSProperties;
-const STEP_ART_D: PanelArt = { left: '6.5%', bottom: -14, width: '87%' };
-const STEP_ART_M: PanelArt = { right: -8, bottom: -8, width: 200 };
 const PANELS: Record<'signin' | 'signupClient' | 'signupArtisan' | 'verify' | 'forgot' | 'reset', {
-  bg: string; fg: string; title: string; text: string; art: string; desktopArt: PanelArt; mobileArt: PanelArt;
+  key: string; bg: string; fg: string; title: string; text: string; screen: React.FC;
 }> = {
-  signin: { bg: '#9BF0C4', fg: C.navy, title: 'Welcome back. Wetin need fixing?', text: 'Your quotes, bookings and payments are right where you left them.', art: 'step-1', desktopArt: STEP_ART_D, mobileArt: STEP_ART_M },
-  signupClient: { bg: '#F7B8D2', fg: C.navy, title: 'Get person wey sabi, and pay when the job is done.', text: 'Checked artisans near you. Your money waits in escrow until you confirm.', art: 'mosaic-quotes', desktopArt: { left: '8%', bottom: -30, width: '84%' }, mobileArt: { right: -20, bottom: -22, width: 230 } },
-  signupArtisan: { bg: '#3B35C9', fg: C.cream, title: 'You do the work. The money don already land.', text: 'Requests from people near you, and payment secured before you start.', art: 'artisan', desktopArt: { left: '18%', bottom: -20, width: '65%' }, mobileArt: { right: 0, bottom: -14, width: 175 } },
-  verify: { bg: '#FFB020', fg: C.navy, title: 'One quick check, then you’re in.', text: 'Your email keeps your bookings, quotes and escrow payments tied to you.', art: 'step-3', desktopArt: STEP_ART_D, mobileArt: STEP_ART_M },
-  forgot: { bg: '#3B35C9', fg: C.cream, title: 'It happens. Let’s get you back in.', text: 'Your escrow payments stay safe while you reset.', art: 'step-4', desktopArt: STEP_ART_D, mobileArt: STEP_ART_M },
-  reset: { bg: '#3B35C9', fg: C.cream, title: 'It happens. Let’s get you back in.', text: 'Your escrow payments stay safe while you reset.', art: 'step-4', desktopArt: STEP_ART_D, mobileArt: STEP_ART_M },
+  signin: { key: 'home', bg: '#9BF0C4', fg: C.navy, title: 'Welcome back. Wetin need fixing?', text: 'Your quotes, bookings and payments are right where you left them.', screen: MockHome },
+  signupClient: { key: 'near', bg: '#F7B8D2', fg: C.navy, title: 'Get person wey sabi, and pay when the job is done.', text: 'Checked artisans near you. Your money waits in escrow until you confirm.', screen: MockNearYou },
+  signupArtisan: { key: 'wallet', bg: '#3B35C9', fg: C.cream, title: 'You do the work. The money don already land.', text: 'Requests from people near you, and payment secured before you start.', screen: MockWallet },
+  verify: { key: 'code', bg: '#FFB020', fg: C.navy, title: 'One quick check, then you’re in.', text: 'Your email keeps your bookings, quotes and escrow payments tied to you.', screen: MockCodeMail },
+  forgot: { key: 'reset', bg: '#3B35C9', fg: C.cream, title: 'It happens. Let’s get you back in.', text: 'Your escrow payments stay safe while you reset.', screen: MockResetMail },
+  reset: { key: 'reset', bg: '#3B35C9', fg: C.cream, title: 'It happens. Let’s get you back in.', text: 'Your escrow payments stay safe while you reset.', screen: MockResetMail },
 };
 
 const Arrow = () => <span className="kh-arrow" aria-hidden="true">→</span>;

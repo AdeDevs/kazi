@@ -71,7 +71,7 @@ function ProfessionalJobsRoute(props: React.ComponentProps<typeof ProfessionalDa
 }
 function ProfessionalGigsNewRoute(props: React.ComponentProps<typeof ProfessionalDashboard>) {
   const { view } = useParams();
-  if (view && view !== 'new') return <NotFound />;
+  if (view && view !== 'new') return <NotFound embedded />;
   return <ProfessionalDashboard {...props} forceGigCreation={view === 'new'} />;
 }
 function ProfessionalProfileRoute({
@@ -88,7 +88,7 @@ function ProfessionalProfileRoute({
     professional ? professional.name : 'Professional not found',
     professional ? `${professional.name} -- ${professional.category} on KaziHub.` : 'This professional profile could not be found.'
   );
-  if (!professional) return <NotFound />;
+  if (!professional) return <NotFound embedded />;
   return <ProfessionalProfileModal {...rest} professional={professional} isOpen />;
 }
 
