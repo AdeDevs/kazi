@@ -376,8 +376,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   return (
     <div className="kh-auth min-h-dvh lg:h-dvh lg:overflow-hidden flex flex-col lg:flex-row font-['Plus_Jakarta_Sans',system-ui,sans-serif]" style={{ background: C.cream, color: C.navy }}>
       {/* ───────── Phones: a plain header with the two-colour logo and a way back to the landing page ───────── */}
-      <header className="lg:hidden h-16 shrink-0 px-5 flex items-center justify-between">
-        <Link to="/" aria-label="KaziHub home" className={`${display} text-2xl tracking-[-0.04em]`}>
+      <header className="lg:hidden h-16 md:h-[88px] shrink-0 px-5 md:px-10 flex items-center justify-between">
+        <Link to="/" aria-label="KaziHub home" className={`${display} text-2xl md:text-[28px] tracking-[-0.04em]`}>
           <span style={{ color: '#3B35C9' }}>Kazi</span><span style={{ color: '#FF6A2B' }}>Hub</span>
         </Link>
         <Link to="/" aria-label="Close and go back to the home page" className="w-10 h-10 -mr-2.5 flex items-center justify-center">
@@ -409,7 +409,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
           <button type="button" onClick={() => goTo(switchLink.view)} className="kh-link pb-px font-extrabold cursor-pointer" style={{ color: C.navy }}>{switchLink.cta}</button>
         </p>
 
-        <div key={currentView} className="kh-rise w-full max-w-[440px] mx-auto lg:my-auto px-5 lg:px-0 pt-6 pb-8 lg:py-24 flex flex-col gap-5 lg:gap-[22px]" style={{ animationDuration: '600ms' }}>
+        <div key={currentView} className="kh-rise w-full max-w-[440px] mx-auto md:my-auto px-5 md:px-0 pt-6 pb-8 md:pt-2 md:pb-[72px] lg:py-24 flex flex-col gap-5 md:gap-[22px]" style={{ animationDuration: '600ms' }}>
           {error && (
             <div role="alert" className="flex items-start gap-3 p-4 rounded-2xl text-sm font-semibold leading-snug" style={{ background: '#FDE3E0', color: C.navy }}>
               <AlertCircle className="w-[18px] h-[18px] shrink-0 mt-px" style={{ color: C.error }} aria-hidden="true" />
@@ -752,7 +752,7 @@ const C = {
   success: '#1F9D5B',
 };
 const display = "font-['Bricolage_Grotesque',sans-serif] font-extrabold";
-const primaryBtn = 'kh-btn w-full h-14 lg:h-[58px] rounded-2xl flex items-center justify-center gap-2 text-[17px] font-extrabold cursor-pointer disabled:cursor-not-allowed disabled:opacity-50';
+const primaryBtn = 'kh-btn w-full h-14 md:h-[58px] rounded-2xl flex items-center justify-center gap-2 text-[17px] font-extrabold cursor-pointer disabled:cursor-not-allowed disabled:opacity-50';
 const STRENGTH: Record<number, string> = { 0: C.error, 1: C.error, 2: '#C98500', 3: '#3B35C9', 4: C.success };
 
 const PANELS: Record<'signin' | 'signupClient' | 'signupArtisan' | 'verify' | 'forgot' | 'reset', {
@@ -770,8 +770,8 @@ const Arrow = () => <span className="kh-arrow" aria-hidden="true">→</span>;
 
 const Heading: React.FC<{ title: string; sub: React.ReactNode }> = ({ title, sub }) => (
   <div className="flex flex-col gap-2.5">
-    <h1 className={`${display} text-[36px] lg:text-[46px] leading-[0.92] tracking-[-0.05em]`}>{title}</h1>
-    <p className="text-[15px] lg:text-base leading-normal font-medium" style={{ color: C.body }}>{sub}</p>
+    <h1 className={`${display} text-[36px] md:text-[46px] leading-[0.92] tracking-[-0.05em]`}>{title}</h1>
+    <p className="text-[15px] md:text-base leading-normal font-medium" style={{ color: C.body }}>{sub}</p>
   </div>
 );
 
@@ -789,7 +789,7 @@ const Field: React.FC<{ label: string; htmlFor: string; aside?: React.ReactNode;
       <label htmlFor={htmlFor} className="text-sm font-extrabold">{label}</label>
       {aside}
     </div>
-    <div className="kh-input h-[54px] lg:h-14 box-border flex items-center gap-3 px-4 rounded-[14px] border-2 bg-white text-base font-semibold" data-invalid={error ? 'true' : undefined}>
+    <div className="kh-input h-[54px] md:h-14 box-border flex items-center gap-3 px-4 rounded-[14px] border-2 bg-white text-base font-semibold" data-invalid={error ? 'true' : undefined}>
       {children}
     </div>
     {error && <p className="text-[13px] font-semibold" style={{ color: C.error }}>{error}</p>}
