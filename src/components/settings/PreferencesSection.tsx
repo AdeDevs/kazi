@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Moon, Sun, Globe, CheckCircle2, X } from 'lucide-react';
 import { Language, SUPPORTED_LANGUAGES, languageCode } from '../../translations';
 import { useAuth } from '../../context/AuthContext';
@@ -7,6 +7,8 @@ import { Card, CardHeader } from '../ui/Card';
 import { SheetDragHandle } from '../ui/SheetDragHandle';
 import { useSlideUpSheet } from '../../hooks/useSlideUpSheet';
 import { toast } from 'sonner';
+import { getNotificationPreferences, updateNotificationPreferences } from '../../lib/notificationsApi';
+import { useAccountFrozen } from '../../hooks/useAccountFrozen';
 
 interface PreferencesSectionProps {
   darkMode?: boolean;
@@ -21,8 +23,34 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({
   currentLanguage = 'English (Nigeria)',
   onLanguageChange,
 }) => {
-  const { updateUser } = useAuth();
+  const { updateUser, isDemo } = useAuth();
+  const { blockIfFrozen } = useAccountFrozen();
 
+  // null = demo, still loading, or couldn't load.
+  const [emailSummaries, setEmailSummaries] = useState<boolean | null>(null);
+  const [isSavingEmail, setIsSavingEmail] = useState(false);
+  useEffect(() => {
+    if (isDemo) return;
+    let cancelled = false;
+    getNotificationPreferences()
+      .then((p) => { if (!cancelled) setEmailSummaries(p.email_summaries); })
+      .catch(() => { if (!cancelled) setEmailSummaries(null); });
+    return () => { cancelled = true; };
+  }, [isDemo]);
+
+  const handleToggleEmailSummaries = async (next: boolean) => {
+    if (blockIfFrozen()) return;
+    setIsSavingEmail(true);
+    try {
+      const saved = await updateNotificationPreferences({ email_summaries: next });
+      setEmailSummaries(saved.email_summaries);
+      toast.success(saved.email_summaries ? 'You’ll get a daily email of unread notifications.' : 'Daily email summaries are off.');
+    } catch (err: any) {
+      toast.error(err?.message || 'Could not update this setting. Try again.');
+    } finally {
+      setIsSavingEmail(false);
+    }
+  };
 
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const languageSheet = useSlideUpSheet(showLanguageModal, () => setShowLanguageModal(false));
@@ -63,21 +91,20 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({
               Push Notifications
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-extrabold">Coming soon</span>
             </p>
-            <p className="text-[11px] text-slate-500">Real-time alerts for booking acceptances & chats.</p>
+            <p className="text-[11px] text-slate-500">Alerts on your phone for bookings and chats. Until then, they show in your notifications here.</p>
           </div>
           <Toggle checked={false} label="Push notifications (coming soon)" onChange={() => undefined} disabled />
         </div>
 
-        {/* Email Alerts */}
-        <div className="py-3 flex items-center justify-between">
+        {/* Email Summaries -- GET/PUT /notifications/preferences */}
+        <div className="py-3 flex items-center justify-between gap-3">
           <div>
-            <p className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              Email Summaries
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-extrabold">Coming soon</span>
+            <p className="font-bold text-slate-900 dark:text-slate-100">Email Summaries</p>
+            <p className="text-[11px] text-slate-500">
+              {isDemo ? 'Not available on the demo account.' : 'A daily email listing notifications you haven’t read yet.'}
             </p>
-            <p className="text-[11px] text-slate-500">Payment receipts and job completion reports.</p>
           </div>
-          <Toggle checked={false} label="Email summaries (coming soon)" onChange={() => undefined} disabled />
+          <Toggle checked={Boolean(emailSummaries)} label="Email summaries" onChange={handleToggleEmailSummaries} disabled={emailSummaries === null} busy={isSavingEmail} />
         </div>
 
         {/* Theme Toggle */}

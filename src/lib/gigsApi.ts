@@ -32,15 +32,16 @@ export const gigFromResponse = (g: GigResponse): Gig => ({
 
 export const listMyGigs = () => apiGet<GigResponse[]>('/gigs/my-gigs');
 
-/** Public, active gigs. The endpoint can't filter by artisan, so callers filter by artisan_profile_id. */
-export const listPublicGigs = () => apiGet<GigResponse[]>('/gigs/?limit=100', { auth: false });
+/** Public, active gigs; pass an artisan's profile id to get only theirs. */
+export const listPublicGigs = (artisanProfileId?: string) =>
+  apiGet<GigResponse[]>(`/gigs/?limit=100${artisanProfileId ? `&artisan_profile_id=${encodeURIComponent(artisanProfileId)}` : ''}`, { auth: false });
 
 export const createGig = (input: GigInput) => apiPost<GigResponse>('/gigs/', input);
 export const updateGig = (id: string, patch: Partial<GigInput> & { is_active?: boolean }) =>
   apiPatch<GigResponse>(`/gigs/${encodeURIComponent(id)}`, patch);
 export const deleteGig = (id: string) => apiDelete<unknown>(`/gigs/${encodeURIComponent(id)}`);
 
-/** POST /gigs/upload -- the docs declare `{}`; the other upload endpoints return `{ "url": "…" }`. */
+/** POST /gigs/upload: JPEG, PNG or WebP up to 10 MB; returns `{ "url": "…" }`. */
 export async function uploadGigImage(file: File): Promise<string> {
   const form = new FormData();
   form.append('file', file, file.name);

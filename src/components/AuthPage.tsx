@@ -5,6 +5,8 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { CheckCircle2, AlertCircle, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import { UserCreate } from '../types/auth';
+import { ApiError } from '../lib/apiClient';
+import { TERMS_VERSION } from './ui/TermsAndPrivacyModal';
 import { useDocumentMeta } from '../hooks/useDocumentMeta';
 import { TermsAndPrivacyModal } from './ui/TermsAndPrivacyModal';
 import { CustomDropdown } from './CustomDropdown';
@@ -94,10 +96,15 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   const [signInPassword, setSignInPassword] = useState('');
   const [showSignInPassword, setShowSignInPassword] = useState(false);
   const [signInTouched, setSignInTouched] = useState<Record<string, boolean>>({});
-  // Accounts with two-step sign-in need an authenticator code with the password. The field stays
-  // tucked away until the person opens it, or the backend's error asks for a code.
-  const [showTotp, setShowTotp] = useState(false);
+  // Two-step sign-in. Login answers 401 `totp_required` once the password is right; that's the
+  // next step, not an error, so the card swaps to a code step. The backend keeps no challenge:
+  // the code is sent with the same email and password, which stay in memory here.
+  const [signinStep, setSigninStep] = useState<'credentials' | 'code'>('credentials');
+  const [stepAnim, setStepAnim] = useState<'' | 'kh-step-fwd' | 'kh-step-back'>('');
+  const [codeMode, setCodeMode] = useState<'app' | 'backup'>('app');
   const [totpCode, setTotpCode] = useState('');
+  const [codeError, setCodeError] = useState<string | null>(null);
+  const [credentialsNote, setCredentialsNote] = useState<string | null>(null);
   const totpInputRef = useRef<HTMLInputElement | null>(null);
 
   // Sign Up State
@@ -141,7 +148,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   const getPasswordStrength = (pass: string) => {
     if (!pass) return { score: 0, label: '', color: 'bg-zinc-200 dark:bg-zinc-700' };
     let score = 0;
-    if (pass.length >= 6) score += 1;
+    if (pass.length >= 8) score += 1;
     if (pass.length >= 8) score += 1;
     if (/[0-9]/.test(pass) && /[a-zA-Z]/.test(pass)) score += 1;
     if (/[^A-Za-z0-9]/.test(pass) || /[A-Z]/.test(pass)) score += 1;
@@ -166,7 +173,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   const emailIsValid = (em: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em.trim());
   const phoneDigits = nationalDigits(phoneNumber);
   const phoneIsValid = isValidNigerianPhone(phoneNumber);
-  const passwordIsValid = password.length >= 6;
+  const passwordIsValid = password.length >= 8 && password.length <= 128;
   const passwordsMatch = password === confirmPassword;
   const ninIsValid = !nin || nin.length === 11;
 
@@ -184,29 +191,101 @@ export const AuthPage: React.FC<AuthPageProps> = ({
     return () => clearTimeout(interval);
   }, [resendTimer]);
 
+  const finishSignIn = (role: string) => onAuthSuccess?.(role === 'artisan' ? 'artisan' : 'client');
+
+  const goToCodeStep = () => {
+    clearError();
+    setTotpCode('');
+    setCodeError(null);
+    setCodeMode('app');
+    setStepAnim('kh-step-fwd');
+    setSigninStep('code');
+  };
+
+  const backToCredentials = (note: string | null = null) => {
+    setCodeError(null);
+    setTotpCode('');
+    setCredentialsNote(note);
+    setStepAnim('kh-step-back');
+    setSigninStep('credentials');
+  };
+
   const handleSignInSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!signInIdentifier || !signInPassword) return;
-
+    setCredentialsNote(null);
     try {
-      const authedUser = await login({
-        username: signInIdentifier.trim(),
-        password: signInPassword,
-        totp_code: showTotp && totpCode ? totpCode : undefined,
-      });
-      if (onAuthSuccess) {
-        onAuthSuccess(authedUser.role === 'artisan' ? 'artisan' : 'client');
-      }
+      const authedUser = await login({ username: signInIdentifier.trim(), password: signInPassword });
+      finishSignIn(authedUser.role);
     } catch (err) {
-      // The error itself is shown by AuthContext. The spec doesn't document the "code required"
-      // response, so this matches its wording loosely to open the code field; the "Use two-step
-      // sign-in?" link is the dependable way in.
-      if (err instanceof Error && /2fa|two[- ]?(factor|step)|totp|authenticator/i.test(err.message)) {
-        setShowTotp(true);
+      // Other errors are shown by AuthContext's banner.
+      if (err instanceof ApiError && err.code === 'totp_required') goToCodeStep();
+    }
+  };
+
+  const verifyCode = async (code: string) => {
+    if (isLoginLoading || code.length < 6) return;
+    setCodeError(null);
+    try {
+      const authedUser = await login(
+        { username: signInIdentifier.trim(), password: signInPassword, totp_code: code },
+        { quiet: true },
+      );
+      finishSignIn(authedUser.role);
+    } catch (err) {
+      const apiErr = err instanceof ApiError ? err : null;
+      if (apiErr?.code === 'totp_invalid') {
+        setCodeError(codeMode === 'app'
+          ? 'That code didn’t work. Codes change every 30 seconds, so enter the one showing now.'
+          : 'That backup code didn’t work, or it’s already been used.');
+        setTotpCode('');
         requestAnimationFrame(() => totpInputRef.current?.focus());
+      } else if (apiErr?.code === 'invalid_credentials' || apiErr?.code === 'totp_required') {
+        // The email/password pair no longer signs in (e.g. the password was just changed elsewhere).
+        backToCredentials('Your sign-in needs to start again. Enter your password.');
+        setSignInPassword('');
+      } else if (apiErr?.status === 429) {
+        setCodeError(apiErr.message || 'Too many attempts. Wait a minute, then try again.');
+      } else if (apiErr?.status === 423) {
+        setCodeError(apiErr.message || 'This account is locked. Contact support to get back in.');
+      } else {
+        setCodeError(err instanceof Error && err.message ? err.message : 'Couldn’t check the code. Try again.');
       }
     }
   };
+
+  const handleCodeSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    verifyCode(totpCode);
+  };
+
+  const handleCodeChange = (raw: string) => {
+    if (codeMode === 'app') {
+      const next = digitsOnly(raw, 6);
+      setTotpCode(next);
+      if (codeError) setCodeError(null);
+      // Typing or pasting the sixth digit submits; the button stays for anyone who prefers it.
+      if (next.length === 6 && totpCode.length < 6) verifyCode(next);
+    } else {
+      setTotpCode(raw.replace(/[^A-Za-z0-9-]/g, '').slice(0, TOTP_MAX));
+      if (codeError) setCodeError(null);
+    }
+  };
+
+  // Leaving sign-in (to sign-up, forgot password…) starts it fresh next time.
+  useEffect(() => {
+    if (currentView !== 'signin') {
+      setSigninStep('credentials');
+      setStepAnim('');
+      setTotpCode('');
+      setCodeError(null);
+    }
+  }, [currentView]);
+
+  // The code step opens ready to type.
+  useEffect(() => {
+    if (signinStep === 'code') totpInputRef.current?.focus();
+  }, [signinStep, codeMode]);
 
   const handleSignUpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -232,6 +311,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
       state: state,
       role: selectedRole, // strictly 'client' or 'artisan'
       nin: nin.trim() ? nin.trim() : '',
+      terms_version: TERMS_VERSION,
     };
 
     try {
@@ -425,9 +505,12 @@ export const AuthPage: React.FC<AuthPageProps> = ({
           )}
 
           {/* ═════════ Sign in ═════════ */}
-          {currentView === 'signin' && (
-            <>
+          {currentView === 'signin' && signinStep === 'credentials' && (
+            <div key="signin-credentials" className={`flex flex-col gap-5 md:gap-[22px] ${stepAnim}`}>
               <Heading title="Welcome back" sub="Sign in with the email or username on your account." />
+              {credentialsNote && (
+                <p className="-mt-1 text-sm font-semibold leading-snug" style={{ color: C.body }} role="status">{credentialsNote}</p>
+              )}
               <form onSubmit={handleSignInSubmit} className="flex flex-col gap-4" noValidate>
                 <Field
                   label="Email or username"
@@ -471,39 +554,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                   />
                   <EyeToggle shown={showSignInPassword} onToggle={() => setShowSignInPassword(!showSignInPassword)} />
                 </Field>
-                {showTotp ? (
-                  <Field
-                    label="Authenticator code"
-                    htmlFor="signin-totp"
-                    aside={
-                      <button type="button" onClick={() => { setShowTotp(false); setTotpCode(''); }} className="kh-link pb-px text-sm font-extrabold cursor-pointer">
-                        Don’t use a code
-                      </button>
-                    }
-                  >
-                    <input
-                      ref={totpInputRef}
-                      id="signin-totp"
-                      type="text"
-                      inputMode="numeric"
-                      autoComplete="one-time-code"
-                      maxLength={6}
-                      placeholder="6-digit code from your app"
-                      value={totpCode}
-                      onChange={(e) => setTotpCode(digitsOnly(e.target.value, 6))}
-                      className={totpCode ? 'tracking-[0.3em] tabular-nums' : undefined}
-                    />
-                  </Field>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => { setShowTotp(true); requestAnimationFrame(() => totpInputRef.current?.focus()); }}
-                    className="kh-link self-start pb-px text-sm font-extrabold cursor-pointer"
-                  >
-                    Use two-step sign-in? Add your code
-                  </button>
-                )}
-                <button type="submit" disabled={isLoginLoading || !signInIdentifier.trim() || !signInPassword || (showTotp && totpCode.length > 0 && totpCode.length !== 6)} className={primaryBtn}>
+                <button type="submit" disabled={isLoginLoading || !signInIdentifier.trim() || !signInPassword} className={primaryBtn}>
                   {submitLabel(isLoginLoading, 'Sign in', 'Signing in…')}
                 </button>
                 <p className="text-[13px] leading-normal font-medium" style={{ color: C.muted }}>
@@ -511,7 +562,57 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                   <button type="button" onClick={() => openTermsWithTab('terms')} className="font-bold underline underline-offset-2 cursor-pointer" style={{ color: C.navy }}>Terms</button>.
                 </p>
               </form>
-            </>
+            </div>
+          )}
+
+          {/* ═════════ Sign in, step 2: two-step code ═════════ */}
+          {currentView === 'signin' && signinStep === 'code' && (
+            <div key="signin-code" className={`flex flex-col gap-5 md:gap-[22px] ${stepAnim}`}>
+              <button type="button" onClick={() => backToCredentials()} className="kh-link self-start pb-px text-sm font-extrabold cursor-pointer" style={{ color: C.navy }}>
+                <span aria-hidden="true">←</span> Back
+              </button>
+              <Heading
+                title={codeMode === 'app' ? 'Enter your 6-digit code' : 'Enter a backup code'}
+                sub={codeMode === 'app'
+                  ? <>Open your authenticator app and enter the code it shows for <strong>{signInIdentifier.trim()}</strong>.</>
+                  : 'Use one of the backup codes you saved when you turned on two-step sign-in. Each one works once.'}
+              />
+              <form onSubmit={handleCodeSubmit} className="flex flex-col gap-4" noValidate>
+                <Field label={codeMode === 'app' ? 'Code' : 'Backup code'} htmlFor="signin-totp" error={codeError || undefined}>
+                  <input
+                    ref={totpInputRef}
+                    id="signin-totp"
+                    type="text"
+                    inputMode={codeMode === 'app' ? 'numeric' : 'text'}
+                    autoComplete="one-time-code"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    enterKeyHint="go"
+                    maxLength={codeMode === 'app' ? 6 : TOTP_MAX}
+                    placeholder={codeMode === 'app' ? '123456' : 'Backup code'}
+                    aria-invalid={Boolean(codeError) || undefined}
+                    value={totpCode}
+                    onChange={(e) => handleCodeChange(e.target.value)}
+                    className={totpCode ? 'tracking-[0.3em] tabular-nums' : undefined}
+                  />
+                </Field>
+                <button
+                  type="submit"
+                  disabled={isLoginLoading || (codeMode === 'app' ? totpCode.length !== 6 : totpCode.length < 6)}
+                  className={primaryBtn}
+                >
+                  {submitLabel(isLoginLoading, 'Verify and sign in', 'Verifying…')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setCodeMode((m) => (m === 'app' ? 'backup' : 'app')); setTotpCode(''); setCodeError(null); }}
+                  className="kh-link self-start pb-px text-sm font-extrabold cursor-pointer"
+                  style={{ color: C.navy }}
+                >
+                  {codeMode === 'app' ? 'Use a backup code' : 'Use the code from your app'}
+                </button>
+              </form>
+            </div>
           )}
 
           {/* ═════════ Sign up ═════════ */}
@@ -548,9 +649,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                   <Field
                     label="Password"
                     htmlFor="signup-password"
-                    error={touched.password && !password ? 'Password is required' : touched.password && !passwordIsValid ? 'Use at least 6 characters' : undefined}
+                    error={touched.password && !password ? 'Password is required' : touched.password && !passwordIsValid ? 'Use 8 to 128 characters' : undefined}
                   >
-                    <input id="signup-password" type={showSignUpPassword ? 'text' : 'password'} autoComplete="new-password" required minLength={6} placeholder="At least 6 characters" value={password} onBlur={() => markTouched('password')} onChange={(e) => setPassword(e.target.value)} />
+                    <input id="signup-password" type={showSignUpPassword ? 'text' : 'password'} autoComplete="new-password" required minLength={8} maxLength={128} placeholder="At least 8 characters" value={password} onBlur={() => markTouched('password')} onChange={(e) => setPassword(e.target.value)} />
                     <EyeToggle shown={showSignUpPassword} onToggle={() => setShowSignUpPassword(!showSignUpPassword)} />
                   </Field>
                   {password && (
@@ -713,13 +814,13 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                   />
                 </Field>
                 <Field label="New password" htmlFor="reset-password">
-                  <input id="reset-password" type={showResetPassword ? 'text' : 'password'} autoComplete="new-password" required minLength={6} placeholder="At least 6 characters" value={resetNewPassword} onChange={(e) => setResetNewPassword(e.target.value)} />
+                  <input id="reset-password" type={showResetPassword ? 'text' : 'password'} autoComplete="new-password" required minLength={8} maxLength={128} placeholder="At least 8 characters" value={resetNewPassword} onChange={(e) => setResetNewPassword(e.target.value)} />
                   <EyeToggle shown={showResetPassword} onToggle={() => setShowResetPassword(!showResetPassword)} />
                 </Field>
                 <Field label="Confirm new password" htmlFor="reset-confirm" error={resetMismatch ? 'Passwords don’t match' : undefined}>
                   <input id="reset-confirm" type={showResetPassword ? 'text' : 'password'} autoComplete="new-password" required placeholder="Type it again" value={resetConfirmPassword} onChange={(e) => setResetConfirmPassword(e.target.value)} />
                 </Field>
-                <button type="submit" disabled={isResetPasswordLoading || resetOtp.length !== 5 || resetNewPassword.length < 6 || resetNewPassword !== resetConfirmPassword} className={primaryBtn}>
+                <button type="submit" disabled={isResetPasswordLoading || resetOtp.length !== 5 || resetNewPassword.length < 8 || resetNewPassword !== resetConfirmPassword} className={primaryBtn}>
                   {submitLabel(isResetPasswordLoading, 'Save new password', 'Saving…')}
                 </button>
               </form>
@@ -741,6 +842,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({
 /* ───────── Page pieces ───────── */
 
 // The public pages' own palette (see LandingPage), independent of the app theme.
+// A 6-digit authenticator code, or one of the account's backup codes.
+const TOTP_MAX = 20;
 const C = {
   navy: '#0B1B3A',
   cream: '#FFF6EC',
@@ -792,7 +895,7 @@ const Field: React.FC<{ label: string; htmlFor: string; aside?: React.ReactNode;
     <div className="kh-input h-[54px] md:h-14 box-border flex items-center gap-3 px-4 rounded-[14px] border-2 bg-white text-base font-semibold" data-invalid={error ? 'true' : undefined}>
       {children}
     </div>
-    {error && <p className="text-[13px] font-semibold" style={{ color: C.error }}>{error}</p>}
+    {error && <p className="text-[13px] font-semibold" style={{ color: C.error }} aria-live="polite">{error}</p>}
   </div>
 );
 

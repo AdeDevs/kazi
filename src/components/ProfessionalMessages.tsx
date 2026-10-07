@@ -9,6 +9,9 @@ import { PhotoPreviewSheet } from './chat/PhotoPreviewSheet';
 import { AttachmentMenu } from './chat/AttachmentMenu';
 import { ImageLightbox } from './chat/ImageLightbox';
 import { compressImage } from '../lib/imageCompress';
+import { DeleteChatButton } from './chat/DeleteChatButton';
+import { PersonAvatar, PersonName } from './ui/PersonAvatar';
+import { firstNameOf } from '../lib/people';
 import { ChatComposer } from './ChatComposer';
 import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
 
@@ -33,12 +36,19 @@ interface ProfessionalMessagesProps {
   bookings: Booking[];
   onSendMessage?: (customerId: string, text: string, mediaProps?: Partial<ChatMessage>) => void;
   onMarkAsRead?: (customerId: string) => void;
+  /** Deletes the conversation for this user only; resolves true on success. */
+  onDeleteConversation?: (customerId: string) => Promise<boolean>;
+  /** Each client's public name and photo, keyed by their user id (from the conversations). */
+  contacts?: Record<string, { name: string; avatar?: string }>;
+  /** True until the conversations have loaded, so names show a skeleton instead of a guess. */
+  contactsLoading?: boolean;
   initialCustomerId?: string;
 }
 
 interface Conversation {
   customerId: string;
   customerName: string;
+  customerAvatar?: string;
   lastMessage: ChatMessage;
   unreadCount: number;
   relatedBooking?: Booking;
@@ -56,6 +66,9 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
   bookings,
   onSendMessage,
   onMarkAsRead,
+  onDeleteConversation,
+  contacts = {},
+  contactsLoading = false,
   initialCustomerId
 }) => {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(initialCustomerId || null);
@@ -95,7 +108,9 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
   messages.forEach(msg => {
     const isCustomerSender = msg.senderRole === 'customer';
     const customerId = isCustomerSender ? msg.senderId : msg.recipientId;
-    const customerName = isCustomerSender ? msg.senderName : (messages.find(m => m.senderId === customerId)?.senderName || 'Customer');
+    const contact = contacts[customerId];
+    const customerName = contact?.name || (isCustomerSender ? msg.senderName : messages.find(m => m.senderId === customerId)?.senderName) || '';
+    const customerAvatar = contact?.avatar || (isCustomerSender ? msg.senderAvatar : undefined);
     
     const existing = conversationsMap.get(customerId);
     const msgTime = new Date(msg.timestamp).getTime();
@@ -114,6 +129,7 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
       conversationsMap.set(customerId, {
         customerId,
         customerName,
+        customerAvatar,
         lastMessage: msg,
         unreadCount,
         relatedBooking
@@ -267,13 +283,11 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
               className={`p-3 cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 ${selectedCustomerId === conv.customerId ? 'bg-navy-50 dark:bg-navy-900/20' : ''}`}
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-slate-800 flex items-center justify-center shrink-0 text-slate-700 dark:text-slate-300 font-bold text-sm border border-slate-200/80 dark:border-slate-700/80">
-                  {conv.customerName.charAt(0)}
-                </div>
+                <PersonAvatar name={conv.customerName} src={conv.customerAvatar} loading={contactsLoading} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-0.5">
                     <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate pr-2">
-                      {conv.customerName}
+                      <PersonName name={conv.customerName} loading={contactsLoading} />
                     </h4>
                     <span className="text-[10px] font-medium text-slate-400 shrink-0">
                       {formatDateLabel(conv.lastMessage.timestamp) === 'Today'
@@ -329,12 +343,10 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
         >
           {isMobile ? <ArrowLeft className="w-5 h-5" /> : <X className="w-5 h-5" />}
         </button>
-        <div className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300 font-bold text-sm border border-slate-200/80 dark:border-slate-700/80 shrink-0">
-          {activeConversation?.customerName.charAt(0)}
-        </div>
+        <PersonAvatar name={activeConversation?.customerName || ''} src={activeConversation?.customerAvatar} loading={contactsLoading} />
         <div className="min-w-0">
           <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
-            {activeConversation?.customerName}
+            <PersonName name={activeConversation?.customerName || ''} loading={contactsLoading} />
           </h3>
           {activeConversation?.relatedBooking && (
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate">
@@ -343,6 +355,13 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
           )}
         </div>
       </div>
+      {onDeleteConversation && activeConversation && (
+        <DeleteChatButton
+          name={activeConversation.customerName}
+          onDelete={() => onDeleteConversation(activeConversation.customerId)}
+          onDeleted={() => selectCustomerId(null)}
+        />
+      )}
     </div>
   );
 
@@ -456,7 +475,7 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
         value={inputText}
         onChange={setInputText}
         onSend={handleSend}
-        placeholder={activeConversation ? `Message ${activeConversation.customerName.split(' · ')[0].split(/\s+/)[0]}` : 'Type a message'}
+        placeholder={activeConversation?.customerName ? `Message ${firstNameOf(activeConversation.customerName)}` : 'Type a message'}
         quickReplies={ARTISAN_QUICK_REPLIES}
         onQuickReply={(text) => {
           if (selectedCustomerId && onSendMessage) onSendMessage(selectedCustomerId, text, { mediaType: 'text', status: 'sent' });
@@ -598,7 +617,7 @@ export const ProfessionalMessages: React.FC<ProfessionalMessagesProps> = ({
       <ImageLightbox src={selectedLightboxImage} onClose={() => setSelectedLightboxImage(null)} />
       <PhotoPreviewSheet
         photo={pendingPhoto}
-        recipientName={activeConversation?.customerName.split(' · ')[0] || 'client'}
+        recipientName={activeConversation?.customerName || ''}
         onCancel={() => setPendingPhoto(null)}
         onSend={handleSendPhoto}
       />

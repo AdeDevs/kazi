@@ -80,6 +80,10 @@
     {
       "source": "/gigs/new",
       "destination": "/index.html"
+    },
+    {
+      "source": "/payment/callback",
+      "destination": "/index.html"
     }
   ],
   "headers": [

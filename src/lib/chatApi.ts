@@ -1,4 +1,4 @@
-import { apiGet, apiPatch, apiPost, apiPostMultipart } from './apiClient';
+import { apiDelete, apiGet, apiPatch, apiPost, apiPostMultipart } from './apiClient';
 
 // Chat over REST (the WebSocket handshake behind /chat/ws-ticket isn't documented yet).
 // Shapes verified against the live API: GET /conversations items, MessageResponse.
@@ -7,6 +7,13 @@ export interface ConversationResponse {
   id: string;
   client_id: string;
   artisan_id: string;
+  // Public details of both people (name and photo only; never email or phone).
+  client_name?: string | null;
+  client_avatar?: string | null;
+  artisan_name?: string | null;
+  artisan_avatar?: string | null;
+  artisan_profile_id?: string | null;
+  unread_count?: number;
   active_booking_id?: string | null;
   active_job_title?: string | null;
   active_job_amount?: number | null;
@@ -54,10 +61,13 @@ export const listMessages = (conversationId: string) =>
   apiGet<MessageResponse[]>(`/conversations/${encodeURIComponent(conversationId)}/messages`);
 export const sendMessage = (body: MessageCreate) =>
   apiPost<MessageResponse>(`/conversations/${encodeURIComponent(body.conversation_id)}/messages`, body);
+/** Removes the conversation and its current messages for the caller only; the other person keeps theirs. */
+export const deleteConversation = (conversationId: string) =>
+  apiDelete<unknown>(`/conversations/${encodeURIComponent(conversationId)}`);
 export const markConversationRead = (conversationId: string) =>
   apiPatch<unknown>(`/conversations/${encodeURIComponent(conversationId)}/read`);
 
-/** Uploads a photo or voice note; the docs declare `{}`, verified live as `{ "url": "…" }`. */
+/** Uploads a photo (JPEG/PNG/WebP, 10 MB), MP4 video (50 MB) or voice note (15 MB); returns its URL. */
 export async function uploadChatMedia(file: Blob, filename: string): Promise<string> {
   const form = new FormData();
   form.append('file', file, filename);

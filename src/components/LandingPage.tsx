@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { TermsAndPrivacyModal } from './ui/TermsAndPrivacyModal';
 import { savePendingSearch } from '../lib/pendingSearch';
 import { formatCurrency } from '../utils';
+import { listFeaturedReviews } from '../lib/reviewsApi';
 import { art } from '../assets/landing';
 import { Phone, MockQuote, MockNearYou, MockPayment, MockIdCheck, MockNewRequest, MockCheckout, MockWallet, ArtisanScene } from './landing/PhoneMocks';
 
@@ -180,9 +181,8 @@ const FAQS = [
   { q: 'When do artisans get paid?', a: 'As soon as the customer confirms the job is done, the payment in escrow is released to the artisan.' },
   { q: 'How do I join as an artisan?', a: 'Sign up, verify your ID and selfie, add your trade and the areas you cover, and you’ll start getting requests from people nearby.' },
 ];
-// SAMPLE reviews, shown until real ones exist (backend ask 40: a public featured-reviews endpoint).
-// The section labels them as samples; replace this list with real, consented reviews before relying
-// on it, and never present these as genuine.
+// SAMPLE reviews, shown only while GET /reviews/featured has none to give (it lists reviews clients
+// chose to share, from paid-out jobs). The section labels them as samples; never present them as genuine.
 const SAMPLE_REVIEWS = [
   { quote: 'My socket was sparking at night. The electrician came the next morning, sent the quote in chat, and I only released the money after testing every switch.', name: 'Tolu A.', meta: 'Bodija, Ibadan · Electrician job' },
   { quote: 'I have been burnt by plumbers before. This time the money sat in escrow until the leak was actually fixed. Na so e suppose be.', name: 'Chinedu O.', meta: 'Yaba, Lagos · Plumber job' },
@@ -293,6 +293,28 @@ export const LandingPage: React.FC = () => {
   const [openTrade, setOpenTrade] = useState(0);
   const [openFaq, setOpenFaq] = useState(0);
   const [review, setReview] = useState(0);
+  const [realReviews, setRealReviews] = useState<typeof SAMPLE_REVIEWS | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    listFeaturedReviews(6)
+      .then((list) => {
+        const usable = list
+          .filter((r) => r.comment?.trim())
+          .map((r) => ({
+            quote: r.comment!.trim(),
+            name: r.client_first_name,
+            meta: [r.client_area, r.category && `${r.category} job`].filter(Boolean).join(' · '),
+          }));
+        if (!cancelled && usable.length) {
+          setRealReviews(usable);
+          setReview(0);
+        }
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, []);
+  const reviews = realReviews ?? SAMPLE_REVIEWS;
+  const reviewsLabel = realReviews ? 'What customers say' : 'Sample reviews';
   const [menuOpen, setMenuOpen] = useState(false);
   const [legal, setLegal] = useState<null | 'terms' | 'escrow' | 'privacy'>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -701,13 +723,13 @@ export const LandingPage: React.FC = () => {
           </div>
         </section>
 
-        {/* ───────── Reviews: fanned illustrated cards + quote (samples until real reviews exist) ───────── */}
+        {/* ───────── Reviews: fanned illustrated cards + quote (real shared reviews, or labelled samples) ───────── */}
         <section aria-label="Customer reviews" className="px-5 md:px-10 lg:px-[72px] pt-14 md:pt-[88px] lg:pt-24">
           <div className="rounded-[28px] lg:rounded-[32px] overflow-hidden flex flex-col md:grid md:grid-cols-12 gap-[22px] md:gap-4 lg:gap-6 px-[22px] pt-[26px] pb-[22px] md:px-9 md:py-10 lg:px-14 lg:py-12 md:h-[420px] lg:h-[410px]" style={{ background: C.navy, color: C.cream }}>
-            <p className={`md:hidden ${eyebrow}`} style={{ color: C.mint }}>Sample reviews</p>
+            <p className={`md:hidden ${eyebrow}`} style={{ color: C.mint }}>{reviewsLabel}</p>
             <div className="relative h-[240px] md:h-auto md:col-span-6 lg:col-span-5" aria-hidden="true">
               {REVIEW_CARDS.map((c, i) => {
-                const pos = (i - review + 3) % 3;
+                const pos = (i - (review % 3) + 3) % 3;
                 return (
                   <div
                     key={c.art}
@@ -727,21 +749,21 @@ export const LandingPage: React.FC = () => {
               })}
             </div>
             <div className="md:col-start-7 md:col-span-6 lg:col-start-6 lg:col-span-7 flex flex-col justify-between gap-[22px] md:gap-5 lg:gap-6">
-              <p className={`hidden md:block ${eyebrow}`} style={{ color: C.mint }}>Sample reviews</p>
+              <p className={`hidden md:block ${eyebrow}`} style={{ color: C.mint }}>{reviewsLabel}</p>
               <figure key={review} className="kh-fade flex flex-col gap-[22px] lg:gap-6" style={{ animationDuration: '300ms' }} aria-live="polite">
-                <blockquote className={`${display} !font-bold text-[21px] md:text-[23px] lg:text-[30px] leading-[1.15] lg:leading-[1.12] tracking-[-0.03em]`}>“{SAMPLE_REVIEWS[review].quote}”</blockquote>
+                <blockquote className={`${display} !font-bold text-[21px] md:text-[23px] lg:text-[30px] leading-[1.15] lg:leading-[1.12] tracking-[-0.03em]`}>“{reviews[review].quote}”</blockquote>
                 <figcaption className="flex flex-col gap-1">
-                  <span className="text-base lg:text-[17px] font-extrabold">{SAMPLE_REVIEWS[review].name}</span>
-                  <span className="text-sm md:text-[13px] lg:text-sm font-medium" style={{ color: C.muted }}>{SAMPLE_REVIEWS[review].meta}</span>
+                  <span className="text-base lg:text-[17px] font-extrabold">{reviews[review].name}</span>
+                  <span className="text-sm md:text-[13px] lg:text-sm font-medium" style={{ color: C.muted }}>{reviews[review].meta}</span>
                 </figcaption>
               </figure>
               <div className="flex items-center justify-between md:justify-end gap-3">
-                <span className="md:mr-1.5 text-sm font-bold tabular-nums" style={{ color: C.muted }}>{review + 1} / {SAMPLE_REVIEWS.length}</span>
+                <span className="md:mr-1.5 text-sm font-bold tabular-nums" style={{ color: C.muted }}>{review + 1} / {reviews.length}</span>
                 <div className="flex gap-2.5 lg:gap-3">
-                  <button type="button" onClick={() => setReview(r => (r + SAMPLE_REVIEWS.length - 1) % SAMPLE_REVIEWS.length)} aria-label="Previous review" className="kh-rev-prev w-12 h-12 md:w-[46px] md:h-[46px] lg:w-12 lg:h-12 rounded-full border-2 flex items-center justify-center cursor-pointer">
+                  <button type="button" onClick={() => setReview(r => (r + reviews.length - 1) % reviews.length)} aria-label="Previous review" className="kh-rev-prev w-12 h-12 md:w-[46px] md:h-[46px] lg:w-12 lg:h-12 rounded-full border-2 flex items-center justify-center cursor-pointer">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M19 12H5" /><path d="m11 18-6-6 6-6" /></svg>
                   </button>
-                  <button type="button" onClick={() => setReview(r => (r + 1) % SAMPLE_REVIEWS.length)} aria-label="Next review" className="kh-rev-next w-12 h-12 md:w-[46px] md:h-[46px] lg:w-12 lg:h-12 rounded-full border-2 flex items-center justify-center cursor-pointer">
+                  <button type="button" onClick={() => setReview(r => (r + 1) % reviews.length)} aria-label="Next review" className="kh-rev-next w-12 h-12 md:w-[46px] md:h-[46px] lg:w-12 lg:h-12 rounded-full border-2 flex items-center justify-center cursor-pointer">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m13 6 6 6-6 6" /></svg>
                   </button>
                 </div>

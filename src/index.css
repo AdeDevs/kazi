@@ -257,6 +257,16 @@ html.dark img {
 @media (prefers-reduced-motion: reduce) {
   .kh-role { transition-property: background-color, color; }
 }
+/* Sign-in steps (credentials -> two-step code): a short slide in the direction of travel.
+   Opacity only when the person prefers less motion. */
+@keyframes kh-step-fwd { from { opacity: 0; transform: translateX(8px); } }
+@keyframes kh-step-back { from { opacity: 0; transform: translateX(-8px); } }
+@keyframes kh-step-fade { from { opacity: 0; } }
+.kh-step-fwd { animation: kh-step-fwd 200ms cubic-bezier(0.23, 1, 0.32, 1); }
+.kh-step-back { animation: kh-step-back 200ms cubic-bezier(0.23, 1, 0.32, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .kh-step-fwd, .kh-step-back { animation-name: kh-step-fade; }
+}
 /* Browser autofill paints its own tint on the <input>, which here sits inside a padded box, so the
    tint stopped short of the box edges. Cover it with the box's white and keep the text navy. The
    long transition stops Chrome flashing its colour back in. */

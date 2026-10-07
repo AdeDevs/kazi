@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Professional, Booking, ChatMessage, Notification } from '../types';
-import { bookingWhen, customerLabel, formatCurrency } from '../utils';
+import { bookingWhen, formatCurrency } from '../utils';
 import { SendQuoteSheet } from './SendQuoteSheet';
 import { ProfessionalMessages } from './ProfessionalMessages';
 import { ProfessionalNotifications } from './ProfessionalNotifications';
@@ -12,8 +12,10 @@ import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
 import { SlideTabPanel, useSlidingIndicator, useTabDirection } from './ui/SlidingTabs';
 import {
   Briefcase, Star, CheckCircle2, Clock, MapPin, Image as ImageIcon, Calendar, Layers,
-  MessageSquare, ClipboardList, ArrowRight, ArrowLeft, Eye, X, AlertCircle
+  MessageSquare, ClipboardList, ArrowRight, ArrowLeft, Eye, X, AlertCircle, Wrench
 } from 'lucide-react';
+import { BookingPhotosField } from './BookingPhotosField';
+import { PersonChip } from './ui/PersonAvatar';
 
 interface ProfessionalDashboardProps {
   professional: Professional;
@@ -28,6 +30,9 @@ interface ProfessionalDashboardProps {
   messages?: ChatMessage[];
   onSendMessage?: (customerId: string, text: string, mediaProps?: Partial<ChatMessage>) => void;
   onMarkAsRead?: (customerId: string) => void;
+  onDeleteConversation?: (customerId: string) => Promise<boolean>;
+  chatContacts?: Record<string, { name: string; avatar?: string }>;
+  chatContactsLoading?: boolean;
   onLogout?: () => void;
   darkMode?: boolean;
   onToggleDarkMode?: () => void;
@@ -53,6 +58,9 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
   messages = [],
   onSendMessage,
   onMarkAsRead,
+  onDeleteConversation,
+  chatContacts,
+  chatContactsLoading,
   onLogout,
   darkMode = false,
   onToggleDarkMode = () => {},
@@ -104,9 +112,15 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
   useEffect(() => {
     if (completingJob) setCachedCompletingJob(completingJob);
   }, [completingJob]);
-  // POST /bookings/{id}/submit-completion takes no body, so this is a confirmation, not a form: a
-  // description or proof photos typed here would never reach the backend or the client.
-  const closeCompletionModal = () => setCompletingJob(null);
+  // Notes and photos are optional proof sent with POST /bookings/{id}/submit-completion.
+  const [completionNotes, setCompletionNotes] = useState('');
+  const [completionPhotos, setCompletionPhotos] = useState<string[]>([]);
+  const [isUploadingProof, setIsUploadingProof] = useState(false);
+  const closeCompletionModal = () => {
+    setCompletingJob(null);
+    setCompletionNotes('');
+    setCompletionPhotos([]);
+  };
   const completionSheet = useSlideUpSheet(Boolean(completingJob), closeCompletionModal);
 
   const [showAllPortfolio, setShowAllPortfolio] = useState(false);
@@ -199,7 +213,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
   );
 
   const filteredActiveJobs = activeJobs.filter(b => {
-    if (activeJobFilter === 'in_progress') return b.status === 'accepted' || b.status === 'in_progress';
+    if (activeJobFilter === 'in_progress') return b.status === 'accepted' || b.status === 'escrow_funded' || b.status === 'in_progress';
     if (activeJobFilter === 'completion_submitted') return b.status === 'completed_by_artisan' && !isJobAutoCompleted(b);
     if (activeJobFilter === 'issue_reported') return b.status === 'disputed';
     return true;
@@ -241,7 +255,10 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
         messages={messages} 
         bookings={bookings} 
         onSendMessage={onSendMessage} 
-        onMarkAsRead={onMarkAsRead} 
+        onMarkAsRead={onMarkAsRead}
+        onDeleteConversation={onDeleteConversation}
+        contacts={chatContacts}
+        contactsLoading={chatContactsLoading} 
         initialCustomerId={initialCustomerId}
       />
     );
@@ -366,7 +383,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                         }`}>
                           {quoteSent ? 'Quote Sent' : isQuote ? 'Awaiting Quote' : 'Pending Booking'}
                         </span>
-                        <span className="text-xs text-slate-400 font-semibold truncate">Customer: {customerLabel(job)}</span>
+                        <span className="text-xs text-slate-400 font-semibold truncate flex items-center gap-1">Customer: <PersonChip name={job.customerName} src={job.customerAvatar} className="text-slate-700 dark:text-slate-300" />{job.customerPhone ? ` (${job.customerPhone})` : ''}</span>
                       </div>
 
                       <h4 className="text-base font-bold text-slate-900 dark:text-slate-100">
@@ -462,7 +479,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
               >
                 <span>In Progress</span>
                 <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200">
-                  {activeJobs.filter(j => j.status === 'accepted' || j.status === 'in_progress').length}
+                  {activeJobs.filter(j => j.status === 'accepted' || j.status === 'escrow_funded' || j.status === 'in_progress').length}
                 </span>
               </button>
               {activeJobs.filter(j => j.status === 'completed_by_artisan' && !isJobAutoCompleted(j)).length > 0 && (
@@ -539,7 +556,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                             </span>
 
                             <span className="text-xs text-slate-400 font-semibold truncate">
-                              Customer: <strong className="text-slate-700 dark:text-slate-300">{job.customerName}</strong>{job.customerPhone ? ` (${job.customerPhone})` : ''}
+                              <span className="inline-flex items-center gap-1">Customer: <PersonChip name={job.customerName} src={job.customerAvatar} className="font-bold text-slate-700 dark:text-slate-300" /></span>{job.customerPhone ? ` (${job.customerPhone})` : ''}
                             </span>
                           </div>
 
@@ -626,6 +643,8 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                             "Contact customer via direct message below to resolve reported details, clarify work performed, or arrange a follow-up fix."
                           ) : job.status === 'accepted' ? (
                             "Accepted. The client pays into escrow next. Agree the time and place with them in messages."
+                          ) : job.status === 'escrow_funded' ? (
+                            "The client has paid into escrow. Tap 'Start Job' when you begin the work."
                           ) : (
                             "Perform the repair work, then click 'Complete Job' to submit work completion proof photos."
                           )}
@@ -665,6 +684,16 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                             <MessageSquare className="w-3.5 h-3.5 shrink-0" />
                             <span>Message</span>
                           </button>
+
+                          {job.status === 'escrow_funded' && (
+                            <button
+                              onClick={() => handleOptimisticUpdateStatus(job.id, 'in_progress')}
+                              className="col-span-2 min-h-11 sm:min-h-0 px-4 py-2 bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white text-xs font-bold rounded-xl transition-[background-color,transform] duration-150 active:scale-[0.97] cursor-pointer shadow-xs flex items-center justify-center gap-1.5 whitespace-nowrap"
+                            >
+                              <Wrench className="w-3.5 h-3.5 shrink-0" />
+                              <span>Start Job</span>
+                            </button>
+                          )}
 
                           {job.status === 'in_progress' && (
                             <button
@@ -711,7 +740,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                               <span>Completed</span>
                               {autoCompleted && <span className="text-[10px] lowercase font-normal">(Auto-finalized)</span>}
                             </span>
-                            <span className="text-xs text-slate-400 font-semibold truncate min-w-0">Customer: {job.customerName}</span>
+                            <span className="text-xs text-slate-400 font-semibold truncate min-w-0 flex items-center gap-1">Customer: <PersonChip name={job.customerName} src={job.customerAvatar} /></span>
                           </div>
 
                           <h4 className="text-base font-bold text-slate-900 dark:text-slate-100">
@@ -805,7 +834,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
               <div className="space-y-3.5 text-xs sm:text-sm text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/80">
                 <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5 sm:gap-2">
                   <span className="font-semibold text-slate-500">Customer Name:</span>
-                  <span className="font-bold text-slate-900 dark:text-white">{booking.customerName}</span>
+                  <PersonChip name={booking.customerName} src={booking.customerAvatar} className="font-bold text-slate-900 dark:text-white" />
                 </div>
                 <div className="flex justify-between">
                   <span className="font-semibold text-slate-500">Phone:</span>
@@ -863,6 +892,19 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                 </p>
               </div>
 
+              {booking.attachments && booking.attachments.length > 0 && (
+                <div className="space-y-1.5">
+                  <span className="text-xs font-semibold text-slate-500">Photos from the customer</span>
+                  <div className="flex flex-wrap gap-2">
+                    {booking.attachments.map((url, i) => (
+                      <a key={url} href={url} target="_blank" rel="noreferrer">
+                        <img src={url} alt={`Customer photo ${i + 1}`} className="w-20 h-20 rounded-xl object-cover border border-slate-200 dark:border-slate-800" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-end pt-2">
                 <button
                   onClick={() => openBookingDetails(null)}
@@ -902,8 +944,30 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                   Mark this job as done?
                 </h3>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  {job.customerName} will be asked to confirm that “{job.title || job.category}” is finished. They have 4 days to confirm or raise an issue.
+                  {job.customerName} will be asked to confirm that “{job.title || job.category}” is finished. They have 4 days to confirm or raise an issue, after which your payment is released.
                 </p>
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="completion-notes" className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                  What did you do? <span className="font-medium text-slate-400">(optional)</span>
+                </label>
+                <textarea
+                  id="completion-notes"
+                  rows={3}
+                  maxLength={2000}
+                  value={completionNotes}
+                  onChange={(e) => setCompletionNotes(e.target.value.slice(0, 2000))}
+                  placeholder="e.g. Replaced the faulty breaker and tested every socket."
+                  className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-navy-800"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <span className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Photos of the finished work <span className="font-medium text-slate-400">(optional)</span>
+                </span>
+                <BookingPhotosField photos={completionPhotos} onChange={setCompletionPhotos} onUploadingChange={setIsUploadingProof} max={10} hint="Photos help the customer confirm quickly." />
               </div>
 
               <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
@@ -916,13 +980,14 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                 </button>
                 <button
                   type="button"
+                  disabled={isUploadingProof}
                   onClick={() => {
                     handleOptimisticUpdateStatus(job.id, 'completed_by_artisan', {
-                      completionDetails: { description: '', photos: [], submittedAt: new Date().toISOString() },
+                      completionDetails: { description: completionNotes.trim(), photos: completionPhotos, submittedAt: new Date().toISOString() },
                     });
-                    setCompletingJob(null);
+                    closeCompletionModal();
                   }}
-                  className="px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white font-bold text-xs shadow-xs transition-[background-color,transform] duration-150 active:scale-[0.97] cursor-pointer flex items-center gap-1.5"
+                  className="disabled:opacity-60 disabled:cursor-wait px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white font-bold text-xs shadow-xs transition-[background-color,transform] duration-150 active:scale-[0.97] cursor-pointer flex items-center gap-1.5"
                 >
                   <CheckCircle2 className="w-4 h-4" />
                   <span>Mark as done</span>
@@ -1141,7 +1206,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                       }`}>
                         {job.status}
                       </span>
-                      <span className="text-xs text-slate-400 font-semibold sm:truncate">Customer: {customerLabel(job)}</span>
+                      <span className="text-xs text-slate-400 font-semibold sm:truncate flex items-center gap-1">Customer: <PersonChip name={job.customerName} src={job.customerAvatar} className="text-slate-700 dark:text-slate-300" />{job.customerPhone ? ` (${job.customerPhone})` : ''}</span>
                     </div>
 
                     <h4 className="text-base font-bold text-slate-900 dark:text-slate-100">Issue: {job.description}</h4>

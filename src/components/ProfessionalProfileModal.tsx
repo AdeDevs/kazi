@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { PersonAvatar } from './ui/PersonAvatar';
+import { Checkbox } from './ui/Checkbox';
 import { HeroScrim } from './ui/HeroScrim';
 import { SlideTabPanel, useSlidingIndicator, useTabDirection } from './ui/SlidingTabs';
 import { X, Star, MapPin, Briefcase, Award, MessageSquare, Calendar, Clock } from 'lucide-react';
@@ -18,7 +20,7 @@ interface ProfessionalProfileModalProps {
   onOpenChat: (pro: Professional) => void;
   /** Starts buying one of this artisan's gigs (real artisans only). */
   onBuyGig?: (gig: Gig, pro: Professional) => void;
-  onAddReview?: (proId: string, rating: number, comment: string) => void;
+  onAddReview?: (proId: string, rating: number, comment: string, sharePublicly?: boolean) => Promise<boolean>;
 }
 
 export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> = ({
@@ -39,6 +41,8 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
   const [newRating, setNewRating] = useState(5);
   const [newHoverRating, setNewHoverRating] = useState(0);
   const [newComment, setNewComment] = useState('');
+  const [sharePublicly, setSharePublicly] = useState(false);
+  const [isPostingReview, setIsPostingReview] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [reviewSuccessMsg, setReviewSuccessMsg] = useState<string | null>(null);
 
@@ -61,9 +65,9 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
       return;
     }
     let cancelled = false;
-    listPublicGigs()
+    listPublicGigs(professionalProp.id)
       .then(list => {
-        if (!cancelled) setGigs(list.filter(g => g.artisan_profile_id === professionalProp.id && g.is_active).map(gigFromResponse));
+        if (!cancelled) setGigs(list.filter(g => g.is_active).map(gigFromResponse));
       })
       .catch(() => { if (!cancelled) setGigs([]); });
     return () => { cancelled = true; };
@@ -546,11 +550,16 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                     <textarea
                       rows={2}
                       value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
+                      maxLength={1000}
+                      onChange={(e) => setNewComment(e.target.value.slice(0, 1000))}
                       placeholder="Share your experience working with this professional..."
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-orange-500/50 focus:border-brand-orange-500 outline-hidden"
                     />
                   </div>
+
+                  <Checkbox id="review-share" checked={sharePublicly} onChange={setSharePublicly} className="text-[11px] font-medium text-slate-600 dark:text-slate-300 leading-snug">
+                    Show this review on KaziHub’s home page with my first name and state.
+                  </Checkbox>
 
                   <div className="flex items-center justify-end gap-2 pt-2">
                     <button
@@ -562,19 +571,24 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
-                        const finalComment = newComment || (selectedTags.length > 0 ? selectedTags.join(' • ') : 'Great professional service!');
-                        if (onAddReview) {
-                          onAddReview(professional.id, newRating, finalComment);
-                        }
+                      disabled={isPostingReview || !onAddReview}
+                      onClick={async () => {
+                        if (!onAddReview) return;
+                        // Only what the client actually wrote or picked; nothing is filled in for them.
+                        const finalComment = [newComment.trim(), selectedTags.join(' • ')].filter(Boolean).join('\n');
+                        setIsPostingReview(true);
+                        const ok = await onAddReview(professional.id, newRating, finalComment, sharePublicly);
+                        setIsPostingReview(false);
+                        if (!ok) return;
                         setReviewSuccessMsg(`Thank you! Your ${newRating}-star review for ${professional.name} was published.`);
                         setShowWriteReview(false);
                         setNewComment('');
                         setSelectedTags([]);
+                        setSharePublicly(false);
                       }}
-                      className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white font-extrabold text-xs shadow-xs cursor-pointer"
+                      className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 disabled:hover:bg-navy-800 disabled:hover:text-white disabled:opacity-70 text-white font-extrabold text-xs shadow-xs cursor-pointer"
                     >
-                      Publish Review
+                      {isPostingReview ? 'Posting…' : 'Publish Review'}
                     </button>
                   </div>
                 </div>
@@ -587,9 +601,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                   <div key={rev.id} className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/30 border border-slate-200/60 dark:border-slate-800 space-y-3">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-navy-800 dark:bg-navy-700 text-white font-bold text-xs flex items-center justify-center flex-shrink-0">
-                          {rev.customerName.charAt(0)}
-                        </div>
+                        <PersonAvatar name={rev.customerName} sizeClassName="w-8 h-8" roundedClassName="rounded-full" />
                         <div>
                           <p className="font-semibold text-slate-900 dark:text-slate-100 text-xs">{rev.customerName}</p>
                           <p className="text-[10px] text-slate-400 dark:text-slate-500">{rev.date}</p>

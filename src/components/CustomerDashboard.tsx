@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { PersonAvatar } from './ui/PersonAvatar';
 import { takePendingSearch } from '../lib/pendingSearch';
 import { Toggle } from './ui/Toggle';
 import { Professional, Category, Booking, ChatMessage } from '../types';
@@ -28,6 +29,9 @@ interface CustomerDashboardProps {
   messages?: ChatMessage[];
   onSendMessage?: (proId: string, text: string, mediaProps?: Partial<ChatMessage>) => void;
   onMarkAsRead?: (proId: string) => void;
+  onDeleteConversation?: (proId: string) => Promise<boolean>;
+  chatContacts?: Record<string, { name: string; avatar?: string }>;
+  chatContactsLoading?: boolean;
   onSelectProForProfile: (pro: Professional) => void;
   onOpenBooking: (pro: Professional) => void;
   onOpenChat: (pro: Professional) => void;
@@ -36,9 +40,11 @@ interface CustomerDashboardProps {
   onCancelBooking: (bookingId: string) => void;
   onUpdateBookingStatus?: (bookingId: string, status: Booking['status'], extra?: Partial<Booking>) => void;
   onAcceptQuote?: (bookingId: string) => void;
+  /** Starts the Paystack checkout for an accepted, unpaid booking. */
+  onPayEscrow?: (bookingId: string) => Promise<void>;
   /** Opens a dispute on the backend; resolves to its ticket id, or null if it failed. */
   onDisputeBooking?: (bookingId: string, reason: string, details: string, evidencePhotos?: string[]) => Promise<string | null>;
-  onAddReview?: (proId: string, rating: number, comment: string) => void;
+  onAddReview?: (proId: string, rating: number, comment: string, sharePublicly?: boolean) => Promise<boolean>;
   activeTab: string;
   onTabChange: (tab: string) => void;
   onLogout?: () => void;
@@ -59,6 +65,9 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   messages = [],
   onSendMessage,
   onMarkAsRead,
+  onDeleteConversation,
+  chatContacts,
+  chatContactsLoading,
   onSelectProForProfile,
   onOpenBooking,
   onOpenChat,
@@ -67,6 +76,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   onCancelBooking,
   onUpdateBookingStatus,
   onAcceptQuote,
+  onPayEscrow,
   onDisputeBooking,
   onAddReview,
   activeTab,
@@ -106,6 +116,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   // Bookings state & modals
   const [bookingFilter, setBookingFilter] = useState<'all' | 'active' | 'awaiting_completion' | 'completed' | 'issue_reported' | 'closed'>('all');
   const [cancelModalBooking, setCancelModalBooking] = useState<Booking | null>(null);
+  const [payingBookingId, setPayingBookingId] = useState<string | null>(null);
   const [rateToast, setRateToast] = useState<string | null>(null);
 
   const [complaintModalBooking, setComplaintModalBooking] = useState<Booking | null>(null);
@@ -601,7 +612,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   }
 
   if (activeTab === 'bookings') {
-    const activeCount = bookings.filter(b => b.status === 'pending' || b.status === 'quote_requested' || b.status === 'accepted' || b.status === 'in_progress').length;
+    const activeCount = bookings.filter(b => b.status === 'pending' || b.status === 'quote_requested' || b.status === 'accepted' || b.status === 'escrow_funded' || b.status === 'in_progress').length;
     const awaitingCompletionCount = bookings.filter(b => b.status === 'completed_by_artisan').length;
     const completedCount = bookings.filter(b => b.status === 'paid_out').length;
     const issueReportedCount = bookings.filter(b => b.status === 'disputed').length;
@@ -612,7 +623,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
     const filteredBookingsList = bookings.filter(b => {
       // Filter by status tab
       if (bookingFilter === 'active') {
-        if (!(b.status === 'pending' || b.status === 'quote_requested' || b.status === 'accepted' || b.status === 'in_progress')) return false;
+        if (!(b.status === 'pending' || b.status === 'quote_requested' || b.status === 'accepted' || b.status === 'escrow_funded' || b.status === 'in_progress')) return false;
       } else if (bookingFilter === 'awaiting_completion') {
         if (b.status !== 'completed_by_artisan') return false;
       } else if (bookingFilter === 'completed') {
@@ -944,17 +955,12 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                   {/* Tier 1: Card Header (Identity, Trade, Price & Single Status Pill) */}
                   <div className="flex items-start justify-between gap-3 border-b border-slate-100 dark:border-slate-800/80 pb-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      {pro ? (
-                        <img
-                          src={pro.profile_picture}
-                          alt={pro.name}
-                          className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl object-cover shrink-0 border border-slate-200 dark:border-slate-700 shadow-xs"
-                        />
-                      ) : (
-                        <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-navy-800/10 dark:bg-navy-400/10 text-navy-800 dark:text-navy-300 flex items-center justify-center font-black text-base shrink-0 border border-slate-200 dark:border-slate-700">
-                          {b.professionalName.charAt(0)}
-                        </div>
-                      )}
+                      <PersonAvatar
+                        name={b.professionalName}
+                        src={b.professionalAvatar || pro?.profile_picture}
+                        sizeClassName="w-11 h-11 sm:w-12 sm:h-12"
+                        textClassName="text-base font-black"
+                      />
                       <div className="min-w-0">
                         <h3 className="font-extrabold text-base text-slate-900 dark:text-slate-100 flex items-center gap-1.5 truncate">
                           <span className="truncate">{b.professionalName}</span>
@@ -1143,7 +1149,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                   )}
 
                   {/* Policy Footer - For active bookings / quote requests */}
-                  {(b.status === 'pending' || b.status === 'quote_requested' || b.status === 'accepted' || b.status === 'in_progress') && (
+                  {(b.status === 'pending' || b.status === 'quote_requested' || b.status === 'accepted' || b.status === 'escrow_funded' || b.status === 'in_progress') && (
                     <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800/60 text-xs text-slate-500 dark:text-slate-400">
                       <Info className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400 shrink-0" />
                       <p className="text-[11px] truncate">
@@ -1152,8 +1158,10 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                           : b.status === 'pending'
                             ? 'Waiting for the artisan to accept.'
                             : b.status === 'accepted'
-                              ? 'Accepted. Paying into escrow is coming soon, so message the artisan to agree next steps.'
-                              : 'Work is in progress.'}
+                              ? 'Accepted. Pay into escrow so the artisan can start. The money is held until you confirm the job is done.'
+                              : b.status === 'escrow_funded'
+                                ? 'Paid into escrow. Waiting for the artisan to start.'
+                                : 'Work is in progress.'}
                       </p>
                     </div>
                   )}
@@ -1175,7 +1183,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     {/* Right: Contextual Primary & High-Priority Actions */}
                     <div className="flex flex-wrap items-center gap-2 shrink-0 justify-end">
                       {/* Active / Pending / Quote Request: Cancel Option */}
-                      {(b.status === 'pending' || b.status === 'quote_requested' || isQuoteSent || b.status === 'accepted' || b.status === 'in_progress') && (
+                      {(b.status === 'pending' || b.status === 'quote_requested' || isQuoteSent || b.status === 'accepted' || b.status === 'escrow_funded' || b.status === 'in_progress') && (
                         <button
                           type="button"
                           onClick={(e) => {
@@ -1187,6 +1195,22 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                         >
                           <XCircle className="w-3.5 h-3.5 shrink-0" />
                           <span>{isQuoteSent ? 'Decline Quote' : isQuoteRequest || b.status === 'pending' ? 'Cancel Request' : 'Cancel Booking'}</span>
+                        </button>
+                      )}
+
+                      {/* Accepted and unpaid: pay into escrow (Paystack checkout) */}
+                      {b.status === 'accepted' && b.escrow_status !== 'held_in_escrow' && onPayEscrow && (
+                        <button
+                          type="button"
+                          disabled={payingBookingId === b.id}
+                          onClick={async () => {
+                            setPayingBookingId(b.id);
+                            try { await onPayEscrow(b.id); } finally { setPayingBookingId(null); }
+                          }}
+                          className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 disabled:hover:bg-navy-800 disabled:hover:text-white disabled:opacity-70 disabled:cursor-wait text-white font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer transition-all"
+                        >
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          <span>{payingBookingId === b.id ? 'Opening payment…' : `Pay ${formatCurrency(b.amount ?? 0)} into Escrow`}</span>
                         </button>
                       )}
 
@@ -1547,6 +1571,9 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
         messages={messages}
         onSendMessage={onSendMessage}
         onMarkAsRead={onMarkAsRead}
+        onDeleteConversation={onDeleteConversation}
+        contacts={chatContacts}
+        contactsLoading={chatContactsLoading}
         onOpenBooking={onOpenBooking}
         onSelectProForProfile={onSelectProForProfile}
         initialProId={initialMessageProId}

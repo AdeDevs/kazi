@@ -119,11 +119,15 @@ export interface BookingStatusHistoryEntry {
 export interface Booking {
   id: string;
   client_id: string;
-  customerName: string; // frontend-only convenience: the backend booking response only returns client_id, not a denormalized name
-  customerPhone: string; // frontend-only convenience, no backend equivalent
+  customerName: string; // client_name
+  customerPhone: string; // client_phone: empty until the client's phone_visibility allows it
+  customerAvatar?: string; // client_avatar
   artisan_id: string;
-  professionalName: string; // frontend-only convenience: the backend booking response only returns artisan_id, not a denormalized name
-  category: Category; // frontend-only convenience, no backend equivalent
+  artisan_profile_id?: string;
+  professionalName: string; // artisan_name
+  professionalPhone?: string; // artisan_phone: only once the artisan's phone_visibility allows it
+  professionalAvatar?: string; // artisan_avatar
+  category: Category; // artisan_category
   booking_type?: BookingType;
   gig_id?: string | null;
   title?: string; // was selectedService
@@ -133,7 +137,7 @@ export interface Booking {
   problemImages?: string[]; // frontend-only, no backend equivalent yet
   attachments?: string[]; // backend field: evidence photo URLs actually sent with the booking request
   scheduled_date?: string; // was `date`
-  timeSlot: string; // frontend-only, no backend equivalent (backend only models a single scheduled_date)
+  timeSlot: string; // scheduled_window, e.g. "09:00-11:00"
   address: string;
   landmark_hint?: string; // was `landmark`
   landmarkImages?: string[]; // frontend-only, no backend equivalent
@@ -174,6 +178,7 @@ export interface ChatMessage {
   bookingId?: string;
   senderId: string; // customerId or professionalId
   senderName: string;
+  senderAvatar?: string;
   senderRole: 'customer' | 'professional';
   recipientId: string;
   message: string;

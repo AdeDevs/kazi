@@ -10,8 +10,7 @@ import {
   ResetPasswordSchema,
 } from '../types/auth';
 import * as authApi from '../lib/authApi';
-import { getMyProfile } from '../lib/profilesApi';
-import { getAccessToken, clearTokens, setOnSessionExpired } from '../lib/apiClient';
+import { ApiError, getAccessToken, clearTokens, setOnSessionExpired } from '../lib/apiClient';
 
 const USER_KEY = 'kazihub_auth_user';
 const DEMO_TOKEN_KEY = 'kazihub_demo_session'; // marks a loginAsDemo() session, which has no real backend token
@@ -40,7 +39,8 @@ export interface AuthContextType {
   clearError: () => void;
 
   // Auth operations, backed by the real KaziHub API
-  login: (credentials: LoginCredentials) => Promise<AuthUser>;
+  /** `quiet` keeps a failure out of the shared error banner, for callers that show it inline. */
+  login: (credentials: LoginCredentials, options?: { quiet?: boolean }) => Promise<AuthUser>;
   register: (payload: UserCreate) => Promise<{ message: string }>;
   verifyEmail: (payload: VerifyEmailSchema) => Promise<AuthUser>;
   resendOtp: (payload: ResendOTPSchema) => Promise<{ message: string }>;
@@ -131,24 +131,6 @@ function clearSession(): void {
   clearTokens();
 }
 
-// GET /auth/me never reports a freeze (is_paused stays false even right after /auth/freeze-me,
-// verified against the live API). For artisans the profile's is_paused does, so merge it in here;
-// clients have no server-side signal at all. Remove once /auth/me reports is_paused itself.
-async function withFrozenState(user: AuthUser): Promise<AuthUser> {
-  if (user.is_paused || user.role !== 'artisan') return user;
-  try {
-    const profile = await getMyProfile();
-    return profile.is_paused ? { ...user, is_paused: true } : user;
-  } catch {
-    return user;
-  }
-}
-
-/** PUT /auth/me and the picture upload also return is_paused=false, so carry the known state over. */
-function keepFrozenState(updated: AuthUser, previous: AuthUser | null): AuthUser {
-  return previous?.is_paused && !updated.is_paused ? { ...updated, is_paused: true } : updated;
-}
-
 function extractErrorMessage(err: unknown, fallback: string): string {
   return err instanceof Error && err.message ? err.message : fallback;
 }
@@ -176,7 +158,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (isDemoSession() || !getAccessToken()) return;
     authApi
       .getMe()
-      .then(withFrozenState)
       .then((freshUser) => {
         setUser(freshUser);
         persistUser(freshUser);
@@ -206,7 +187,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
   }, []);
 
-  const login = async (credentials: LoginCredentials): Promise<AuthUser> => {
+  const login = async (credentials: LoginCredentials, options?: { quiet?: boolean }): Promise<AuthUser> => {
     setIsLoginLoading(true);
     setError(null);
     try {
@@ -216,15 +197,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // ignore
       }
       const pair = await authApi.login(credentials);
-      const authedUser = await withFrozenState(await authApi.getMe());
+      const authedUser = await authApi.getMe();
       persistUser(authedUser);
       setUser(authedUser);
       setToken(pair.access_token);
       return authedUser;
     } catch (err) {
       const errMsg = extractErrorMessage(err, 'Unable to sign in. Please check your credentials.');
-      setError(errMsg);
-      throw new Error(errMsg);
+      // "Enter your 2FA code" is the next step of signing in, not a failure, so it never goes to the banner.
+      const needsCode = err instanceof ApiError && err.code === 'totp_required';
+      if (!options?.quiet && !needsCode) setError(errMsg);
+      // Keep the ApiError so the sign-in form can read its `code` (e.g. totp_required).
+      throw err instanceof Error ? err : new Error(errMsg);
     } finally {
       setIsLoginLoading(false);
     }
@@ -322,7 +306,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(updated);
         return updated;
       }
-      const updated = keepFrozenState(await authApi.updateMe(payload), user);
+      const updated = await authApi.updateMe(payload);
       persistUser(updated);
       setUser(updated);
       return updated;
@@ -352,7 +336,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(updated);
         return updated;
       }
-      const updated = keepFrozenState(await authApi.uploadProfilePicture(file), user);
+      const updated = await authApi.uploadProfilePicture(file);
       persistUser(updated);
       setUser(updated);
       return updated;
@@ -384,7 +368,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const refreshUser = useCallback(async (): Promise<AuthUser | null> => {
     if (isDemoSession() || !getAccessToken()) return null;
-    const fresh = await withFrozenState(await authApi.getMe());
+    const fresh = await authApi.getMe();
     persistUser(fresh);
     setUser(fresh);
     return fresh;
@@ -392,8 +376,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = useCallback(() => {
     if (!isDemoSession()) {
-      // Best-effort: revoke the refresh token server-side, but don't block logging out locally on it.
-      authApi.revokeSessions().catch(() => undefined);
+      // Best-effort: end this device's session server-side, but don't block logging out locally on it.
+      authApi.logout().catch(() => undefined);
     }
     clearSession();
     setUser(null);

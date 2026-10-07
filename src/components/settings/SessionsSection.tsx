@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import { listSessions, revokeSession, revokeSessions } from '../../lib/authApi';
 import { SessionInfo } from '../../types/auth';
 
-// The backend stores session times in UTC but sends them without a timezone suffix.
+// Session times come back in UTC with a "Z"; older responses had no suffix, so add one if missing.
 function parseServerTime(value: string): Date {
   return new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(value) ? value : `${value}Z`);
 }
@@ -46,7 +46,7 @@ function timeAgo(date: Date): string {
 const dateFormat = new Intl.DateTimeFormat('en-NG', { day: 'numeric', month: 'short', year: 'numeric' });
 
 interface SessionsSectionProps {
-  /** Called after every session is revoked, to finish signing out locally. */
+  /** Called after this device's own session is ended (alone or with all the others), to finish signing out locally. */
   onSignedOutEverywhere: () => void;
 }
 
@@ -63,7 +63,10 @@ export const SessionsSection: React.FC<SessionsSectionProps> = ({ onSignedOutEve
     setLoadError(null);
     try {
       const list = await listSessions();
-      list.sort((a, b) => parseServerTime(b.last_used_at).getTime() - parseServerTime(a.last_used_at).getTime());
+      // This device first, then the most recently used.
+      list.sort((a, b) =>
+        Number(b.is_current) - Number(a.is_current) ||
+        parseServerTime(b.last_used_at).getTime() - parseServerTime(a.last_used_at).getTime());
       setSessions(list);
     } catch (err: any) {
       setLoadError(err?.message || 'Could not load your sessions.');
@@ -80,6 +83,11 @@ export const SessionsSection: React.FC<SessionsSectionProps> = ({ onSignedOutEve
     setRevokingId(target.id);
     try {
       await revokeSession(target.id);
+      if (target.is_current) {
+        toast.success('Signed out of this device.');
+        onSignedOutEverywhere();
+        return;
+      }
       setSessions(prev => (prev ? prev.filter(s => s.id !== target.id) : prev));
       toast.success(`${describeDevice(target.user_agent).label} has been signed out.`);
     } catch (err: any) {
@@ -130,9 +138,14 @@ export const SessionsSection: React.FC<SessionsSectionProps> = ({ onSignedOutEve
                     <DeviceIcon className="w-4 h-4" />
                   </div>
                   <div className="min-w-0">
-                    <p className="font-bold text-slate-900 dark:text-slate-100 truncate">{label}</p>
+                    <p className="font-bold text-slate-900 dark:text-slate-100 truncate flex items-center gap-2">
+                      <span className="truncate">{label}</span>
+                      {session.is_current && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-extrabold shrink-0">This device</span>
+                      )}
+                    </p>
                     <p className="text-[11px] text-slate-500 truncate">
-                      Active {timeAgo(parseServerTime(session.last_used_at))}
+                      {session.is_current ? 'Active now' : `Active ${timeAgo(parseServerTime(session.last_used_at))}`}
                       {' · '}Signed in {dateFormat.format(parseServerTime(session.created_at))}
                       {session.ip_address ? ` · ${session.ip_address}` : ''}
                     </p>
@@ -153,10 +166,7 @@ export const SessionsSection: React.FC<SessionsSectionProps> = ({ onSignedOutEve
       </div>
 
       {!isDemo && sessions && sessions.length > 0 && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-          <p className="text-[11px] text-slate-500 max-w-md">
-            KaziHub can’t yet tell which of these is the device you’re using now.
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
           <button
             type="button"
             onClick={() => setShowRevokeAll(true)}
@@ -173,8 +183,10 @@ export const SessionsSection: React.FC<SessionsSectionProps> = ({ onSignedOutEve
         isOpen={Boolean(sessionToRevoke)}
         onClose={() => setSessionToRevoke(null)}
         onConfirm={handleRevoke}
-        title="Sign Out This Device?"
-        description={`${describeDevice(sessionToRevoke?.user_agent).label} will need to sign in again. If it’s the device you’re using now, you’ll be signed out here too.`}
+        title={sessionToRevoke?.is_current ? 'Sign Out Here?' : 'Sign Out This Device?'}
+        description={sessionToRevoke?.is_current
+          ? 'This is the device you’re using now. You’ll need to sign in again here.'
+          : `${describeDevice(sessionToRevoke?.user_agent).label} will need to sign in again.`}
         confirmText="Yes, Sign Out Device"
         cancelText="Keep Signed In"
         type="logout"

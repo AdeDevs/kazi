@@ -1,4 +1,4 @@
-import { apiDelete, apiGet, apiPost, apiPostForm, apiPostMultipart, apiPut, clearTokens, setTokens } from './apiClient';
+import { apiDelete, apiGet, apiPost, apiPostForm, apiPostMultipart, apiPut, clearTokens, getRefreshToken, setTokens } from './apiClient';
 import {
   AuthUser,
   ChangePasswordSchema,
@@ -9,6 +9,7 @@ import {
   ResendOTPSchema,
   ResetPasswordSchema,
   TokenPair,
+  TwoFactorEnabledResponse,
   TwoFactorSetupResponse,
   UserCreate,
   UserUpdate,
@@ -38,6 +39,14 @@ export async function login(credentials: LoginCredentials): Promise<TokenPair> {
   return pair;
 }
 
+/** Signs out this device only: revokes the session its refresh token belongs to (always 204). */
+export async function logout(): Promise<void> {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) return;
+  await apiPost<unknown>('/auth/logout', { refresh_token: refreshToken }, { auth: false });
+}
+
+/** Signs out every device, this one included. */
 export async function revokeSessions(): Promise<void> {
   await apiPost<unknown>('/auth/revoke-sessions');
 }
@@ -109,6 +118,23 @@ export async function revokeSession(sessionId: string): Promise<void> {
   await apiDelete<unknown>(`/auth/sessions/${encodeURIComponent(sessionId)}`);
 }
 
-export async function verifyTwoFactorSetup(totpCode: string): Promise<void> {
-  await apiPost<unknown>('/auth/2fa/verify', { totp_code: totpCode });
+/** Turns 2FA on. The response carries ten backup codes, shown to the user once. */
+export async function verifyTwoFactorSetup(totpCode: string): Promise<TwoFactorEnabledResponse> {
+  return apiPost<TwoFactorEnabledResponse>('/auth/2fa/verify', { totp_code: totpCode });
+}
+
+/** `totpCode` may be an authenticator code or an unused backup code. */
+export async function disableTwoFactor(currentPassword: string, totpCode: string): Promise<void> {
+  await apiPost<unknown>('/auth/2fa/disable', { current_password: currentPassword, totp_code: totpCode });
+}
+
+/** Replaces all backup codes; the old ones stop working. Needs a current authenticator code. */
+export async function regenerateBackupCodes(totpCode: string): Promise<TwoFactorEnabledResponse> {
+  return apiPost<TwoFactorEnabledResponse>('/auth/2fa/backup-codes', { totp_code: totpCode });
+}
+
+/** GET /auth/me/export: everything KaziHub holds about the caller, as a JSON file. */
+export async function exportMyData(): Promise<Blob> {
+  const data = await apiGet<unknown>('/auth/me/export');
+  return new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
 }

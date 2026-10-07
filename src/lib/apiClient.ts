@@ -60,12 +60,15 @@ export interface ValidationErrorDetail {
 export class ApiError extends Error {
   status: number;
   details?: ValidationErrorDetail[];
+  /** Machine-readable reason some errors carry, e.g. `totp_required` from login or `account_frozen` (423). */
+  code?: string;
 
-  constructor(message: string, status: number, details?: ValidationErrorDetail[]) {
+  constructor(message: string, status: number, details?: ValidationErrorDetail[], code?: string) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.details = details;
+    this.code = code;
   }
 }
 
@@ -84,7 +87,7 @@ async function parseErrorBody(response: Response): Promise<ApiError> {
     return new ApiError(message || 'Request validation failed.', response.status, detail);
   }
   if (typeof detail === 'string') {
-    return new ApiError(detail, response.status);
+    return new ApiError(detail, response.status, undefined, typeof body?.code === 'string' ? body.code : undefined);
   }
   return new ApiError(response.statusText || `Request failed with status ${response.status}`, response.status);
 }

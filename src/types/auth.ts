@@ -19,6 +19,12 @@ export interface AuthUser {
   profile_picture?: string | null;
   theme: string;
   preferred_language: string;
+  /** Who can see this person's phone number: 'after_escrow' (default) or 'verified_only'. */
+  phone_visibility?: string;
+  /** Whether their area (state/neighbourhood) is shown to others. */
+  share_neighborhood?: boolean;
+  terms_version?: string | null;
+  terms_accepted_at?: string | null;
   created_at: string;
 }
 
@@ -31,6 +37,8 @@ export interface UserCreate {
   nin?: string | null;
   state: string;
   role: UserRole;
+  /** Which version of the Terms the person ticked (TERMS_VERSION). */
+  terms_version: string;
 }
 
 export interface UserUpdate {
@@ -42,6 +50,8 @@ export interface UserUpdate {
   profile_picture?: string | null;
   theme?: string | null;
   preferred_language?: string | null;
+  phone_visibility?: string | null;
+  share_neighborhood?: boolean | null;
 }
 
 export interface LoginCredentials {
@@ -61,6 +71,12 @@ export interface TwoFactorSetupResponse {
   otpauth_url: string;
 }
 
+/** From /auth/2fa/verify and /auth/2fa/backup-codes. The codes are shown once and never again. */
+export interface TwoFactorEnabledResponse {
+  detail: string;
+  backup_codes: string[];
+}
+
 export interface ChangePasswordSchema {
   current_password: string;
   new_password: string;
@@ -74,6 +90,9 @@ export interface RequestEmailChangeSchema {
 /** One active (non-revoked, unexpired) refresh-token session, from GET /auth/sessions. */
 export interface SessionInfo {
   id: string;
+  session_id: string;
+  /** True for the session of the device making the request. */
+  is_current: boolean;
   user_agent?: string | null;
   ip_address?: string | null;
   created_at: string;

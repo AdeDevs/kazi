@@ -17,7 +17,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   saveMyProfile, createService, updateService, deleteService,
-  createPortfolioItem, deletePortfolioItem, uploadPortfolioImage, mapService, mapPortfolioItem,
+  createPortfolioItem, updatePortfolioItem, deletePortfolioItem, uploadPortfolioImage, mapService, mapPortfolioItem,
 } from '../lib/profilesApi';
 import { NIGERIAN_STATES, LIMITS, DURATION_OPTIONS, RESPONSE_TIME_OPTIONS, digitsOnly, isValidNigerianPhone, knownResponseTime, sanitizeName, sanitizePlace, toStoredPhone } from '../lib/inputRules';
 import { PhoneField, displayPhone } from './ui/PhoneField';
@@ -372,7 +372,6 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
       });
       const basePrice = work.pricingType === 'quote_required' ? 0 : work.basePrice;
       await saveMyProfile({
-        business_name: name.trim(),
         // The trade (category) is the one description of what an artisan does; the old free-text
         // title duplicated it and often disagreed, so it's cleared rather than left stale.
         tagline: null,
@@ -543,19 +542,12 @@ export const ProProfileManagement: React.FC<ProProfileManagementProps> = ({
     };
     setIsSavingPortfolio(true);
     try {
-      const saved = mapPortfolioItem(await createPortfolioItem(payload));
       if (editingPortfolioId) {
-        // No update endpoint exists for portfolio items, so an edit saves the new version first
-        // and only then removes the old one -- a failure never leaves the project missing.
-        const oldId = editingPortfolioId;
-        commitPortfolio(portfolio.map(p => (p.id === oldId ? saved : p)));
-        try {
-          await deletePortfolioItem(oldId);
-        } catch (err) {
-          console.warn('Saved the edited project but could not remove the old copy', err);
-          toast.error('Project updated, but the old version is still on your profile. Remove it manually.');
-        }
+        const id = editingPortfolioId;
+        const saved = mapPortfolioItem(await updatePortfolioItem(id, payload));
+        commitPortfolio(portfolio.map(p => (p.id === id ? saved : p)));
       } else {
+        const saved = mapPortfolioItem(await createPortfolioItem(payload));
         commitPortfolio([saved, ...portfolio]);
       }
       setShowPortfolioModal(false);

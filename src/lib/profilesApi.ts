@@ -3,10 +3,7 @@ import { Category, PortfolioItem, Professional, Review, ServiceItem, ServicePric
 import { CATEGORIES } from '../mockData';
 
 // Shapes returned by the backend's public artisan-directory endpoints (GET /profiles/ and
-// GET /profiles/{id}). Note what's deliberately absent: no name or photo. Those only exist on
-// UserResponse (self-only, via /auth/me) -- the backend has no public "get user by id" endpoint,
-// so a real artisan's display name/avatar can't be resolved from these responses. business_name
-// is the only usable name; profiles without one are hidden (see isBrowsableProfile).
+// GET /profiles/{id}). The artisan's name and photo are copied from their user account.
 export interface ProfileResponse {
   id: string;
   user_id: string;
@@ -16,8 +13,10 @@ export interface ProfileResponse {
   state: string;
   is_available: boolean;
   is_verified: boolean;
+  first_name?: string | null;
+  last_name?: string | null;
+  /** Legacy: the frontend used to copy the artisan's name here before the name fields existed. */
   business_name?: string | null;
-  /** Not sent by the backend yet -- the photo lives only on the user record. Used once it is. */
   profile_picture?: string | null;
   tagline?: string | null;
   bio?: string | null;
@@ -92,7 +91,11 @@ export interface ListProfilesParams {
   state?: string;
   min_rating?: number;
   min_experience?: number;
+  /** Accepting new work (is_available), online or not. */
   available_only?: boolean;
+  /** Online right now (availability_status 'Available'). */
+  online_now?: boolean;
+  verified_only?: boolean;
   search?: string;
   limit?: number;
   offset?: number;
@@ -110,7 +113,6 @@ export function listProfiles(params: ListProfilesParams = {}): Promise<ProfileLi
 
 /** Writable fields of the logged-in artisan's own profile (PUT /profiles/me is a partial update). */
 export interface ProfileUpdate {
-  business_name?: string | null;
   category?: string | null;
   tagline?: string | null;
   bio?: string | null;
@@ -175,8 +177,7 @@ export function deleteService(serviceId: string): Promise<void> {
   return apiDelete<void>(`/profiles/me/services/${encodeURIComponent(serviceId)}`);
 }
 
-// --- The logged-in artisan's own portfolio (PortfolioItemCreate in the backend docs) ---
-// The backend has no update endpoint for portfolio items -- only list, create and delete.
+// --- The logged-in artisan's own portfolio (PortfolioItemCreate / PortfolioItemUpdate) ---
 
 export interface PortfolioItemCreate {
   title: string;
@@ -187,11 +188,7 @@ export interface PortfolioItemCreate {
   date_completed?: string | null;
 }
 
-/**
- * Uploads a project photo to Cloudinary and returns its URL, to pass as image_url when creating
- * the portfolio item. The docs declare the response as `{}`; verified against the live API it's
- * `{ "url": "https://res.cloudinary.com/…" }`.
- */
+/** Uploads a project photo (JPEG, PNG or WebP, up to 10 MB) and returns its URL, for image_url. */
 export async function uploadPortfolioImage(file: File): Promise<string> {
   const form = new FormData();
   form.append('file', file, file.name);
@@ -208,6 +205,10 @@ export function createPortfolioItem(body: PortfolioItemCreate): Promise<Portfoli
   return apiPost<PortfolioItemResponse>('/profiles/me/portfolio/', body);
 }
 
+export function updatePortfolioItem(itemId: string, body: Partial<PortfolioItemCreate>): Promise<PortfolioItemResponse> {
+  return apiPatch<PortfolioItemResponse>(`/profiles/me/portfolio/${encodeURIComponent(itemId)}`, body);
+}
+
 export function deletePortfolioItem(itemId: string): Promise<void> {
   return apiDelete<void>(`/profiles/me/portfolio/${encodeURIComponent(itemId)}`);
 }
@@ -217,12 +218,13 @@ export function getProfileDetail(profileId: string): Promise<PublicProfileDetail
   return apiGet<PublicProfileDetailResponse>(`/profiles/${encodeURIComponent(profileId)}`, { auth: false });
 }
 
-// The directory has no photo for any artisan (see the note above), and the rest of the UI renders
+// Artisans without a photo would otherwise get an empty src, and the rest of the UI renders
 // professional avatars as plain <img> tags (no missing-image fallback), so an empty src would show
-// a broken-image icon on every real professional's card. Generate a same-style initials avatar
+// a broken-image icon on their card. Generate a same-style initials avatar
 // (matching UserAvatar's own palette/logic) as a local data URI instead -- no network dependency,
 // and every existing <img src={pro.profile_picture}> site keeps working unchanged.
-const PLACEHOLDER_AVATAR_COLORS = ['#1e3a8a', '#1e293b', '#ea580c']; // navy-900, slate-800, brand-orange-600
+// Same neutral look as PersonAvatar's initials fallback (slate-200 / slate-700).
+const PLACEHOLDER_AVATAR_COLORS = ['#e2e8f0'];
 
 function initialsFor(name: string): string {
   const clean = name.trim().replace(/^(Engr\.|Dr\.|Mr\.|Mrs\.|Ms\.)\s+/i, '');
@@ -235,12 +237,12 @@ function initialsFor(name: string): string {
 function placeholderAvatarDataUri(name: string): string {
   const initials = initialsFor(name);
   const color = PLACEHOLDER_AVATAR_COLORS[(name.charCodeAt(0) + (name.charCodeAt(1) || 0)) % PLACEHOLDER_AVATAR_COLORS.length];
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="${color}"/><text x="50%" y="50%" dy=".35em" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="80" font-weight="700" fill="#ffffff">${initials}</text></svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="${color}"/><text x="50%" y="50%" dy=".35em" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="80" font-weight="700" fill="#334155">${initials}</text></svg>`;
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 }
 
 function baseProfessionalFields(p: ProfileResponse): Omit<Professional, 'services' | 'portfolio' | 'reviews'> {
-  const name = p.business_name?.trim() || '';
+  const name = displayName(p);
   return {
     id: p.id,
     user_id: p.user_id,
@@ -268,13 +270,18 @@ function baseProfessionalFields(p: ProfileResponse): Omit<Professional, 'service
   };
 }
 
+function displayName(p: ProfileResponse): string {
+  const full = [p.first_name, p.last_name].map((n) => n?.trim()).filter(Boolean).join(' ');
+  return full || p.business_name?.trim() || '';
+}
+
 /**
- * Whether a directory entry is complete enough to show a customer: it needs a real display name
- * (business_name -- the only name the public API exposes) and one of the known categories.
- * Signup creates an empty profile stub on the backend, so most unfinished accounts fail this.
+ * Whether a directory entry can be shown to a customer: it needs a name and one of the known
+ * categories. The backend already leaves out unfinished profiles and now rejects unknown
+ * categories, but one older profile still has a misspelled category and no account name.
  */
 export function isBrowsableProfile(p: ProfileResponse): boolean {
-  return Boolean(p.business_name?.trim()) && (CATEGORIES as readonly string[]).includes(p.category);
+  return Boolean(displayName(p)) && (CATEGORIES as readonly string[]).includes(p.category);
 }
 
 /** Maps a directory-listing entry, which has no services/portfolio/reviews yet -- see profileDetailToProfessional. */

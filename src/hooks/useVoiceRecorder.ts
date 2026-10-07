@@ -17,10 +17,11 @@ export const PEAK_BARS = 40;
 /** A new live bar every this many ms, so the meter scrolls at a steady pace. */
 const SAMPLE_MS = 70;
 
-// The chat upload accepts only audio/webm and audio/wav. WebM where the browser can record it
-// (Chrome, Android, Firefox); Safari can only record MP4, which stop() converts to WAV.
+// The chat upload accepts WebM, WAV and MP4/M4A/AAC audio, and returns every voice note as an
+// AAC .m4a that plays everywhere. WebM where the browser can record it (Chrome, Android, Firefox);
+// Safari records MP4, uploaded as is. Anything else is converted to WAV in stop().
 const MIME_PREFERENCE = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
-const UPLOADABLE = ['audio/webm', 'audio/wav'];
+const UPLOADABLE = ['audio/webm', 'audio/wav', 'audio/mp4', 'audio/x-m4a', 'audio/m4a', 'audio/aac'];
 
 /** Squashes a level series into `count` bars (peak of each bucket), scaled so the loudest is 1. */
 export function toPeaks(levels: number[], count = PEAK_BARS): number[] {

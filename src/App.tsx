@@ -12,18 +12,20 @@ import { LandingPage } from './components/LandingPage';
 import { hasPendingSearch } from './lib/pendingSearch';
 import { RequireAuth, markSigningOut } from './components/RequireAuth';
 import { RequireRole } from './components/RequireRole';
+import { personName, UNKNOWN_PERSON } from './lib/people';
+import { PaymentCallback } from './components/PaymentCallback';
 import { NotFound } from './components/NotFound';
 import { useAuth } from './context/AuthContext';
 import { useDocumentMeta } from './hooks/useDocumentMeta';
 import { useAccountFrozen, FROZEN_ACTION_MESSAGE } from './hooks/useAccountFrozen';
 import {
   BookingResponse, listMyBookings, bookingFromResponse, createFixedBooking, requestQuote, acceptBooking, declineBooking,
-  sendQuote, submitCompletion, acceptQuote, confirmCompletion, disputeBooking, cancelBooking, createReview, buyGig,
+  sendQuote, startJob, submitCompletion, acceptQuote, initializeEscrow, confirmCompletion, disputeBooking, cancelBooking, createReview, buyGig,
 } from './lib/bookingsApi';
 import { NotificationResponse, listNotifications, markNotificationRead, markAllNotificationsRead } from './lib/notificationsApi';
 import { FavoriteResponse, listFavorites, saveFavorite, removeFavorite } from './lib/favoritesApi';
 import {
-  ConversationResponse, MessageResponse, MessageCreate, listConversations, listMessages, startConversation, sendMessage,
+  ConversationResponse, MessageResponse, MessageCreate, listConversations, listMessages, deleteConversation, startConversation, sendMessage,
   markConversationRead, uploadChatMedia,
 } from './lib/chatApi';
 import { timeAgo } from './utils';
@@ -36,7 +38,7 @@ import { SettingsView } from './components/SettingsView';
 import { ProfessionalNotifications } from './components/ProfessionalNotifications';
 
 import {
-  listProfiles, getProfileDetail, getMyProfile, saveMyProfile, listMyServices, listMyPortfolio,
+  listProfiles, getProfileDetail, getMyProfile, listMyServices, listMyPortfolio,
   isBrowsableProfile, profileToProfessional, profileDetailToProfessional, mapService, mapPortfolioItem,
 } from './lib/profilesApi';
 
@@ -227,8 +229,6 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false;
-    // No available_only: the backend reads it as "online right now" (availability_status), not
-    // "accepting work", so it hides every artisan who isn't currently online.
     listProfiles({ limit: 100 })
       .then(({ data }) => {
         if (cancelled) return;
@@ -383,12 +383,6 @@ export default function App() {
           services: services.map(mapService),
           portfolio: portfolio.map(mapPortfolioItem),
         });
-        // The public directory's only name field is business_name, and the product has no
-        // business-name concept -- so it carries the artisan's own name. Backfill it for
-        // profiles created before this existed.
-        if (!profile.business_name?.trim() && artisanFullName) {
-          saveMyProfile({ business_name: artisanFullName }).catch((err) => console.warn('Could not sync public name', err));
-        }
       })
       .catch((err) => {
         if (cancelled) return;
@@ -441,23 +435,21 @@ export default function App() {
     reloadBookings().catch((err) => console.warn('Could not load your bookings', err));
   }, [usesBackendBookings, user?.id, reloadBookings]);
 
-  // A booking only carries client_id / artisan_id. The artisan's name comes from the directory;
-  // a client's name isn't available to anyone but that client yet (no endpoint returns it).
+  // Bookings carry both names; these fallbacks cover older records that don't.
   const bookingNames = (b: { artisan_id: string; client_id: string }) => {
     const ownArtisanBooking = isArtisan && user?.id === b.artisan_id;
     const pro = allProfessionals.find(p => p.user_id === b.artisan_id);
     return {
-      professionalName: ownArtisanBooking ? artisanFullName : pro?.name || 'Artisan',
+      professionalName: ownArtisanBooking ? artisanFullName : pro?.name || UNKNOWN_PERSON,
       category: ((ownArtisanBooking ? myProfessional?.category : pro?.category) || '') as Category,
-      customerName: user?.id === b.client_id ? artisanFullName || 'You' : 'Client',
+      customerName: user?.id === b.client_id ? artisanFullName || UNKNOWN_PERSON : UNKNOWN_PERSON,
     };
   };
   const liveBookings = serverBookings.map(b => bookingFromResponse(b, bookingNames(b)));
   const bookings = usesBackendBookings ? liveBookings : demoBookings;
 
-  // Notifications for real accounts come from GET /notifications/; the sample lists above are for
-  // the demo account only. (Verified live: the backend doesn't create notifications for booking
-  // events yet, so this stays empty until it does -- but it's the real list, not a stand-in.)
+  // Notifications for real accounts come from GET /notifications/ (booking events create them; see
+  // GET /notifications/types); the sample lists above are for the demo account only.
   const [serverNotifications, setServerNotifications] = useState<NotificationResponse[]>([]);
   const reloadNotifications = useCallback(async () => {
     setServerNotifications(await listNotifications());
@@ -663,7 +655,7 @@ export default function App() {
         return {
           key: f.artisan_id,
           profileId: pro?.id,
-          name: f.business_name?.trim() || pro?.name || 'Artisan',
+          name: f.business_name?.trim() || pro?.name || UNKNOWN_PERSON,
           category: f.category || pro?.category,
           rating: f.rating_average ?? pro?.rating_average ?? 0,
           avatar: f.avatar_url || pro?.profile_picture,
@@ -864,17 +856,19 @@ export default function App() {
     const service = input.service;
     const request = {
       artisan_id: artisanId,
-      service_title: service?.name || 'General request',
       description: input.description.trim(),
       address: input.address.trim(),
       // Omitted rather than null when empty: an explicit null crashed /bookings/buy-gig when tested.
       ...(input.landmark.trim() ? { landmark_hint: input.landmark.trim() } : {}),
+      ...(input.photos.length ? { attachments: input.photos } : {}),
+      ...(input.date ? { scheduled_date: input.date } : {}),
+      ...(input.window ? { scheduled_window: input.window } : {}),
     };
-    // Only a fixed-price service is booked at a set amount. "Starting from" and quote-only services
-    // go through a quote request, so the artisan sets the final price.
+    // Only a fixed-price service is booked directly; the server prices it from service_id.
+    // "Starting from" and quote-only services go through a quote request, so the artisan sets the price.
     const created = service?.pricing_type === 'fixed' && (service.price ?? 0) > 0
-      ? await createFixedBooking({ ...request, amount: service.price as number })
-      : await requestQuote(request);
+      ? await createFixedBooking({ ...request, service_id: service.id })
+      : await requestQuote({ ...request, service_title: service?.name || 'General request' });
     setServerBookings(prev => [created, ...prev]);
     return bookingFromResponse(created, bookingNames(created));
   };
@@ -905,13 +899,29 @@ export default function App() {
         return current?.status === 'pending'
           ? runBookingAction(() => declineBooking(bookingId), 'Booking declined.', 'Could not decline this booking.')
           : runBookingAction(() => cancelBooking(bookingId), 'Request cancelled.', 'Could not cancel this request.');
+      case 'in_progress':
+        return runBookingAction(() => startJob(bookingId), 'Job started. Mark it done when you finish.', 'Could not start this job.');
       case 'completed_by_artisan':
-        return runBookingAction(() => submitCompletion(bookingId), 'Marked as done. The client has 4 days to confirm.', 'Could not mark this job as done.');
+        return runBookingAction(() => submitCompletion(bookingId, {
+          completion_description: extra?.completionDetails?.description || undefined,
+          completion_photos: extra?.completionDetails?.photos?.length ? extra.completionDetails.photos : undefined,
+        }), 'Marked as done. The client has 4 days to confirm.', 'Could not mark this job as done.');
       case 'paid_out':
         return runBookingAction(() => confirmCompletion(bookingId), 'Job confirmed. Payment released to the artisan.', 'Could not confirm this job.');
       default:
         toast.error('That step isn’t available yet.');
         reloadBookings().catch(() => undefined);
+    }
+  };
+
+  /** Sends the client to Paystack; they come back to /payment/callback, which confirms the payment. */
+  const handlePayEscrow = async (bookingId: string) => {
+    if (blockIfFrozen()) return;
+    try {
+      const checkout = await initializeEscrow(bookingId);
+      window.location.assign(checkout.authorization_url);
+    } catch (err) {
+      toast.error(errorText(err, 'Could not start the payment. Try again.'));
     }
   };
 
@@ -947,24 +957,27 @@ export default function App() {
     runBookingAction(() => cancelBooking(bookingId), 'Booking cancelled.', 'Could not cancel this booking.');
   };
 
-  const handleAddReview = (proId: string, rating: number, comment: string) => {
-    if (blockIfFrozen()) return;
+  /** Resolves true once the review is saved (the form only thanks the client then). */
+  const handleAddReview = async (proId: string, rating: number, comment: string, sharePublicly = false): Promise<boolean> => {
+    if (blockIfFrozen()) return false;
     if (usesBackendBookings) {
       // Reviews attach to a completed booking (POST /reviews/ needs booking_id).
       const pro = allProfessionals.find(p => p.id === proId);
       const completed = pro?.user_id ? bookings.find(b => b.artisan_id === pro.user_id && b.status === 'paid_out') : undefined;
       if (!completed) {
         toast.error('You can review an artisan once they’ve completed a booking for you.');
-        return;
+        return false;
       }
-      createReview(completed.id, rating, comment)
-        .then(() => {
-          toast.success('Thanks, your review is posted.');
-          fetchedDetailIdsRef.current.delete(proId);
-          loadProfessionalDetail(proId);
-        })
-        .catch((err) => toast.error(errorText(err, 'Could not post your review.')));
-      return;
+      try {
+        await createReview(completed.id, rating, comment, sharePublicly);
+        toast.success('Thanks, your review is posted.');
+        fetchedDetailIdsRef.current.delete(proId);
+        loadProfessionalDetail(proId);
+        return true;
+      } catch (err) {
+        toast.error(errorText(err, 'Could not post your review.'));
+        return false;
+      }
     }
     const clientFullName = user ? `${user.first_name} ${user.last_name}`.trim() || user.email.split('@')[0] : 'Client';
     setProfessionals(prev => prev.map(pro => {
@@ -986,6 +999,7 @@ export default function App() {
         reviewCount: updatedReviews.length
       };
     }));
+    return true;
   };
 
   const handleUpdateProfile = (updated: Partial<Professional>) => {
@@ -1010,6 +1024,7 @@ export default function App() {
   const [conversations, setConversations] = useState<ConversationResponse[]>([]);
   const [chatMessages, setChatMessages] = useState<Record<string, MessageResponse[]>>({});
   const [openChatPeer, setOpenChatPeer] = useState<string | null>(null);
+  const [chatLoaded, setChatLoaded] = useState(false);
 
   const loadConversationMessages = useCallback(async (conversationId: string) => {
     const list = await listMessages(conversationId);
@@ -1018,6 +1033,7 @@ export default function App() {
   const reloadChat = useCallback(async () => {
     const convs = await listConversations();
     setConversations(convs);
+    setChatLoaded(true);
     await Promise.all(convs.map(c => loadConversationMessages(c.id).catch(() => undefined)));
   }, [loadConversationMessages]);
 
@@ -1056,10 +1072,22 @@ export default function App() {
   }, [location.pathname]);
 
   const utcTimestamp = (v: string) => (/[zZ]|[+-]\d\d:?\d\d$/.test(v) ? v : `${v}Z`);
+  // Each conversation carries both people's public name and photo, so messages (which only have
+  // sender_id) take theirs from it. `chatContacts` is keyed the way each chat screen keys a peer.
+  const chatContacts: Record<string, { name: string; avatar?: string }> = {};
+  for (const conv of conversations) {
+    const artisanPro = allProfessionals.find(p => p.user_id === conv.artisan_id);
+    if (isArtisan) {
+      chatContacts[conv.client_id] = { name: personName({ name: conv.client_name }), avatar: conv.client_avatar || undefined };
+    } else {
+      const key = artisanPro?.id ?? conv.artisan_profile_id ?? conv.artisan_id;
+      chatContacts[key] = { name: personName({ name: conv.artisan_name }) || artisanPro?.name || '', avatar: conv.artisan_avatar || artisanPro?.profile_picture };
+    }
+  }
   const liveChatMessages: ChatMessage[] = conversations.flatMap(conv => {
     const artisanPro = allProfessionals.find(p => p.user_id === conv.artisan_id);
-    // No endpoint returns a client's name yet; the job title at least tells an artisan's chats apart.
-    const clientLabel = conv.active_job_title ? `Client · ${conv.active_job_title}` : 'Client';
+    const clientName = personName({ name: conv.client_name }) || UNKNOWN_PERSON;
+    const artisanName = personName({ name: conv.artisan_name }) || artisanPro?.name || UNKNOWN_PERSON;
     const screenId = (userId: string) => {
       if (userId === user?.id) return isArtisan ? userId : 'c1';
       if (userId === conv.artisan_id) return artisanPro?.id ?? userId;
@@ -1075,9 +1103,8 @@ export default function App() {
         bookingId: conv.active_booking_id || undefined,
         senderId: screenId(m.sender_id),
         recipientId: screenId(recipient),
-        senderName: fromClient
-          ? (m.sender_id === user?.id ? artisanFullName || 'You' : clientLabel)
-          : (m.sender_id === user?.id ? artisanFullName : artisanPro?.name || 'Artisan'),
+        senderName: fromClient ? clientName : artisanName,
+        senderAvatar: (fromClient ? conv.client_avatar : conv.artisan_avatar) || undefined,
         senderRole: fromClient ? 'customer' : 'professional',
         message: m.content || (kind === 'image' ? 'Photo' : kind === 'audio' ? 'Voice note' : kind === 'location' ? 'Shared location' : ''),
         timestamp: utcTimestamp(m.created_at),
@@ -1131,7 +1158,7 @@ export default function App() {
         // The upload checks the bare type ("audio/webm"), so drop parameters like ";codecs=opus".
         const type = raw.type.split(';')[0];
         const blob = type === raw.type ? raw : new Blob([raw], { type });
-        const ext = type.split('/')[1] || 'bin';
+        const ext = type === 'audio/mp4' ? 'm4a' : type.split('/')[1] || 'bin';
         const url = await uploadChatMedia(blob, `${kind}-${Date.now()}.${ext}`);
         if (kind === 'image') Object.assign(body, { message_type: 'image', media_type: 'image', attachments: [url] });
         else Object.assign(body, {
@@ -1216,6 +1243,31 @@ export default function App() {
     setMessages(prev => [...prev, newMsg]);
   };
 
+  /** Both chat screens: `peer` is the artisan's profile id (client) or the client's user id (artisan). */
+  const handleDeleteConversation = async (peer: string): Promise<boolean> => {
+    if (blockIfFrozen()) return false;
+    const peerUserId = peerUserIdFor(peer);
+    const conv = peerUserId ? conversationWith(peerUserId) : undefined;
+    if (!usesBackendBookings || !conv) {
+      toast.error('This conversation can’t be deleted.');
+      return false;
+    }
+    try {
+      await deleteConversation(conv.id);
+      setConversations(prev => prev.filter(c => c.id !== conv.id));
+      setChatMessages(prev => {
+        const next = { ...prev };
+        delete next[conv.id];
+        return next;
+      });
+      toast.success('Conversation deleted.');
+      return true;
+    } catch (err) {
+      toast.error(errorText(err, 'Could not delete this conversation.'));
+      return false;
+    }
+  };
+
   const handleCustomerMarkAsRead = useCallback((proId: string) => {
     if (usesBackendBookings) {
       markChatRead(proId);
@@ -1285,10 +1337,14 @@ export default function App() {
     professionals: allProfessionals,
     bookings: usesBackendBookings ? bookings : bookings.filter(b => b.client_id === 'c1'),
     onAcceptQuote: handleAcceptQuote,
+    onPayEscrow: handlePayEscrow,
     onDisputeBooking: handleDisputeBooking,
     messages: shownMessages,
     onSendMessage: handleCustomerSendMessage,
     onMarkAsRead: handleCustomerMarkAsRead,
+    onDeleteConversation: handleDeleteConversation,
+    chatContacts,
+    chatContactsLoading: usesBackendBookings && !chatLoaded,
     onSelectProForProfile: (pro: Professional) => navigate(`/professionals/${pro.id}`, { state: { backgroundLocation: location } }),
     onOpenBooking: (pro: Professional) => {
       if (blockIfFrozen()) return;
@@ -1335,6 +1391,9 @@ export default function App() {
     messages: shownMessages.filter(m => m.recipientId === activeProfessional.id || m.senderId === activeProfessional.id),
     onSendMessage: handleProfessionalSendMessage,
     onMarkAsRead: handleProfessionalMarkAsRead,
+    onDeleteConversation: handleDeleteConversation,
+    chatContacts,
+    chatContactsLoading: usesBackendBookings && !chatLoaded,
     onLogout: handleLogout,
     darkMode,
     onToggleDarkMode: () => setDarkMode(!darkMode),
@@ -1477,6 +1536,11 @@ export default function App() {
             <Route path="/saved" element={
               <AppShell {...commonAppShellProps} activeTab="saved">
                 <CustomerDashboard {...commonCustomerProps} activeTab="saved" />
+              </AppShell>
+            } />
+            <Route path="/payment/callback" element={
+              <AppShell {...commonAppShellProps} activeTab="bookings">
+                <PaymentCallback onFunded={() => reloadBookings().catch(() => undefined)} />
               </AppShell>
             } />
           </Route>

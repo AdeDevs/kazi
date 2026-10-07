@@ -3,6 +3,9 @@ import { FileText } from 'lucide-react';
 import { SheetDragHandle } from './SheetDragHandle';
 import { useSlideUpSheet } from '../../hooks/useSlideUpSheet';
 
+/** Sent as `terms_version` at signup. Change it whenever the terms below change. */
+export const TERMS_VERSION = '2026-08';
+
 interface TermsAndPrivacyModalProps {
   isOpen: boolean;
   onClose: () => void;

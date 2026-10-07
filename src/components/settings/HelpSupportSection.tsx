@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp, MessageSquare, PhoneCall, X, Send } from 'lucide-react';
 import { Card, CardHeader } from '../ui/Card';
 import { SheetDragHandle } from '../ui/SheetDragHandle';
@@ -7,6 +7,13 @@ import { useSlideUpSheet } from '../../hooks/useSlideUpSheet';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 import { CustomDropdown } from '../CustomDropdown';
 import { toast } from 'sonner';
+import { useAuth } from '../../context/AuthContext';
+import { useAccountFrozen } from '../../hooks/useAccountFrozen';
+import { SupportTicket, createSupportTicket, listMySupportTickets } from '../../lib/supportApi';
+
+const MESSAGE_MAX = 5000;
+const dateFormat = new Intl.DateTimeFormat('en-NG', { day: 'numeric', month: 'short', year: 'numeric' });
+const statusLabel = (status: string) => status.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
 
 const FAQS = [
   {
@@ -41,12 +48,30 @@ export const HelpSupportSection: React.FC = () => {
   const contactGuard = useUnsavedChangesGuard(isContactFormDirty, closeContactSupport);
   const contactSheet = useSlideUpSheet(showContactSupport, contactGuard.requestClose);
 
-  const handleContactSupportSubmit = (e: React.FormEvent) => {
+  const { isDemo } = useAuth();
+  const { blockIfFrozen } = useAccountFrozen();
+  const [isSending, setIsSending] = useState(false);
+  // null = demo or not loaded.
+  const [tickets, setTickets] = useState<SupportTicket[] | null>(null);
+  const loadTickets = useCallback(() => {
+    listMySupportTickets().then(setTickets).catch(() => setTickets(null));
+  }, []);
+  useEffect(() => { if (!isDemo) loadTickets(); }, [isDemo, loadTickets]);
+
+  const handleContactSupportSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!supportMessage.trim()) return;
-    toast.success('Support request submitted! Ticket #KZ-' + Math.floor(1000 + Math.random() * 9000) + ' created.');
-    setShowContactSupport(false);
-    setSupportMessage('');
+    setIsSending(true);
+    try {
+      const ticket = await createSupportTicket({ subject: supportSubject, message: supportMessage.trim() });
+      toast.success(`Request sent. Your ticket number is ${ticket.ticket_number}.`);
+      setTickets((prev) => [ticket, ...(prev ?? [])]);
+      closeContactSupport();
+    } catch (err: any) {
+      toast.error(err?.message || 'Could not send your request. Try again.');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -83,8 +108,9 @@ export const HelpSupportSection: React.FC = () => {
       <div className="flex flex-wrap gap-2 pt-2">
         <button
           type="button"
-          onClick={() => setShowContactSupport(true)}
-          className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+          onClick={() => { if (!blockIfFrozen()) setShowContactSupport(true); }}
+          disabled={isDemo}
+          className="disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
         >
           <MessageSquare className="w-3.5 h-3.5" />
           <span>Contact Support</span>
@@ -97,6 +123,23 @@ export const HelpSupportSection: React.FC = () => {
           <span>Call Us (Toll-Free)</span>
         </a>
       </div>
+
+      {tickets && tickets.length > 0 && (
+        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
+          <p className="text-xs font-bold text-slate-900 dark:text-slate-100">Your Requests</p>
+          <ul className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+            {tickets.slice(0, 5).map((t) => (
+              <li key={t.id} className="py-2.5 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-bold text-slate-900 dark:text-slate-100 truncate">{t.subject}</p>
+                  <p className="text-[11px] text-slate-500">{t.ticket_number} · {dateFormat.format(new Date(t.created_at))}</p>
+                </div>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-extrabold shrink-0">{statusLabel(t.status)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* CONTACT SUPPORT MODAL */}
       {contactSheet.shouldRender && (
@@ -144,7 +187,8 @@ export const HelpSupportSection: React.FC = () => {
                 <textarea
                   rows={4}
                   value={supportMessage}
-                  onChange={(e) => setSupportMessage(e.target.value)}
+                  maxLength={MESSAGE_MAX}
+                  onChange={(e) => setSupportMessage(e.target.value.slice(0, MESSAGE_MAX))}
                   placeholder="Describe your request or issue with full details..."
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-slate-100"
                   required
@@ -161,10 +205,11 @@ export const HelpSupportSection: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs"
+                  disabled={isSending || !supportMessage.trim()}
+                  className="px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 disabled:hover:bg-navy-800 disabled:hover:text-white disabled:opacity-70 disabled:cursor-not-allowed text-white font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer"
                 >
                   <Send className="w-3.5 h-3.5" />
-                  <span>Submit Ticket</span>
+                  <span>{isSending ? 'Sending…' : 'Send Request'}</span>
                 </button>
               </div>
             </form>

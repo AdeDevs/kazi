@@ -17,6 +17,7 @@ import { PhotoPreviewSheet } from './chat/PhotoPreviewSheet';
 import { AttachmentMenu } from './chat/AttachmentMenu';
 import { ImageLightbox } from './chat/ImageLightbox';
 import { compressImage } from '../lib/imageCompress';
+import { DeleteChatButton } from './chat/DeleteChatButton';
 import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
 import { ChatComposer } from './ChatComposer';
 import { VerifiedBadge } from './ui/VerifiedBadge';
@@ -27,6 +28,11 @@ interface CustomerMessagesProps {
   messages: ChatMessage[];
   onSendMessage?: (proId: string, text: string, mediaProps?: Partial<ChatMessage>) => void;
   onMarkAsRead?: (proId: string) => void;
+  /** Deletes the conversation for this user only; resolves true on success. */
+  onDeleteConversation?: (proId: string) => Promise<boolean>;
+  /** Each artisan's public name and photo from the conversations, keyed by profile id. */
+  contacts?: Record<string, { name: string; avatar?: string }>;
+  contactsLoading?: boolean;
   onOpenBooking?: (pro: Professional) => void;
   onSelectProForProfile?: (pro: Professional) => void;
   initialProId?: string;
@@ -58,6 +64,8 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
   messages,
   onSendMessage,
   onMarkAsRead,
+  onDeleteConversation,
+  contacts = {},
   onOpenBooking,
   onSelectProForProfile,
   initialProId
@@ -134,9 +142,11 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
           .filter(b => b.artisan_id === pro.id || b.artisan_id === pro.user_id)
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
 
+        // The conversation's own name and photo win over the directory copy when both exist.
+        const contact = contacts[pro.id];
         return {
           proId: pro.id,
-          professional: pro,
+          professional: contact ? { ...pro, name: contact.name || pro.name, profile_picture: contact.avatar || pro.profile_picture } : pro,
           lastMessage,
           unreadCount,
           relatedBooking
@@ -153,7 +163,7 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
         if (!a.relatedBooking && b.relatedBooking) return 1;
         return b.professional.rating_average - a.professional.rating_average;
       });
-  }, [professionals, messages, bookings, selectedProId]);
+  }, [professionals, messages, bookings, selectedProId, contacts]);
 
   // Filter conversations
   const filteredConversations = useMemo(() => {
@@ -375,8 +385,8 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
           </div>
         </div>
 
-        {/* Actions: Book Job */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Actions: Book Job, delete */}
+        <div className="flex items-center gap-1.5 shrink-0">
           {onOpenBooking && (
             <button
               onClick={() => onOpenBooking(activeConversation.professional)}
@@ -385,6 +395,13 @@ export const CustomerMessages: React.FC<CustomerMessagesProps> = ({
               <Calendar className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Book Job</span>
             </button>
+          )}
+          {onDeleteConversation && activeConversation.lastMessage && (
+            <DeleteChatButton
+              name={activeConversation.professional.name}
+              onDelete={() => onDeleteConversation(activeConversation.proId)}
+              onDeleted={() => selectProId(null)}
+            />
           )}
         </div>
       </div>

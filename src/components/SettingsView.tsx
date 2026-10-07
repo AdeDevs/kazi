@@ -5,11 +5,14 @@ import { Language } from '../translations';
 import {
   Key, Download, Snowflake, Trash2, X
 } from 'lucide-react';
-import { changePassword, freezeMe, unfreezeMe } from '../lib/authApi';
+import { changePassword, exportMyData, freezeMe, unfreezeMe } from '../lib/authApi';
 import { getMyProfile, saveMyProfile } from '../lib/profilesApi';
 import { useAccountFrozen } from '../hooks/useAccountFrozen';
 import { EmailSection, EMAIL_SECTION_ID } from './settings/EmailSection';
 import { SessionsSection } from './settings/SessionsSection';
+import { TwoFactorSection } from './settings/TwoFactorSection';
+import { PayoutSection } from './settings/PayoutSection';
+import { FEATURES } from '../lib/features';
 import { ConfirmationModal } from './ui/ConfirmationModal';
 import { UnsavedChangesModal } from './ui/UnsavedChangesModal';
 import { SheetDragHandle } from './ui/SheetDragHandle';
@@ -52,7 +55,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   currentLanguage = 'English (Nigeria)',
   onLanguageChange
 }) => {
-  const { user, deleteAccount, isDemo, refreshUser } = useAuth();
+  const { user, deleteAccount, isDemo, refreshUser, updateUser } = useAuth();
   const { blockIfFrozen } = useAccountFrozen();
   const location = useLocation();
 
@@ -65,14 +68,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }, 120);
     return () => clearTimeout(timer);
   }, [location.hash]);
-  // Security States - 2FA and biometric login aren't backed by a real auth backend yet,
-  // so these are shown disabled/"Coming soon" rather than falsely reporting them as active.
-  const [twoFactorAuth] = useState(false);
+  // Biometric login isn't backed by the backend, so it's shown disabled/"Coming soon".
   const [biometricLogin] = useState(false);
 
   // Privacy States
-  // null = unavailable (customer/demo) or still loading from GET /profiles/me.
-  const [shareNeighborhood, setShareNeighborhood] = useState<boolean | null>(null);
+  // Artisans keep this on their profile (it hides their neighbourhood, address and map location);
+  // customers have it on their account, where it hides their state on reviews they share publicly.
+  // null = unavailable (demo) or still loading from GET /profiles/me.
+  const isArtisan = user?.role === 'artisan';
+  const [artisanShareNeighborhood, setShareNeighborhood] = useState<boolean | null>(null);
+  const shareNeighborhood = isDemo ? null : isArtisan ? artisanShareNeighborhood : (user?.share_neighborhood ?? true);
   const [isSavingNeighborhood, setIsSavingNeighborhood] = useState(false);
   useEffect(() => {
     if (isDemo || user?.role !== 'artisan') return;
@@ -87,9 +92,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     if (blockIfFrozen()) return;
     setIsSavingNeighborhood(true);
     try {
-      const saved = await saveMyProfile({ share_neighborhood: next });
-      setShareNeighborhood(saved.share_neighborhood ?? next);
-      toast.success(next ? 'Your neighbourhood is shown on your profile.' : 'Your neighbourhood is now hidden from your profile.');
+      if (isArtisan) {
+        const saved = await saveMyProfile({ share_neighborhood: next });
+        setShareNeighborhood(saved.share_neighborhood ?? next);
+        toast.success(next ? 'Your neighbourhood is shown on your profile.' : 'Your neighbourhood is now hidden from your profile.');
+      } else {
+        await updateUser({ share_neighborhood: next });
+        toast.success(next ? 'Your state is shown on reviews you share.' : 'Your state is now hidden on reviews you share.');
+      }
     } catch (err: any) {
       toast.error(err?.message || 'Could not update this setting. Try again.');
     } finally {
@@ -99,10 +109,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   // Account Lifecycle States
   const isFrozen = Boolean(user?.is_paused);
-  // Verified against the live API: freezing a client account changes nothing the backend enforces
-  // (bookings, messages and edits all still go through) and nothing reports the state back, so
-  // offering it to customers would be a toggle that does nothing. Artisans' freeze is real.
-  const canFreeze = user?.role === 'artisan';
   const [isFreezeBusy, setIsFreezeBusy] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
 
@@ -181,27 +187,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
   };
 
-  const handleExportData = () => {
-    const dataObj = {
-      user: {
-        role: user?.role || currentRole,
-        name: user ? `${user.first_name} ${user.last_name}`.trim() : (currentRole === 'customer' ? 'Client Profile' : activeProfessional.name),
-        email: user?.email || (currentRole === 'customer' ? '' : activeProfessional.email),
-        phone_number: user?.phone_number || (currentRole === 'customer' ? '' : activeProfessional.phone_number),
-        state: user?.state || activeProfessional.state,
-      },
-      bookingsCount: bookings.length,
-      exportedAt: new Date().toISOString(),
-      platform: 'KaziHub Escrow Marketplace'
-    };
-    const blob = new Blob([JSON.stringify(dataObj, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `kazihub_account_data_${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success('Data archive generated and downloaded!');
+  const [isExporting, setIsExporting] = useState(false);
+  const handleExportData = async () => {
+    setIsExporting(true);
+    try {
+      const blob = await exportMyData();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `kazihub-my-data-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Your data has downloaded.');
+    } catch (err: any) {
+      toast.error(err?.message || 'Could not download your data. Try again.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -228,6 +230,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
       <EmailSection />
 
+      {/* Artisans only. Clients get it back with the wallet page, via FEATURES.clientPayoutAccount. */}
+      {((user?.role === 'artisan' && currentRole === 'professional') || FEATURES.clientPayoutAccount) && <PayoutSection />}
+
       {/* 1. SECURITY & AUTHENTICATION */}
       <Card className="space-y-4">
         <CardHeader
@@ -253,17 +258,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </button>
           </div>
 
-          {/* 2-Factor Authentication - not backed by a real auth backend yet */}
-          <div className="py-3.5 flex items-center justify-between gap-3">
-            <div>
-              <p className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                Two-Factor Authentication (2FA)
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-extrabold">Coming soon</span>
-              </p>
-              <p className="text-[11px] text-slate-500">Require an SMS/Authenticator OTP code on every login attempt.</p>
-            </div>
-            <Toggle checked={twoFactorAuth} label="Two-Factor Authentication (coming soon)" onChange={() => undefined} disabled />
-          </div>
+          <TwoFactorSection />
 
           {/* Biometric Unlock - not backed by a real auth backend yet */}
           <div className="py-3.5 flex items-center justify-between gap-3">
@@ -290,15 +285,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         />
 
         <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
-          {/* Phone Visibility -- the backend never exposes phone numbers publicly yet, and its docs say
-              enforcing this rule needs booking context that isn't built, so it's shown as unavailable. */}
+          {/* Phone Visibility -- enforced through bookings: a number is shared on a booking once
+              phone_visibility allows it. Only the default value is documented, so it's shown, not edited. */}
           <div className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <p className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                Telephone Number Privacy
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-extrabold">Coming soon</span>
+              <p className="font-bold text-slate-900 dark:text-slate-100">Telephone Number Privacy</p>
+              <p className="text-[11px] text-slate-500">
+                {isDemo
+                  ? 'Not available on the demo account.'
+                  : (user?.phone_visibility ?? 'after_escrow') === 'after_escrow'
+                    ? 'Your number is never on your public profile. It’s shared on a booking only once payment is held in escrow.'
+                    : 'Your number is never on your public profile, and is shared on a booking only under your account’s rule.'}
               </p>
-              <p className="text-[11px] text-slate-500">Your number isn’t shown on your public profile. Choosing when it’s shared after a booking is coming soon.</p>
             </div>
           </div>
 
@@ -310,8 +308,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <p className="text-[11px] text-slate-500">
                 {isDemo
                   ? 'Not available on the demo account.'
-                  : user?.role !== 'artisan'
-                    ? 'Not available for customer accounts yet.'
+                  : !isArtisan
+                    ? 'Show your state next to reviews you choose to share on KaziHub’s home page.'
                     : 'Show your neighbourhood on your public profile so nearby customers can find you. When off, your neighbourhood, address and map location are hidden.'}
               </p>
             </div>
@@ -322,15 +320,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <div className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <p className="font-bold text-slate-900 dark:text-slate-100">Download My Data</p>
-              <p className="text-[11px] text-slate-500">Get a copy of your booking history, payment receipts, and profile info.</p>
+              <p className="text-[11px] text-slate-500">
+                {isDemo ? 'Not available on the demo account.' : 'Everything KaziHub holds about you: account, bookings, payments, reviews, messages and more, as one file.'}
+              </p>
             </div>
             <button
               type="button"
               onClick={handleExportData}
-              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs transition-colors cursor-pointer shrink-0 flex items-center gap-1.5 border border-slate-200 dark:border-slate-700"
+              disabled={isDemo || isExporting}
+              className="disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs transition-colors cursor-pointer shrink-0 flex items-center gap-1.5 border border-slate-200 dark:border-slate-700"
             >
               <Download className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400" />
-              <span>Download</span>
+              <span>{isExporting ? 'Preparing…' : 'Download'}</span>
             </button>
           </div>
         </div>
@@ -368,17 +369,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <p className="text-[11px] text-slate-500 max-w-lg leading-relaxed">
                 {isDemo
                   ? 'Not available on the demo account.'
-                  : !canFreeze
-                    ? 'Freezing isn’t available for customer accounts yet.'
                   : isFrozen
-                    ? 'Your account is paused: new bookings are blocked and any artisan profile is hidden from search. Unfreeze any time.'
-                    : 'Pause new bookings and hide any artisan profile from search, without deleting anything. You can still sign in.'}
+                    ? 'Your account is paused: bookings, messages and profile changes are blocked, and any artisan profile is hidden from search. Unfreeze any time.'
+                    : 'Pause bookings, messages and profile changes, and hide any artisan profile from search, without deleting anything. You can still sign in.'}
               </p>
             </div>
             <button
               type="button"
               onClick={() => setShowFreezeModal(true)}
-              disabled={isDemo || isFreezeBusy || !canFreeze}
+              disabled={isDemo || isFreezeBusy}
               className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed ${
                 isFrozen
                   ? 'bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 disabled:hover:bg-navy-800 disabled:hover:text-white text-white shadow-xs'
@@ -420,8 +419,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         title={isFrozen ? 'Unfreeze Your Account?' : 'Freeze Your Account?'}
         description={
           isFrozen
-            ? 'New bookings open again straight away, and any artisan profile shows in search again.'
-            : 'New bookings are blocked and any artisan profile drops out of search until you unfreeze.'
+            ? 'Bookings, messages and profile changes open again straight away, and any artisan profile shows in search again.'
+            : 'Bookings, messages and profile changes are blocked, and any artisan profile drops out of search, until you unfreeze.'
         }
         confirmText={isFrozen ? 'Yes, Unfreeze Account' : 'Yes, Freeze Account'}
         cancelText="Keep as is"
@@ -471,7 +470,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
             <div className="space-y-1">
               <h3 className="text-xl font-black text-slate-900 dark:text-slate-100">Update Password</h3>
-              <p className="text-xs text-slate-500">Use at least 6 characters, the same rule as when you signed up.</p>
+              <p className="text-xs text-slate-500">Use 8 to 128 characters.</p>
             </div>
 
             <form onSubmit={handlePasswordSubmit} className="space-y-3">
@@ -492,7 +491,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  minLength={6}
+                  minLength={8}
+                  maxLength={128}
                   autoComplete="new-password"
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100"
                   required

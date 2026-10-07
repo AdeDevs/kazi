@@ -5,9 +5,23 @@ import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import { formatCurrency, formatServicePrice } from '../utils';
 import {
-  X, MapPin, FileText, CheckCircle2, ShieldCheck, Wrench, AlertCircle, ArrowLeft, ArrowRight, MessageSquare, Info,
+  X, MapPin, FileText, CheckCircle2, ShieldCheck, Wrench, AlertCircle, ArrowLeft, ArrowRight, MessageSquare,
 } from 'lucide-react';
 import { Professional, Booking, ServiceItem } from '../types';
+import { ChoiceChips } from './ui/ChoiceChips';
+import { BookingPhotosField } from './BookingPhotosField';
+
+/** Arrival windows offered when booking; sent as scheduled_window. */
+const WINDOWS = ['Any time', '08:00-10:00', '10:00-12:00', '12:00-14:00', '14:00-16:00', '16:00-18:00'] as const;
+type WindowChoice = typeof WINDOWS[number];
+
+/** Today in the user's own timezone, as YYYY-MM-DD (the date input's min). */
+const todayIso = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+const dateLabel = (iso: string) =>
+  new Intl.DateTimeFormat('en-NG', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(`${iso}T12:00:00`));
 
 /** What the form collects -- exactly what POST /bookings/fixed and /bookings/quote-request accept. */
 export interface BookingRequestInput {
@@ -16,6 +30,12 @@ export interface BookingRequestInput {
   description: string;
   address: string;
   landmark: string;
+  /** YYYY-MM-DD, or '' for no particular day. */
+  date: string;
+  /** "HH:MM-HH:MM", or '' for any time. */
+  window: string;
+  /** Uploaded photo URLs of the problem. */
+  photos: string[];
 }
 
 interface BookingModalProps {
@@ -47,6 +67,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [description, setDescription] = useState('');
   const [address, setAddress] = useState('');
   const [landmark, setLandmark] = useState('');
+  const [date, setDate] = useState('');
+  const [windowChoice, setWindowChoice] = useState<WindowChoice>('Any time');
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -75,13 +99,16 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     setDescription('');
     setAddress('');
     setLandmark('');
+    setDate('');
+    setWindowChoice('Any time');
+    setPhotos([]);
     setValidationError(null);
     setSubmitError(null);
     setCreated(null);
     onClose();
   };
 
-  const isDirty = step !== 'confirmed' && Boolean(description.trim() || address.trim() || landmark.trim());
+  const isDirty = step !== 'confirmed' && Boolean(description.trim() || address.trim() || landmark.trim() || date || photos.length);
   const closeGuard = useUnsavedChangesGuard(isDirty, handleReset);
   const sheet = useSlideUpSheet(isOpen, closeGuard.requestClose);
 
@@ -102,6 +129,14 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       setValidationError('Enter the address where the work will happen.');
       return;
     }
+    if (date && date < todayIso()) {
+      setValidationError('Pick today or a later date.');
+      return;
+    }
+    if (isUploadingPhoto) {
+      setValidationError('Wait for your photos to finish uploading.');
+      return;
+    }
     setSubmitError(null);
     setStep('review');
   };
@@ -110,7 +145,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      const booking = await onSubmitBooking({ professional, service: selectedService, description, address, landmark });
+      const booking = await onSubmitBooking({
+        professional, service: selectedService, description, address, landmark,
+        date, window: windowChoice === 'Any time' ? '' : windowChoice, photos,
+      });
       setCreated(booking);
       setStep('confirmed');
     } catch (err: any) {
@@ -264,10 +302,29 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               />
             </div>
 
-            <p className="flex items-start gap-2 text-[11px] text-slate-500 dark:text-slate-400">
-              <Info className="w-3.5 h-3.5 shrink-0 mt-px" />
-              <span>Choosing a date and time, and attaching photos, are coming soon. Agree the timing with {firstName} in messages for now.</span>
-            </p>
+            <div className="space-y-2">
+              <label htmlFor="booking-date" className="block text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                4. When? <span className="normal-case tracking-normal font-bold text-slate-400">(optional)</span>
+              </label>
+              <input
+                id="booking-date"
+                type="date"
+                min={todayIso()}
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-navy-800"
+              />
+              {date && (
+                <ChoiceChips<WindowChoice> label="Arrival window" value={windowChoice} options={WINDOWS} onChange={setWindowChoice} />
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <span className="block text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                5. Photos <span className="normal-case tracking-normal font-bold text-slate-400">(optional)</span>
+              </span>
+              <BookingPhotosField photos={photos} onChange={setPhotos} onUploadingChange={setIsUploadingPhoto} max={5} hint={`Show ${firstName} the problem so they know what to bring.`} />
+            </div>
 
             <div className="pt-3 border-t border-slate-100 dark:border-slate-800">{priceLine}</div>
 
@@ -316,6 +373,20 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 <p className="font-bold text-slate-900 dark:text-slate-100">{address.trim()}</p>
                 {landmark.trim() && <p className="text-[11px] text-slate-500 mt-0.5">Landmark: {landmark.trim()}</p>}
               </div>
+              <div>
+                <span className="text-slate-400 font-bold block mb-0.5">When</span>
+                <p className="font-bold text-slate-900 dark:text-slate-100">
+                  {date ? `${dateLabel(date)}${windowChoice !== 'Any time' ? `, ${windowChoice.replace('-', '–')}` : ', any time'}` : `Any day. Agree it with ${firstName}.`}
+                </p>
+              </div>
+              {photos.length > 0 && (
+                <div>
+                  <span className="text-slate-400 font-bold block mb-1">Photos</span>
+                  <div className="flex flex-wrap gap-2">
+                    {photos.map((url) => <img key={url} src={url} alt="" className="w-14 h-14 rounded-xl object-cover border border-slate-200 dark:border-slate-800" />)}
+                  </div>
+                </div>
+              )}
               <div className="pt-3 border-t border-slate-200 dark:border-slate-800">{priceLine}</div>
             </div>
 

@@ -11,6 +11,8 @@ interface UserAvatarProps {
   /** Set false when a parent frame already draws the border and clips the avatar. */
   bordered?: boolean;
   alt?: string;
+  /** Initials on a neutral grey instead of the per-name brand colour. */
+  neutral?: boolean;
 }
 
 export function getInitials(name?: string): string {
@@ -44,7 +46,8 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
   textClassName = 'text-xs font-bold',
   roundedClassName = 'rounded-lg',
   bordered = true,
-  alt
+  alt,
+  neutral = false,
 }) => {
   const [hasError, setHasError] = useState(false);
   const initials = getInitials(name);
@@ -53,7 +56,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
   return (
     <div className={`relative shrink-0 ${sizeClassName} ${className}`}>
       <div className={`w-full h-full ${roundedClassName} overflow-hidden flex items-center justify-center ${bordered ? 'border border-zinc-200 dark:border-zinc-700/80' : ''} select-none ${
-        hasValidSrc ? 'bg-zinc-100 dark:bg-zinc-800' : getAvatarColor(name)
+        hasValidSrc ? 'bg-zinc-100 dark:bg-zinc-800' : neutral ? 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-100' : getAvatarColor(name)
       }`}>
         {hasValidSrc ? (
           <img
