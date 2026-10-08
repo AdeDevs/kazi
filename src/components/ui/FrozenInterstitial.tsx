@@ -70,8 +70,8 @@ export const FrozenInterstitial: React.FC = () => {
 
   return (
     <ConsequenceSheet
-        theme="frost"
-        icon={Snowflake}
+      theme="frost"
+      icon={Snowflake}
       isOpen={open}
       onClose={() => setOpen(false)}
       title="Your account is frozen"

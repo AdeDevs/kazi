@@ -60,6 +60,21 @@ export function formatCurrency(value: number): string {
   return NAIRA.format(value);
 }
 
+const NAIRA_KOBO = new Intl.NumberFormat('en-NG', {
+  style: 'currency',
+  currency: 'NGN',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+/**
+ * Like formatCurrency, but keeps kobo when there are any: 16272.5 => '₦16,272.50', 18500 => '₦18,500'.
+ * For fees and payout shares, which are often not whole naira.
+ */
+export function formatCurrencyExact(value: number): string {
+  return Number.isInteger(Math.round(value * 100) / 100) ? NAIRA.format(value) : NAIRA_KOBO.format(value);
+}
+
 /** 150000 => '150,000' -- for amounts shown without the ₦ sign, such as a price input's value. */
 export function formatAmount(value: number): string {
   return GROUPED_NUMBER.format(value);

@@ -11,8 +11,6 @@ import { useAccountFrozen } from '../hooks/useAccountFrozen';
 import { EmailSection, EMAIL_SECTION_ID } from './settings/EmailSection';
 import { SessionsSection } from './settings/SessionsSection';
 import { TwoFactorSection } from './settings/TwoFactorSection';
-import { PayoutSection } from './settings/PayoutSection';
-import { FEATURES } from '../lib/features';
 import { FROZEN_ON_HOLD, ConsequenceSheet } from './ui/ConsequenceSheet';
 import { markFrozenNoticeSeen } from './ui/FrozenInterstitial';
 import { Bookmark, DoorOpen, KeyRound, LogIn, MonitorSmartphone, UserX } from 'lucide-react';
@@ -254,8 +252,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
       <EmailSection />
 
-      {/* Artisans only. Clients get it back with the wallet page, via FEATURES.clientPayoutAccount. */}
-      {((user?.role === 'artisan' && currentRole === 'professional') || FEATURES.clientPayoutAccount) && <PayoutSection />}
+      {/* The payout account lives on the Wallet page now. */}
 
       {/* 1. SECURITY & AUTHENTICATION */}
       <Card className="space-y-4">

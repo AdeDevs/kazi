@@ -12,6 +12,7 @@ import { hasPendingSearch } from './lib/pendingSearch';
 import { RequireAuth, markSigningOut } from './components/RequireAuth';
 import { RequireRole } from './components/RequireRole';
 import { personName, UNKNOWN_PERSON } from './lib/people';
+import { WalletPage } from './components/WalletPage';
 import { PaymentCallback } from './components/PaymentCallback';
 import { NotFound } from './components/NotFound';
 import { useAuth } from './context/AuthContext';
@@ -172,6 +173,7 @@ export default function App() {
     saved: '/saved',
     jobs: '/jobs',
     gigs: '/gigs',
+    wallet: '/wallet',
   };
 
   // The single navigation entry point every nav click/CTA throughout the app already calls
@@ -441,8 +443,11 @@ export default function App() {
 
   const usesBackendBookings = Boolean(user) && !isDemo;
   const [serverBookings, setServerBookings] = useState<BookingResponse[]>([]);
+  // False until the first GET /bookings/me answers, so money screens show skeletons, not ₦0.
+  const [bookingsLoaded, setBookingsLoaded] = useState(false);
   const reloadBookings = useCallback(async () => {
     setServerBookings(await listMyBookings());
+    setBookingsLoaded(true);
   }, []);
   useEffect(() => {
     if (!usesBackendBookings) {
@@ -1323,6 +1328,10 @@ export default function App() {
   const roleBookings = usesBackendBookings
     ? bookings
     : bookings.filter(b => currentRole === 'customer' ? b.client_id === 'c1' : b.artisan_id === activeProfessional.id);
+  // The wallet counts only the side of each booking this person is on: an artisan's earnings, or a client's payments.
+  const walletBookings = usesBackendBookings
+    ? bookings.filter(b => (currentRole === 'professional' ? b.artisan_id : b.client_id) === user?.id)
+    : roleBookings;
 
   const commonAppShellProps = {
     currentRole,
@@ -1592,14 +1601,22 @@ export default function App() {
                 onTabChange={handleTabChange}
                 scrollToSection={profileScrollTarget}
                 onScrollToSectionHandled={() => setProfileScrollTarget(null)}
-                onDeleteAccount={() => {
-                  if (window.confirm('Are you sure you want to permanently delete your KaziHub account? All bookings and history will be removed.')) {
-                    handleLogout();
-                  }
-                }}
+                // Runs after the account is already closed (the sheet asked first), so just sign out.
+                onDeleteAccount={handleLogout}
               />
             </AppShell>
           } />
+          <Route path="/wallet" element={
+            <AppShell {...commonAppShellProps} activeTab="wallet">
+              <WalletPage
+                role={currentRole}
+                bookings={walletBookings}
+                loaded={!usesBackendBookings || bookingsLoaded}
+                onReleasePayment={(id) => handleUpdateBookingStatus(id, 'paid_out', { completedAt: new Date().toISOString() })}
+              />
+            </AppShell>
+          } />
+
           <Route path="/settings" element={
             <AppShell {...commonAppShellProps} activeTab="settings">
               <SettingsView

@@ -20,13 +20,18 @@ const C = {
   yellow: '#FFB020',
   peach: '#FFE3CC',
   muted: '#C9D1DE',
+  night: '#0B1238',
+  lilac: '#DCD8F4',
 };
 
 const CLIENT_SIGNUP = '/signup?role=client';
 const ARTISAN_SIGNUP = '/signup?role=artisan';
 const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
 // Preloaded from index.html on the landing page; the name is versioned so it can be cached for good.
-const SKYLINE = '/landing/ibadan-skyline-3.svg';
+// Hero art: Ibadan at dusk, one lit house where an electrician fixes the porch lamp. One crop per
+// layout, so a phone never downloads the desktop picture. Preloaded from index.html on "/".
+// AVIF (about 50 KB each), with WebP for browsers without AVIF. Originals: design/hero/*.png.
+const heroArt = (size: 'phone' | 'tablet' | 'desktop', ext: 'avif' | 'webp') => `/landing/hero-dusk-${size}.${ext}`;
 
 const display = "font-['Bricolage_Grotesque',sans-serif] font-extrabold";
 const eyebrow = 'text-[13px] lg:text-sm font-extrabold uppercase tracking-[0.08em]';
@@ -228,58 +233,45 @@ const Swoosh: React.FC<{ d: string; color: string; width: number; className: str
   </svg>
 );
 
-/**
- * A status bubble floating over the skyline, drawn in the skyline's own 1440×500 coordinates.
- * `left` is the bubble's left edge relative to its tail at (x, y).
- */
-const Bubble: React.FC<{
-  x: number; y: number; scale?: number; left: number; width: number;
-  dot: string; done?: boolean; text: string; delay: number; floatDelay: number;
-}> = ({ x, y, scale = 1, left, width, dot, done, text, delay, floatDelay }) => {
-  const cx = left + 22;
-  return (
-    <g transform={`translate(${x} ${y}) scale(${scale})`}>
-      <g
-        className="kh-bubble"
-        style={{ animation: `kh-pop 600ms ${EASE} ${delay}ms both, kh-float 5.5s ease-in-out ${floatDelay}s infinite alternate` }}
-      >
-        <rect x={left} y="-52" width={width} height="40" rx="14" fill="#FFFFFF" stroke={C.navy} strokeWidth="2" />
-        <path d="M -8 -13 L 0 -2 L 8 -13 Z" fill="#FFFFFF" stroke={C.navy} strokeWidth="2" strokeLinejoin="round" />
-        <rect x="-9" y="-16" width="18" height="5" fill="#FFFFFF" />
-        <circle cx={cx} cy="-32" r="11" fill={dot} />
-        {done
-          ? <path d={`M ${cx - 5.5} -32 l 4 4 l 7 -8`} fill="none" stroke={C.navy} strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />
-          : <circle cx={cx} cy="-32" r="4" fill="#FFFFFF" />}
-        <text x={cx + 20} y="-26.5" fontFamily="Plus Jakarta Sans, system-ui, sans-serif" fontSize="15" fontWeight="800" fill={C.navy}>{text}</text>
-      </g>
-    </g>
-  );
-};
-
-const JOB_DONE = `Job done · ${formatCurrency(18500)} released`;
-
-/** The illustrated Ibadan skyline (Cocoa House, Bower's Tower, Mapo Hall) with its bubbles on top. */
-const Skyline: React.FC<{ className: string; style?: React.CSSProperties; children: React.ReactNode }> = ({ className, style, children }) => {
-  // Fades in once downloaded rather than popping in on a slow connection. A cached copy can finish
-  // before React attaches onLoad, so `complete` is checked on mount too.
+/** The dusk illustration under the hero. Fades in once downloaded rather than popping in on a slow connection. */
+const HeroArt: React.FC = () => {
   const [loaded, setLoaded] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
+  // A cached copy can finish before React attaches onLoad, so `complete` is checked on mount too.
   useEffect(() => {
-    if (imgRef.current?.complete) setLoaded(true);
+    if (imgRef.current?.complete && imgRef.current.naturalWidth > 0) setLoaded(true);
   }, []);
   return (
-    <div className={`absolute aspect-[1440/500] ${className}`} style={style}>
-      <img
-        ref={imgRef}
-        src={SKYLINE}
-        alt=""
-        fetchPriority="high"
-        decoding="async"
-        onLoad={() => setLoaded(true)}
-        className="absolute inset-0 w-full h-full transition-opacity duration-500 ease-out motion-reduce:transition-none"
-        style={{ opacity: loaded ? 1 : 0 }}
+    <div
+      // Top-anchored like the board: the art's top edge is the hero colour, so it melts in. Past
+      // 1920px it stops growing and fades out at the sides instead of turning the hero into a wall.
+      className="kh-rise kh-hero-art relative w-full max-w-[1920px] mx-auto overflow-hidden -mt-[96px] aspect-[390/403] min-[600px]:aspect-[768/498] md:-mt-[300px] lg:-mt-[290px] lg:aspect-[1440/720]"
+      style={{ animationDuration: '1100ms', animationDelay: '300ms' }}
+    >
+      <picture>
+        <source media="(min-width: 1024px)" type="image/avif" srcSet={heroArt('desktop', 'avif')} />
+        <source media="(min-width: 1024px)" type="image/webp" srcSet={heroArt('desktop', 'webp')} />
+        {/* The tablet crop from 600px: the tall phone crop gets too big on large phones. */}
+        <source media="(min-width: 600px)" type="image/avif" srcSet={heroArt('tablet', 'avif')} />
+        <source media="(min-width: 600px)" type="image/webp" srcSet={heroArt('tablet', 'webp')} />
+        <source type="image/avif" srcSet={heroArt('phone', 'avif')} />
+        <img
+          ref={imgRef}
+          src={heroArt('phone', 'webp')}
+          alt="Dusk in Ibadan: the street is dark except one house, where an electrician on a ladder fixes the porch lamp. Ibadan landmarks stand behind."
+          fetchPriority="high"
+          decoding="async"
+          onLoad={() => setLoaded(true)}
+          className="absolute inset-0 w-full h-full object-cover object-top transition-opacity duration-500 ease-out motion-reduce:transition-none"
+          style={{ opacity: loaded ? 1 : 0 }}
+        />
+      </picture>
+      {/* Fades the hero blue into the art's sky, so the text sits on one continuous night. */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-0 top-0 h-[42%] pointer-events-none"
+        style={{ background: `linear-gradient(to bottom, ${C.night} 0%, ${C.night}E6 25%, ${C.night}80 55%, ${C.night}00 100%)` }}
       />
-      <svg viewBox="0 0 1440 500" aria-hidden="true" className="absolute inset-0 w-full h-full overflow-visible">{children}</svg>
     </div>
   );
 };
@@ -363,16 +355,9 @@ export const LandingPage: React.FC = () => {
 
   return (
     <div className="kh-landing min-h-dvh overflow-x-clip font-['Plus_Jakarta_Sans',system-ui,sans-serif]" style={{ background: C.cream, color: C.navy }}>
-      {/* ───────── Hero: Ibadan skyline ───────── */}
-      <section className="relative overflow-hidden flex flex-col md:block md:h-[896px] lg:h-[1000px]" style={{ background: C.orange }}>
-        <svg viewBox="0 0 1440 300" aria-hidden="true" className="hidden md:block absolute left-1/2 -translate-x-1/2 top-0 w-[1440px] h-[300px]">
-          <g fill={C.cream} opacity="0.22">
-            <path d="M -40 200 q 0 -70 70 -70 q 20 -80 110 -80 q 90 0 110 80 q 70 0 70 70 z" />
-            <path d="M 1120 250 q 0 -60 60 -60 q 16 -70 96 -70 q 80 0 96 70 q 60 0 60 60 z" />
-          </g>
-        </svg>
-
-        <div className="relative z-10 px-5 md:px-10 lg:px-[72px] flex flex-col items-center gap-5 md:gap-0 max-w-[1440px] mx-auto w-full box-border">
+      {/* ───────── Hero: Ibadan at dusk ───────── */}
+      <section className="kh-dark relative overflow-hidden flex flex-col" style={{ background: C.night, color: C.cream }}>
+        <div className="relative z-10 px-5 md:px-10 lg:px-[72px] flex flex-col items-center gap-5 md:gap-0 md:h-[568px] lg:h-[535px] max-w-[1440px] mx-auto w-full box-border">
           <header ref={menuRef} className="kh-fade relative z-30 self-stretch h-16 md:h-[84px] flex items-center justify-between">
             <Link to="/" aria-label="KaziHub home" className={`${display} text-[24px] md:text-[28px] tracking-[-0.04em]`}>KaziHub</Link>
             <nav aria-label="Sections" className="hidden lg:flex gap-7 text-[15px] font-bold">
@@ -380,7 +365,7 @@ export const LandingPage: React.FC = () => {
             </nav>
             <div className="flex items-center gap-2 lg:gap-3">
               <Link to="/signin" className="kh-link hidden md:inline mx-3 py-1 text-[15px] md:text-base lg:text-[15px] font-extrabold">Sign in</Link>
-              <Link to={CLIENT_SIGNUP} className="kh-btn kh-btn-on-orange px-4 md:px-[22px] lg:px-5 py-2.5 md:py-3.5 lg:py-3 rounded-xl md:rounded-[14px] lg:rounded-xl text-sm md:text-[15px] font-extrabold">
+              <Link to={CLIENT_SIGNUP} className="kh-btn kh-btn-orange px-4 md:px-[22px] lg:px-5 py-2.5 md:py-3.5 lg:py-3 rounded-xl md:rounded-[14px] lg:rounded-xl text-sm md:text-[15px] font-extrabold">
                 Get started
               </Link>
               <button
@@ -389,7 +374,7 @@ export const LandingPage: React.FC = () => {
                 aria-label={menuOpen ? 'Close menu' : 'Open menu'}
                 aria-expanded={menuOpen}
                 aria-controls="kh-menu"
-                className="kh-menu-btn lg:hidden w-11 h-11 md:w-12 md:h-12 rounded-xl md:rounded-[14px] border-2 flex items-center justify-center cursor-pointer"
+                className="kh-menu-btn kh-menu-btn-light lg:hidden w-11 h-11 md:w-12 md:h-12 rounded-xl md:rounded-[14px] border-2 flex items-center justify-center cursor-pointer"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
                   {menuOpen
@@ -403,7 +388,7 @@ export const LandingPage: React.FC = () => {
                 id="kh-menu"
                 aria-label="Sections"
                 className="kh-fade lg:hidden absolute right-0 top-[62px] md:top-[74px] z-20 w-56 rounded-[18px] border-2 p-2 flex flex-col text-base font-bold"
-                style={{ background: C.cream, borderColor: C.navy, animationDuration: '180ms' }}
+                style={{ background: C.cream, borderColor: C.navy, color: C.navy, animationDuration: '180ms' }}
               >
                 {sections.map(s => (
                   <a key={s.href} href={s.href} onClick={() => setMenuOpen(false)} className="kh-menu-item px-3 py-3 rounded-xl">{s.label}</a>
@@ -413,10 +398,10 @@ export const LandingPage: React.FC = () => {
             )}
           </header>
 
-          <h1 className={`kh-rise mt-6 md:mt-9 lg:mt-12 text-center ${display} text-[48px] md:text-[76px] lg:text-[88px] leading-[0.92] md:leading-[0.88] tracking-[-0.055em]`} style={{ animationDelay: '60ms' }}>
+          <h1 className={`kh-rise mt-3 md:mt-6 lg:mt-7 text-center ${display} text-[48px] md:text-[76px] lg:text-[88px] leading-[0.92] md:leading-[0.88] tracking-[-0.055em]`} style={{ animationDelay: '60ms' }}>
             Light don off?<br />Get person<br className="md:hidden" /> wey sabi.
           </h1>
-          <p className="kh-rise md:mt-5 md:mb-7 max-w-[320px] md:max-w-[540px] lg:max-w-[600px] text-center text-[15px] md:text-[19px] leading-normal font-semibold" style={{ animationDelay: '160ms' }}>
+          <p className="kh-rise md:mt-5 md:mb-7 max-w-[330px] md:max-w-[540px] lg:max-w-[600px] text-center text-[15px] md:text-[19px] leading-normal font-semibold" style={{ animationDelay: '160ms', color: C.lilac }}>
             ID-verified artisans near you. Your money stays in escrow until the job is done, and you say so.
           </p>
 
@@ -457,21 +442,7 @@ export const LandingPage: React.FC = () => {
           </form>
         </div>
 
-        {/* Phone: cropped to Cocoa House and the cherry-picker */}
-        <div className="kh-rise md:hidden relative h-[260px] sm:h-[340px] mt-4 overflow-hidden" style={{ animationDuration: '1100ms', animationDelay: '300ms' }}>
-          <Skyline className="bottom-0 w-[749px] left-[calc(50%-482px)] sm:left-1/2 sm:-translate-x-1/2 sm:w-[max(980px,100%)]">
-            <Bubble x={1000} y={140} scale={1.5} left={-204} width={238} dot={C.indigo} text="AC repair · Working" delay={900} floatDelay={1.7} />
-            <Bubble x={1170} y={236} scale={1.5} left={-279} width={313} dot={C.mint} done text={JOB_DONE} delay={1400} floatDelay={2.2} />
-          </Skyline>
-        </div>
-        {/* Tablet and desktop: the full skyline across the bottom of the hero */}
-        <div className="kh-rise hidden md:block absolute inset-x-0 bottom-0 h-[368px] lg:h-[520px]" style={{ animationDuration: '1100ms', animationDelay: '300ms' }}>
-          <Skyline className="bottom-0 left-1/2 -translate-x-1/2 w-[1060px] lg:w-[max(1500px,100%)]">
-            <Bubble x={452} y={328} left={-124} width={248} dot={C.orange} text="Plumber · On the way" delay={900} floatDelay={1.7} />
-            <Bubble x={362} y={132} left={-34} width={220} dot={C.indigo} text="Painter · Working" delay={1300} floatDelay={2.1} />
-            <Bubble x={1152} y={254} left={-279} width={313} dot={C.mint} done text={JOB_DONE} delay={1700} floatDelay={2.5} />
-          </Skyline>
-        </div>
+        <HeroArt />
       </section>
 
       {/* ───────── Marquee ───────── */}

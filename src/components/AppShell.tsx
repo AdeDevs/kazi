@@ -4,7 +4,7 @@ import { Role, Professional, Booking, Category } from '../types';
 import { Language, t } from '../translations';
 import { 
   Wrench, Home, Calendar, MessageSquare,
-  Moon, Sun, Bell, Settings, Briefcase, LogOut, Menu, X, LogIn, Layers
+  Moon, Sun, Bell, Settings, Briefcase, LogOut, Menu, X, LogIn, Layers, Wallet
 } from 'lucide-react';
 import { ConfirmationModal } from './ui/ConfirmationModal';
 import { UserAvatar } from './ui/UserAvatar';
@@ -90,6 +90,7 @@ export const AppShell: React.FC<AppShellProps> = ({
       { id: 'gigs', label: 'My Gigs', icon: Layers }
     ] : []),
     ...(currentRole === 'customer' ? [{ id: 'bookings', label: t('nav.bookings', currentLanguage), icon: Calendar, badge: clientActionCount > 0 ? clientActionCount : undefined }] : []),
+    { id: 'wallet', label: 'Wallet', icon: Wallet },
     { id: 'messages', label: t('nav.messages', currentLanguage), icon: MessageSquare, badge: unreadCount > 0 ? unreadCount : undefined },
     { id: 'notifications', label: t('nav.notifications', currentLanguage), icon: Bell, badge: notificationsUnreadCount > 0 ? notificationsUnreadCount : undefined },
     { id: 'settings', label: 'Account Settings', icon: Settings },
@@ -371,6 +372,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                  activeTab === 'bookings' ? (currentRole === 'customer' ? 'My Bookings & Jobs' : 'Service Jobs') :
                  activeTab === 'jobs' ? 'Service Jobs' :
                  activeTab === 'gigs' ? 'My Gigs' :
+                 activeTab === 'wallet' ? 'Wallet' :
                  activeTab === 'messages' ? 'Messages' :
                  activeTab === 'notifications' ? 'Notifications' :
                  activeTab === 'settings' ? 'Account Settings' :

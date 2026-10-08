@@ -292,7 +292,7 @@ export const MockWallet = () => (
         <div style={{ fontSize: 11.4, fontWeight: '600', color: '#3A4458' }}>From Tolu A. · Leak under sink</div>
       </div>
     </div>
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 44, boxSizing: 'border-box', borderRadius: 14, background: '#FF6A2B', marginTop: 14, fontSize: 14, fontWeight: '800' }}>Withdraw to bank</div>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 44, boxSizing: 'border-box', borderRadius: 14, background: '#D9F7E7', marginTop: 14, fontSize: 14, fontWeight: '800' }}>Sent to your bank account</div>
   </>
 );
 

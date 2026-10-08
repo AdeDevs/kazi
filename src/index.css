@@ -196,6 +196,16 @@ html.dark img {
 .kh-btn-orange { background-color: #FF6A2B; color: #0B1B3A; }
 .kh-btn:active { transform: scale(0.97); }
 .kh-menu-btn { color: #0B1B3A; border-color: #0B1B3A; transition: background-color 150ms ease, color 150ms ease; }
+/* On the dark hero: cream outline, swapping to cream fill on hover. */
+.kh-menu-btn-light { color: #FFF6EC; border-color: #FFF6EC; }
+.kh-hero-art { -webkit-mask-image: none; mask-image: none; }
+@media (min-width: 1921px) {
+  .kh-hero-art {
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 10%, #000 90%, transparent);
+    mask-image: linear-gradient(to right, transparent, #000 10%, #000 90%, transparent);
+  }
+}
+.kh-dark .kh-search:focus-within { box-shadow: 0 0 0 5px rgba(255, 246, 236, 0.3); }
 .kh-turn svg { transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1); }
 .kh-arrow { display: inline-block; transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1); }
 .kh-link {
@@ -217,6 +227,7 @@ html.dark img {
   .kh-btn:hover { background-color: #FF6A2B; color: #0B1B3A; }
   .kh-btn-on-orange:hover, .kh-btn-orange:hover { background-color: #FFF6EC; color: #0B1B3A; }
   .kh-menu-btn:hover { background-color: #0B1B3A; color: #FFF6EC; }
+  .kh-menu-btn-light:hover { background-color: #FFF6EC; color: #0B1B3A; }
   .kh-menu-item:hover { background-color: #FF6A2B; color: #0B1B3A; }
   .kh-rev-prev:hover, .kh-rev-next:hover { background-color: #FFF6EC; border-color: #FFF6EC; color: #0B1B3A; }
   /* The diagonal arrow turns flat: "go there" becomes "going". */
