@@ -176,7 +176,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const handlePermanentDelete = async () => {
     try {
       await deleteAccount();
-      toast.success('Account data deleted successfully.');
+      toast.success('Your account is closed.');
       if (onDeleteAccount) {
         onDeleteAccount();
       } else if (onLogout) {
@@ -349,7 +349,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       <Card tone="danger" className="space-y-4">
         <CardHeader
           title="Account Lifecycle Actions"
-          subtitle="Freeze account visibility temporarily or delete permanently."
+          subtitle="Pause your account for a while, or close it."
         />
 
         <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
@@ -392,9 +392,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           {/* Delete Account */}
           <div className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="space-y-0.5">
-              <p className="font-bold text-rose-600 dark:text-rose-400">Delete Account Permanently</p>
+              <p className="font-bold text-rose-600 dark:text-rose-400">Delete Account</p>
               <p className="text-[11px] text-slate-500 max-w-lg leading-relaxed">
-                Permanently erase your identity, booking records, and stored payment profiles from KaziHub. This can't be undone.
+                Closes your account and signs you out on every device straight away. Your personal details are removed later, once KaziHub no longer has to keep records of your bookings and payments.
               </p>
             </div>
             <button
@@ -437,15 +437,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handlePermanentDelete}
-        title="Permanently Delete Account?"
-        description="Are you absolutely sure you want to delete your KaziHub account? All user profile data, job history, and ratings will be erased permanently."
-        confirmText="Yes, Permanently Delete"
-        cancelText="Nevermind, Cancel"
+        title="Delete Your Account?"
+        description="Your account closes now and you’re signed out on every device. You won’t be able to sign in with it again."
+        confirmText="Yes, Delete My Account"
+        cancelText="Keep My Account"
         type="danger"
         details={[
-          'All pending escrow transactions and bookings will be cancelled',
-          'Your phone number and verified reputation credentials will be permanently erased',
-          "This can't be undone"
+          'Your personal details are removed later, after the period KaziHub has to keep booking and payment records',
+          'If money is held in escrow on one of your bookings, contact support before deleting',
+          'To take a break instead, freeze your account: you can unfreeze it any time',
         ]}
       />
 

@@ -4,7 +4,7 @@ import { createGig as createDemoGig } from '../lib/mockGigsStore';
 import { createGig, uploadGigImage } from '../lib/gigsApi';
 import { useAuth } from '../context/AuthContext';
 import { GigInput } from '../types';
-import { CATEGORIES } from '../mockData';
+import { CATEGORIES } from '../catalog';
 import { formatAmount } from '../utils';
 import { CustomDropdown } from './CustomDropdown';
 import { UnsavedChangesModal } from './ui/UnsavedChangesModal';

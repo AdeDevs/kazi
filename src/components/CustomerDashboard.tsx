@@ -3,7 +3,7 @@ import { PersonAvatar } from './ui/PersonAvatar';
 import { takePendingSearch } from '../lib/pendingSearch';
 import { Toggle } from './ui/Toggle';
 import { Professional, Category, Booking, ChatMessage } from '../types';
-import { CATEGORIES, CATEGORY_SERVICES_CATALOG } from '../mockData';
+import { CATEGORIES, CATEGORY_SERVICES_CATALOG } from '../catalog';
 import { CustomDropdown } from './CustomDropdown';
 import { CustomerMessages } from './CustomerMessages';
 import { ConfirmationModal } from './ui/ConfirmationModal';
@@ -151,12 +151,8 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   }, [submittedTicket]);
   const ticketSheet = useSlideUpSheet(Boolean(submittedTicket), () => setSubmittedTicket(null));
 
-  const [recentSearches, setRecentSearches] = useState<string[]>([
-    'Plumber leak repair',
-    'Certified electrician',
-    'AC maintenance',
-    'Solar installation'
-  ]);
+  // Only searches the person actually made this session.
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [searchSuggestions] = useState<string[]>([
     'Plumbers',
     'Electricians',
@@ -415,6 +411,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
 
           {/* Recent Searches & Search Suggestions */}
           <div className="space-y-3 pt-2 border-t border-navy-700/80">
+            {recentSearches.length > 0 && (
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <span className="text-slate-300 font-bold uppercase tracking-wider text-[10px]">Recent Searches:</span>
               {recentSearches.map((term, idx) => (
@@ -433,6 +430,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 Clear History
               </button>
             </div>
+            )}
 
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <span className="text-slate-300 font-bold uppercase tracking-wider text-[10px]">Suggestions:</span>
@@ -2185,7 +2183,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
               {selectedCategoryFilter === 'All' ? 'Nearby & Recommended Professionals' : `${selectedCategoryFilter} Specialists`}
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Showing {displayedPros.length} vetted specialists {selectedNeighborhood === 'All' ? 'across Oyo State' : `in ${selectedNeighborhood}`}
+              Showing {displayedPros.length} {displayedPros.length === 1 ? 'artisan' : 'artisans'}{selectedNeighborhood === 'All' ? '' : ` in ${selectedNeighborhood}`}
             </p>
           </div>
 
@@ -2226,8 +2224,15 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
 
         {displayedPros.length === 0 ? (
           <div className="text-center py-12 px-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+            {professionals.length === 0 ? (
+              <>
+                <p className="text-sm font-bold text-slate-700 dark:text-slate-300">No artisans have joined yet.</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">KaziHub is new, and artisans are signing up. Check back soon; the ones near you will show here.</p>
+              </>
+            ) : (
+            <>
             <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
-              No professionals found matching your search or filters.
+              No artisans match your search or filters.
             </p>
             <button
               onClick={() => {
@@ -2243,6 +2248,8 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
             >
               Reset All Filters
             </button>
+            </>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">

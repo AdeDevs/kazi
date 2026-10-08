@@ -7,6 +7,7 @@ import { CheckCircle2, AlertCircle, RefreshCw, Eye, EyeOff } from 'lucide-react'
 import { UserCreate } from '../types/auth';
 import { ApiError } from '../lib/apiClient';
 import { TERMS_VERSION } from './ui/TermsAndPrivacyModal';
+import { BackupCodeInput, CodeInputHandle, DigitCodeInput, isCompleteBackupCode } from './ui/CodeInput';
 import { useDocumentMeta } from '../hooks/useDocumentMeta';
 import { TermsAndPrivacyModal } from './ui/TermsAndPrivacyModal';
 import { CustomDropdown } from './CustomDropdown';
@@ -83,7 +84,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   }, [location.pathname]);
 
   const VIEW_META: Record<AuthPageView, { title: string; description: string }> = {
-    signin: { title: 'Sign In', description: 'Sign in to KaziHub to book vetted electricians, plumbers, AC technicians, and more across Nigeria.' },
+    signin: { title: 'Sign In', description: 'Sign in to KaziHub to book electricians, plumbers, AC technicians, and more near you, with payment held safely until the job is done.' },
     signup: { title: 'Create Account', description: 'Create a free KaziHub account as a client or a verified artisan.' },
     verify: { title: 'Verify Your Email', description: 'Enter the 5-digit code sent to your email to verify your KaziHub account.' },
     forgot: { title: 'Forgot Password', description: 'Request a password reset code for your KaziHub account.' },
@@ -105,7 +106,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   const [totpCode, setTotpCode] = useState('');
   const [codeError, setCodeError] = useState<string | null>(null);
   const [credentialsNote, setCredentialsNote] = useState<string | null>(null);
-  const totpInputRef = useRef<HTMLInputElement | null>(null);
+  const totpInputRef = useRef<CodeInputHandle | null>(null);
 
   // Sign Up State
   // The landing page's two sign-up buttons pass ?role=client or ?role=artisan.
@@ -224,7 +225,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   };
 
   const verifyCode = async (code: string) => {
-    if (isLoginLoading || code.length < 6) return;
+    if (isLoginLoading || (codeMode === 'app' ? code.length !== 6 : !isCompleteBackupCode(code))) return;
     setCodeError(null);
     try {
       const authedUser = await login(
@@ -239,7 +240,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({
           ? 'That code didn’t work. Codes change every 30 seconds, so enter the one showing now.'
           : 'That backup code didn’t work, or it’s already been used.');
         setTotpCode('');
-        requestAnimationFrame(() => totpInputRef.current?.focus());
+        // After the cleared boxes render, so focus lands on the first one.
+        setTimeout(() => totpInputRef.current?.focus(), 30);
       } else if (apiErr?.code === 'invalid_credentials' || apiErr?.code === 'totp_required') {
         // The email/password pair no longer signs in (e.g. the password was just changed elsewhere).
         backToCredentials('Your sign-in needs to start again. Enter your password.');
@@ -259,17 +261,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({
     verifyCode(totpCode);
   };
 
-  const handleCodeChange = (raw: string) => {
-    if (codeMode === 'app') {
-      const next = digitsOnly(raw, 6);
-      setTotpCode(next);
-      if (codeError) setCodeError(null);
-      // Typing or pasting the sixth digit submits; the button stays for anyone who prefers it.
-      if (next.length === 6 && totpCode.length < 6) verifyCode(next);
-    } else {
-      setTotpCode(raw.replace(/[^A-Za-z0-9-]/g, '').slice(0, TOTP_MAX));
-      if (codeError) setCodeError(null);
-    }
+  const handleCodeChange = (next: string) => {
+    setTotpCode(next);
+    if (codeError) setCodeError(null);
   };
 
   // Leaving sign-in (to sign-up, forgot password…) starts it fresh next time.
@@ -578,27 +572,34 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                   : 'Use one of the backup codes you saved when you turned on two-step sign-in. Each one works once.'}
               />
               <form onSubmit={handleCodeSubmit} className="flex flex-col gap-4" noValidate>
-                <Field label={codeMode === 'app' ? 'Code' : 'Backup code'} htmlFor="signin-totp" error={codeError || undefined}>
-                  <input
-                    ref={totpInputRef}
-                    id="signin-totp"
-                    type="text"
-                    inputMode={codeMode === 'app' ? 'numeric' : 'text'}
-                    autoComplete="one-time-code"
-                    autoCapitalize="none"
-                    spellCheck={false}
-                    enterKeyHint="go"
-                    maxLength={codeMode === 'app' ? 6 : TOTP_MAX}
-                    placeholder={codeMode === 'app' ? '123456' : 'Backup code'}
-                    aria-invalid={Boolean(codeError) || undefined}
-                    value={totpCode}
-                    onChange={(e) => handleCodeChange(e.target.value)}
-                    className={totpCode ? 'tracking-[0.3em] tabular-nums' : undefined}
-                  />
-                </Field>
+                <div className="flex flex-col gap-2">
+                  {codeMode === 'app' ? (
+                    <DigitCodeInput
+                      ref={totpInputRef}
+                      idPrefix="signin-totp"
+                      label="6-digit code"
+                      value={totpCode}
+                      onChange={handleCodeChange}
+                      // Typing, pasting or autofilling the sixth digit submits; the button stays too.
+                      onComplete={verifyCode}
+                      invalid={Boolean(codeError)}
+                      disabled={isLoginLoading}
+                    />
+                  ) : (
+                    <BackupCodeInput
+                      ref={totpInputRef}
+                      idPrefix="signin-backup"
+                      value={totpCode}
+                      onChange={handleCodeChange}
+                      invalid={Boolean(codeError)}
+                      disabled={isLoginLoading}
+                    />
+                  )}
+                  {codeError && <p className="text-[13px] font-semibold" style={{ color: C.error }} aria-live="polite">{codeError}</p>}
+                </div>
                 <button
                   type="submit"
-                  disabled={isLoginLoading || (codeMode === 'app' ? totpCode.length !== 6 : totpCode.length < 6)}
+                  disabled={isLoginLoading || (codeMode === 'app' ? totpCode.length !== 6 : !isCompleteBackupCode(totpCode))}
                   className={primaryBtn}
                 >
                   {submitLabel(isLoginLoading, 'Verify and sign in', 'Verifying…')}
@@ -842,8 +843,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
 /* ───────── Page pieces ───────── */
 
 // The public pages' own palette (see LandingPage), independent of the app theme.
-// A 6-digit authenticator code, or one of the account's backup codes.
-const TOTP_MAX = 20;
+
 const C = {
   navy: '#0B1B3A',
   cream: '#FFF6EC',

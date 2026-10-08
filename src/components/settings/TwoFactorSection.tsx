@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { Copy, Download, KeyRound, ShieldCheck, X } from 'lucide-react';
-import QRCode from 'qrcode';
 import { toast } from 'sonner';
 import { SheetDragHandle } from '../ui/SheetDragHandle';
 import { UnsavedChangesModal } from '../ui/UnsavedChangesModal';
@@ -10,6 +9,7 @@ import { useSlideUpSheet } from '../../hooks/useSlideUpSheet';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 import { disableTwoFactor, regenerateBackupCodes, setupTwoFactor, verifyTwoFactorSetup } from '../../lib/authApi';
 import { TwoFactorSetupResponse } from '../../types/auth';
+import { BackupCodeInput, DigitCodeInput, isCompleteBackupCode } from '../ui/CodeInput';
 
 const inputClass =
   'w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-slate-100';
@@ -20,9 +20,6 @@ const cancelClass =
 const secondaryClass =
   'px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs transition-colors cursor-pointer shrink-0 flex items-center justify-center gap-1.5 border border-slate-200 dark:border-slate-700 disabled:opacity-50 disabled:cursor-not-allowed';
 
-/** An authenticator code is 6 digits; a backup code is accepted wherever the backend says so. */
-const sixDigits = (value: string) => value.replace(/\D/g, '').slice(0, 6);
-const codeOrBackup = (value: string) => value.replace(/[^A-Za-z0-9-]/g, '').slice(0, 20);
 
 type Flow =
   | { kind: 'enable'; step: 'scan'; setup: TwoFactorSetupResponse; qrSvg: string }
@@ -40,11 +37,14 @@ export const TwoFactorSection: React.FC = () => {
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
   const [isBusy, setIsBusy] = useState(false);
+  // Turning 2FA off accepts an authenticator code or an unused backup code.
+  const [offWith, setOffWith] = useState<'app' | 'backup'>('app');
 
   const close = () => {
     setFlow(null);
     setCode('');
     setPassword('');
+    setOffWith('app');
   };
   // Backup codes are shown only once, so closing that step isn't "discarding" anything, and the
   // scan step has nothing typed yet until a code is entered.
@@ -60,6 +60,8 @@ export const TwoFactorSection: React.FC = () => {
     setIsBusy(true);
     try {
       const setup = await setupTwoFactor();
+      // The QR library is only needed here, so it's fetched on demand.
+      const { default: QRCode } = await import('qrcode');
       const qrSvg = await QRCode.toString(setup.otpauth_url, { type: 'svg', margin: 1, errorCorrectionLevel: 'M' });
       setFlow({ kind: 'enable', step: 'scan', setup, qrSvg });
     } catch (err: any) {
@@ -69,11 +71,12 @@ export const TwoFactorSection: React.FC = () => {
     }
   };
 
-  const handleVerify = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleVerify = async (e: React.FormEvent | null, entered = code) => {
+    e?.preventDefault();
+    if (isBusy || entered.length !== 6) return;
     setIsBusy(true);
     try {
-      const res = await verifyTwoFactorSetup(code);
+      const res = await verifyTwoFactorSetup(entered);
       await refreshUser();
       setCode('');
       setFlow({ kind: 'codes', codes: res.backup_codes, fresh: true });
@@ -87,6 +90,7 @@ export const TwoFactorSection: React.FC = () => {
 
   const handleDisable = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isBusy || !password || (offWith === 'app' ? code.length !== 6 : !isCompleteBackupCode(code))) return;
     setIsBusy(true);
     try {
       await disableTwoFactor(password, code);
@@ -100,11 +104,12 @@ export const TwoFactorSection: React.FC = () => {
     }
   };
 
-  const handleRegenerate = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleRegenerate = async (e: React.FormEvent | null, entered = code) => {
+    e?.preventDefault();
+    if (isBusy || entered.length !== 6) return;
     setIsBusy(true);
     try {
-      const res = await regenerateBackupCodes(code);
+      const res = await regenerateBackupCodes(entered);
       setCode('');
       setFlow({ kind: 'codes', codes: res.backup_codes, fresh: false });
       toast.success('New backup codes made. The old ones no longer work.');
@@ -227,18 +232,8 @@ export const TwoFactorSection: React.FC = () => {
                   </div>
                 </div>
                 <div>
-                  <label htmlFor="twofa-verify-code" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">6-Digit Code</label>
-                  <input
-                    id="twofa-verify-code"
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    maxLength={6}
-                    value={code}
-                    onChange={(e) => setCode(sixDigits(e.target.value))}
-                    className={`${inputClass} tracking-[0.3em]`}
-                    required
-                  />
+                  <p className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">6-Digit Code</p>
+                  <DigitCodeInput appearance="app" idPrefix="twofa-verify" label="6-digit code" value={code} onChange={setCode} onComplete={(c) => handleVerify(null, c)} disabled={isBusy} />
                 </div>
                 <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
                   <button type="button" onClick={guard.requestClose} className={cancelClass}>Cancel</button>
@@ -263,24 +258,24 @@ export const TwoFactorSection: React.FC = () => {
                     required
                   />
                 </div>
-                <div>
-                  <label htmlFor="twofa-off-code" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Authenticator or Backup Code</label>
-                  <input
-                    id="twofa-off-code"
-                    type="text"
-                    autoComplete="one-time-code"
-                    autoCapitalize="none"
-                    spellCheck={false}
-                    maxLength={20}
-                    value={code}
-                    onChange={(e) => setCode(codeOrBackup(e.target.value))}
-                    className={`${inputClass} tracking-[0.2em]`}
-                    required
-                  />
+                <div className="space-y-2">
+                  <p className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">{offWith === 'app' ? 'Code From Your App' : 'Backup Code'}</p>
+                  {offWith === 'app' ? (
+                    <DigitCodeInput appearance="app" idPrefix="twofa-off" label="6-digit code" value={code} onChange={setCode} disabled={isBusy} />
+                  ) : (
+                    <BackupCodeInput appearance="app" idPrefix="twofa-off-backup" value={code} onChange={setCode} disabled={isBusy} />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => { setOffWith((m) => (m === 'app' ? 'backup' : 'app')); setCode(''); }}
+                    className="text-[11px] font-bold text-navy-800 dark:text-navy-400 hover:underline cursor-pointer"
+                  >
+                    {offWith === 'app' ? 'Lost your phone? Use a backup code' : 'Use the code from your app'}
+                  </button>
                 </div>
                 <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
                   <button type="button" onClick={guard.requestClose} className={cancelClass}>Cancel</button>
-                  <button type="submit" disabled={isBusy || !password || code.length < 6} className={primaryClass}>
+                  <button type="submit" disabled={isBusy || !password || (offWith === 'app' ? code.length !== 6 : !isCompleteBackupCode(code))} className={primaryClass}>
                     {isBusy ? 'Turning off…' : 'Turn Off'}
                   </button>
                 </div>
@@ -290,18 +285,8 @@ export const TwoFactorSection: React.FC = () => {
             {f.kind === 'regenerate' && (
               <form onSubmit={handleRegenerate} className="space-y-3">
                 <div>
-                  <label htmlFor="twofa-regen-code" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">6-Digit Code</label>
-                  <input
-                    id="twofa-regen-code"
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    maxLength={6}
-                    value={code}
-                    onChange={(e) => setCode(sixDigits(e.target.value))}
-                    className={`${inputClass} tracking-[0.3em]`}
-                    required
-                  />
+                  <p className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">6-Digit Code</p>
+                  <DigitCodeInput appearance="app" idPrefix="twofa-regen" label="6-digit code" value={code} onChange={setCode} onComplete={(c) => handleRegenerate(null, c)} disabled={isBusy} />
                 </div>
                 <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
                   <button type="button" onClick={guard.requestClose} className={cancelClass}>Cancel</button>

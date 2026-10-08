@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { Role, Professional, Booking, ChatMessage, Category, Notification, Gig, SavedArtisanSummary } from './types';
 import { Language, languageFromStored } from './translations';
-import { INITIAL_PROFESSIONALS, INITIAL_BOOKINGS } from './mockData';
 import { AppShell } from './components/AppShell';
 import { ProfessionalProfileModal } from './components/ProfessionalProfileModal';
 import { BookingModal, BookingRequestInput } from './components/BookingModal';
@@ -95,6 +94,10 @@ function ProfessionalProfileRoute({
 }
 
 const errorTextOf = (err: unknown, fallback: string) => (err instanceof Error && err.message ? err.message : fallback);
+
+const BLANK_PROFESSIONAL: Professional = profileToProfessional({
+  id: '', user_id: '', category: '', skills: [], years_of_experience: 0, state: '', is_available: false, is_verified: false,
+});
 
 export default function App() {
   const { user, logout: authLogout, isDemo } = useAuth();
@@ -205,24 +208,20 @@ export default function App() {
     setPageSubtitle(null);
   }, [location.pathname]);
 
-  // State with localStorage persistence or fallback to mock data
+  // Sample artisans, for the demo account only: loaded on demand (see the effect below), so real
+  // accounts never download them. Earlier builds cached the roster in localStorage; clear that.
   const [professionals, setProfessionals] = useState<Professional[]>(() => {
-    // Clear old cached data
-    localStorage.removeItem('kazihub_professionals');
-    localStorage.removeItem('kazihub_ng_professionals_v2');
-    localStorage.removeItem('kazihub_ng_professionals_v5');
-    localStorage.removeItem('kazihub_ng_professionals_v9');
-    localStorage.removeItem('kazihub_ng_professionals_v10');
-    const saved = localStorage.getItem('kazihub_ng_professionals_v11');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { console.error(e); }
+    try {
+      ['kazihub_professionals', 'kazihub_ng_professionals_v2', 'kazihub_ng_professionals_v5', 'kazihub_ng_professionals_v9',
+        'kazihub_ng_professionals_v10', 'kazihub_ng_professionals_v11'].forEach(k => localStorage.removeItem(k));
+    } catch {
+      // Storage blocked: nothing to clear.
     }
-    return INITIAL_PROFESSIONALS;
+    return [];
   });
 
-  // Real, signed-up artisans fetched from the backend's public directory (GET /profiles/), merged
-  // alongside the mock roster above so the catalog looks fuller while few real artisans have
-  // signed up. Not persisted to localStorage -- this is server-owned data, refetched each load.
+  // Real, signed-up artisans from the backend's public directory (GET /profiles/). Not persisted to
+  // localStorage -- this is server-owned data, refetched each load.
   const [realProfessionals, setRealProfessionals] = useState<Professional[]>([]);
   const realProfileIdsRef = useRef<Set<string>>(new Set());
   const fetchedDetailIdsRef = useRef<Set<string>>(new Set());
@@ -256,9 +255,12 @@ export default function App() {
       });
   }, []);
 
+  // Real accounts and signed-out visitors see only real artisans. The sample roster exists for the
+  // demo account alone; mixing it in made made-up artisans look bookable to real customers.
+  const showSampleArtisans = Boolean(user) && isDemo;
   const allProfessionals = useMemo(
-    () => [...professionals, ...realProfessionals],
-    [professionals, realProfessionals]
+    () => (showSampleArtisans ? [...professionals, ...realProfessionals] : realProfessionals),
+    [showSampleArtisans, professionals, realProfessionals]
   );
 
   // Sample bookings for the demo account only (it has no backend session). Real accounts use
@@ -274,8 +276,22 @@ export default function App() {
     if (saved) {
       try { return JSON.parse(saved); } catch (e) { console.error(e); }
     }
-    return INITIAL_BOOKINGS;
+    return [];
   });
+
+  // Starting a demo session loads the sample artisans and bookings (a separate file, fetched once).
+  useEffect(() => {
+    if (!user || !isDemo) return;
+    let cancelled = false;
+    import('./mockData')
+      .then(({ INITIAL_PROFESSIONALS, INITIAL_BOOKINGS }) => {
+        if (cancelled) return;
+        setProfessionals(prev => (prev.length ? prev : INITIAL_PROFESSIONALS));
+        setDemoBookings(prev => (prev.length ? prev : INITIAL_BOOKINGS));
+      })
+      .catch((err) => console.warn('Could not load the demo samples', err));
+    return () => { cancelled = true; };
+  }, [user, isDemo]);
 
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     localStorage.removeItem('kazihub_messages');
@@ -319,7 +335,8 @@ export default function App() {
 
   // Currently logged in professional partner view
   const [activeProId] = useState<string>('p1');
-  const rawPro = professionals.find(p => p.id === activeProId) || professionals[0];
+  // The demo's sample artisan; a blank profile until the samples load (and for real customers).
+  const rawPro = professionals.find(p => p.id === activeProId) || professionals[0] || BLANK_PROFESSIONAL;
 
   const [customerAvatar, setCustomerAvatar] = useState<string>(() => {
     if (user?.profile_picture) return user.profile_picture;
@@ -796,10 +813,6 @@ export default function App() {
     const interval = setInterval(checkAutoCompletions, 60 * 1000); // Check every minute
     return () => clearInterval(interval);
   }, [demoBookings]);
-
-  useEffect(() => {
-    localStorage.setItem('kazihub_ng_professionals_v10', JSON.stringify(professionals));
-  }, [professionals]);
 
   useEffect(() => {
     localStorage.setItem('kazihub_ng_bookings_v12', JSON.stringify(demoBookings));

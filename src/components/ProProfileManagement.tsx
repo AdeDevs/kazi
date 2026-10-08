@@ -3,7 +3,7 @@ import { HeroScrim } from './ui/HeroScrim';
 import { Toggle } from './ui/Toggle';
 import { Professional, ServiceItem, PortfolioItem, ServicePricingType, Category } from '../types';
 import { formatAmount, formatCurrency, localDateISO } from '../utils';
-import { CATEGORIES } from '../mockData';
+import { CATEGORIES } from '../catalog';
 import { ConfirmationModal } from './ui/ConfirmationModal';
 import { UnsavedChangesModal } from './ui/UnsavedChangesModal';
 import { KYCVerificationModal, VerificationSubmission } from './ui/KYCVerificationModal';

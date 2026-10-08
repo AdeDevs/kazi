@@ -1,6 +1,6 @@
 import { ApiError, apiDelete, apiGet, apiPatch, apiPost, apiPostMultipart, apiPut } from './apiClient';
 import { Category, PortfolioItem, Professional, Review, ServiceItem, ServicePricingType } from '../types';
-import { CATEGORIES } from '../mockData';
+import { CATEGORIES } from '../catalog';
 
 // Shapes returned by the backend's public artisan-directory endpoints (GET /profiles/ and
 // GET /profiles/{id}). The artisan's name and photo are copied from their user account.
