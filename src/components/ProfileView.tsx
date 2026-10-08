@@ -268,7 +268,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <div className="sm:hidden -mx-[15px] -mt-[15px] relative h-[220px] rounded-t-2xl overflow-hidden">
           <button
             type="button"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => { if (!blockIfFrozen()) fileInputRef.current?.click(); }}
             disabled={isUploadingAvatar}
             className="absolute inset-0 w-full h-full cursor-pointer"
             title="Tap to change your photo"
@@ -325,7 +325,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <div className="flex items-end justify-between gap-3.5 px-[15px] -mt-11">
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => { if (!blockIfFrozen()) fileInputRef.current?.click(); }}
                 disabled={isUploadingAvatar}
                 className="relative shrink-0 cursor-pointer rounded-2xl overflow-hidden border-4 border-white dark:border-slate-900 shadow-lg"
                 title="Tap to change your photo"

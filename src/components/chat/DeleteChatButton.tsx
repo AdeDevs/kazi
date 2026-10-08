@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { Trash2 } from 'lucide-react';
-import { ConfirmationModal } from '../ui/ConfirmationModal';
+import { Image, MessageSquare, MessageSquareX, Mic, Trash2 } from 'lucide-react';
+import { ConsequenceSheet } from '../ui/ConsequenceSheet';
+import { firstNameOf } from '../../lib/people';
+import { useAccountFrozen } from '../../hooks/useAccountFrozen';
 
 interface DeleteChatButtonProps {
   /** Who the conversation is with, for the confirmation text. */
@@ -13,22 +15,26 @@ interface DeleteChatButtonProps {
 
 /** DELETE /conversations/{id} removes the chat for this person only; the other side keeps theirs. */
 export const DeleteChatButton: React.FC<DeleteChatButtonProps> = ({ name, onDelete, onDeleted }) => {
+  const { blockIfFrozen } = useAccountFrozen();
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
+  const who = name ? firstNameOf(name) : 'They';
 
   const handleConfirm = async () => {
     setBusy(true);
     const ok = await onDelete();
     setBusy(false);
-    setConfirming(false);
-    if (ok) onDeleted();
+    if (ok) {
+      setConfirming(false);
+      onDeleted();
+    }
   };
 
   return (
     <>
       <button
         type="button"
-        onClick={() => setConfirming(true)}
+        onClick={() => { if (!blockIfFrozen()) setConfirming(true); }}
         disabled={busy}
         title="Delete conversation"
         aria-label="Delete conversation"
@@ -36,16 +42,25 @@ export const DeleteChatButton: React.FC<DeleteChatButtonProps> = ({ name, onDele
       >
         <Trash2 className="w-4.5 h-4.5" />
       </button>
-      <ConfirmationModal
+      <ConsequenceSheet
         isOpen={confirming}
-        onClose={() => { if (!busy) setConfirming(false); }}
-        onConfirm={handleConfirm}
-        isLoading={busy}
-        title="Delete This Conversation?"
-        description={`The messages with ${name} are removed from your inbox for good. ${name} keeps their copy. If either of you writes again, the chat starts fresh from that message.`}
-        confirmText="Yes, Delete"
-        cancelText="Keep Conversation"
-        type="danger"
+        onClose={() => setConfirming(false)}
+        theme="permanent"
+        icon={MessageSquareX}
+        title="Delete this conversation?"
+        description={`It’s removed from your inbox for good. ${who} keeps their copy.`}
+        pillsLabel="Removed for you"
+        pills={[
+          { label: 'Messages', Icon: MessageSquare },
+          { label: 'Photos', Icon: Image },
+          { label: 'Voice notes', Icon: Mic },
+        ]}
+        note="If either of you writes again, the chat starts fresh from that message."
+        primaryLabel="Delete conversation"
+        busyLabel="Deleting…"
+        onPrimary={handleConfirm}
+        secondaryLabel="Keep it"
+        busy={busy}
       />
     </>
   );

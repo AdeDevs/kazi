@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAccountFrozen } from '../hooks/useAccountFrozen';
 import { useNavigate } from 'react-router-dom';
 import { Professional, Booking, ChatMessage, Notification } from '../types';
 import { bookingWhen, formatCurrency } from '../utils';
@@ -72,6 +73,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
   forceGigCreation = false
 }) => {
   const navigate = useNavigate();
+  const { blockIfFrozen } = useAccountFrozen();
   // Sub-tabs for home view or jobs page
   const [homeSubTab, setHomeSubTab] = useState<'overview' | 'portfolio'>('overview');
   const [jobsSubTab, setJobsSubTab] = useState<'requests' | 'active' | 'completed'>('requests');
@@ -432,7 +434,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                         </span>
                       ) : job.status === 'quote_requested' ? (
                         <button
-                          onClick={() => setQuotingJob(job)}
+                          onClick={() => { if (!blockIfFrozen()) setQuotingJob(job); }}
                           className="px-4 py-2.5 bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer w-full sm:w-auto shadow-xs"
                         >
                           Send Quote
@@ -698,7 +700,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                           {job.status === 'in_progress' && (
                             <button
                               onClick={() => {
-                                setCompletingJob(job);
+                                if (!blockIfFrozen()) setCompletingJob(job);
                               }}
                               className="col-span-2 min-h-11 sm:min-h-0 px-4 py-2 bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white text-xs font-bold rounded-xl transition-[background-color,transform] duration-150 active:scale-[0.97] cursor-pointer shadow-xs flex items-center justify-center gap-1.5 whitespace-nowrap"
                             >
@@ -1237,7 +1239,7 @@ export const ProfessionalDashboard: React.FC<ProfessionalDashboardProps> = ({
                     ) : job.status === 'in_progress' ? (
                       <button
                         onClick={() => {
-                          setCompletingJob(job);
+                          if (!blockIfFrozen()) setCompletingJob(job);
                         }}
                         className="px-4 py-2 bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer w-full sm:w-auto shadow-xs flex items-center justify-center gap-1.5"
                       >

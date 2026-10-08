@@ -286,3 +286,69 @@ html.dark img {
 }
 .kh-input input:autofill,
 .kh-search input:autofill { box-shadow: 0 0 0 1000px #FFFFFF inset; -webkit-text-fill-color: #0B1B3A; }
+
+/* Frozen-account sheet (components/ui/FrozenInterstitial.tsx): an icy band lit by two soft glows
+   (no repeating texture), and a snowflake that turns in once when the sheet opens. */
+.kh-frost {
+  background:
+    radial-gradient(120% 90% at 12% 0%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0) 55%),
+    radial-gradient(90% 80% at 92% 18%, rgba(165, 225, 250, 0.55) 0%, rgba(165, 225, 250, 0) 60%),
+    linear-gradient(180deg, #d6eefc 0%, #e9f6fe 58%, #ffffff 100%);
+}
+:root.dark .kh-frost {
+  background:
+    radial-gradient(120% 90% at 12% 0%, rgba(125, 211, 252, 0.16) 0%, rgba(125, 211, 252, 0) 55%),
+    radial-gradient(90% 80% at 92% 18%, rgba(34, 211, 238, 0.12) 0%, rgba(34, 211, 238, 0) 60%),
+    linear-gradient(180deg, rgba(12, 74, 110, 0.55) 0%, rgba(12, 74, 110, 0.18) 60%, rgba(15, 23, 42, 0) 100%);
+}
+@keyframes kh-frost-flake { from { opacity: 0; transform: rotate(-30deg) scale(0.9); } }
+.kh-frost-flake { animation: kh-frost-flake 500ms cubic-bezier(0.23, 1, 0.32, 1) 120ms both; }
+@media (prefers-reduced-motion: reduce) {
+  .kh-frost-flake { animation: kh-fade 200ms ease both; }
+}
+
+/* Consequence sheets (components/ui/ConsequenceSheet.tsx): the same soft-glow band as frost, tinted by
+   what kind of consequence the action has. */
+.kh-band-money {
+  background:
+    radial-gradient(120% 90% at 12% 0%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0) 55%),
+    radial-gradient(90% 80% at 92% 18%, rgba(110, 231, 183, 0.45) 0%, rgba(110, 231, 183, 0) 60%),
+    linear-gradient(180deg, #d5f5e6 0%, #ebfaf2 58%, #ffffff 100%);
+}
+.kh-band-permanent {
+  background:
+    radial-gradient(120% 90% at 12% 0%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0) 55%),
+    radial-gradient(90% 80% at 92% 18%, rgba(253, 164, 175, 0.4) 0%, rgba(253, 164, 175, 0) 60%),
+    linear-gradient(180deg, #fde4e8 0%, #fef1f3 58%, #ffffff 100%);
+}
+.kh-band-security {
+  background:
+    radial-gradient(120% 90% at 12% 0%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0) 55%),
+    radial-gradient(90% 80% at 92% 18%, rgba(148, 163, 184, 0.35) 0%, rgba(148, 163, 184, 0) 60%),
+    linear-gradient(180deg, #e3e8f0 0%, #f1f4f8 58%, #ffffff 100%);
+}
+:root.dark .kh-band-money {
+  background:
+    radial-gradient(120% 90% at 12% 0%, rgba(110, 231, 183, 0.14) 0%, rgba(110, 231, 183, 0) 55%),
+    linear-gradient(180deg, rgba(6, 95, 70, 0.5) 0%, rgba(6, 95, 70, 0.16) 60%, rgba(15, 23, 42, 0) 100%);
+}
+:root.dark .kh-band-permanent {
+  background:
+    radial-gradient(120% 90% at 12% 0%, rgba(253, 164, 175, 0.12) 0%, rgba(253, 164, 175, 0) 55%),
+    linear-gradient(180deg, rgba(136, 19, 55, 0.5) 0%, rgba(136, 19, 55, 0.16) 60%, rgba(15, 23, 42, 0) 100%);
+}
+:root.dark .kh-band-security {
+  background:
+    radial-gradient(120% 90% at 12% 0%, rgba(203, 213, 225, 0.1) 0%, rgba(203, 213, 225, 0) 55%),
+    linear-gradient(180deg, rgba(51, 65, 85, 0.6) 0%, rgba(51, 65, 85, 0.2) 60%, rgba(15, 23, 42, 0) 100%);
+}
+@keyframes kh-badge-in { from { opacity: 0; transform: scale(0.9); } }
+.kh-badge-in { animation: kh-badge-in 400ms cubic-bezier(0.23, 1, 0.32, 1) 100ms both; }
+
+/* Hold to confirm: the fill wipes across while held (linear, so progress reads honestly) and snaps
+   back fast on release. */
+.kh-hold-fill { clip-path: inset(0 100% 0 0); transition: clip-path 200ms cubic-bezier(0.23, 1, 0.32, 1); }
+.kh-hold[data-holding] .kh-hold-fill { clip-path: inset(0 0 0 0); transition: clip-path 1500ms linear; }
+@media (prefers-reduced-motion: reduce) {
+  .kh-badge-in { animation: kh-fade 200ms ease both; }
+}

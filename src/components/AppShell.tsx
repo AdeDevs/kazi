@@ -12,6 +12,7 @@ import { useAuth } from '../context/AuthContext';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { useAccountFrozen } from '../hooks/useAccountFrozen';
 import { FrozenBanner } from './ui/FrozenNotice';
+import { FrozenInterstitial } from './ui/FrozenInterstitial';
 
 interface AppShellProps {
   currentRole: Role;
@@ -443,6 +444,7 @@ export const AppShell: React.FC<AppShellProps> = ({
           {/* Main Feed Content Area */}
           <div className="p-3.5 sm:p-4 pb-4 w-full max-w-none flex-1">
             {isFrozen && activeTab !== 'settings' && <div className="mb-3.5 sm:mb-4"><FrozenBanner /></div>}
+            <FrozenInterstitial />
             {children}
           </div>
         </main>

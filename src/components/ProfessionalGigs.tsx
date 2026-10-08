@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAccountFrozen } from '../hooks/useAccountFrozen';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, Layers, Loader2 } from 'lucide-react';
 import { getGigsByProfessional, deleteGig as deleteDemoGig } from '../lib/mockGigsStore';
@@ -19,6 +20,7 @@ interface ProfessionalGigsProps {
 
 export const ProfessionalGigs: React.FC<ProfessionalGigsProps> = ({ professionalId, onPageSubtitleChange, forceCreating = false }) => {
   const navigate = useNavigate();
+  const { blockIfFrozen } = useAccountFrozen();
   const [gigs, setGigs] = useState<Gig[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(forceCreating);
@@ -26,7 +28,13 @@ export const ProfessionalGigs: React.FC<ProfessionalGigsProps> = ({ professional
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
+    // Opening /gigs/new directly while frozen shows the frozen sheet and stays on the gig list.
+    if (forceCreating && blockIfFrozen()) {
+      navigate('/gigs', { replace: true });
+      return;
+    }
     setIsCreating(forceCreating);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [forceCreating]);
 
   useEffect(() => {
@@ -92,7 +100,7 @@ export const ProfessionalGigs: React.FC<ProfessionalGigsProps> = ({ professional
           </p>
         </div>
         <button
-          onClick={() => navigate('/gigs/new')}
+          onClick={() => { if (!blockIfFrozen()) navigate('/gigs/new'); }}
           className="px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white font-bold text-sm shadow-md transition-all flex items-center gap-2 justify-center shrink-0"
         >
           <Plus className="w-4 h-4" />
@@ -123,7 +131,7 @@ export const ProfessionalGigs: React.FC<ProfessionalGigsProps> = ({ professional
                   {gig.category}
                 </span>
                 <button
-                  onClick={() => setGigToDelete(gig.id)}
+                  onClick={() => { if (!blockIfFrozen()) setGigToDelete(gig.id); }}
                   aria-label="Delete gig"
                   className="p-1.5 text-slate-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 opacity-100 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 focus:opacity-100"
                 >

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useAccountFrozen } from '../hooks/useAccountFrozen';
 import { PersonAvatar } from './ui/PersonAvatar';
 import { Checkbox } from './ui/Checkbox';
 import { HeroScrim } from './ui/HeroScrim';
@@ -32,6 +33,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
   onBuyGig,
   onAddReview
 }) => {
+  const { blockIfFrozen } = useAccountFrozen();
   const [activeTab, setActiveTab] = useState<'about' | 'gigs' | 'reviews'>('about');
   const profileTabs = useSlidingIndicator(activeTab);
   const tabDirection = useTabDirection(activeTab, ['about', 'gigs', 'reviews'] as const);
@@ -469,7 +471,7 @@ export const ProfessionalProfileModal: React.FC<ProfessionalProfileModalProps> =
                 {!showWriteReview && (
                   <button
                     type="button"
-                    onClick={() => setShowWriteReview(true)}
+                    onClick={() => { if (!blockIfFrozen()) setShowWriteReview(true); }}
                     className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition-all self-stretch sm:self-auto"
                   >
                     <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 flex-shrink-0" />

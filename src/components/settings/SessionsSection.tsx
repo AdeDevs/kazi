@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Laptop, LogOut, Smartphone } from 'lucide-react';
+import { Laptop, LogOut, MonitorSmartphone, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardHeader } from '../ui/Card';
 import { ConfirmationModal } from '../ui/ConfirmationModal';
+import { ConsequenceSheet } from '../ui/ConsequenceSheet';
 import { useAuth } from '../../context/AuthContext';
 import { listSessions, revokeSession, revokeSessions } from '../../lib/authApi';
 import { SessionInfo } from '../../types/auth';
@@ -97,17 +98,27 @@ export const SessionsSection: React.FC<SessionsSectionProps> = ({ onSignedOutEve
     }
   };
 
+  const [revokeAllError, setRevokeAllError] = useState<string | null>(null);
   const handleRevokeAll = async () => {
     setIsRevokingAll(true);
+    setRevokeAllError(null);
     try {
       await revokeSessions();
       toast.success('Signed out of every device.');
       onSignedOutEverywhere();
     } catch (err: any) {
-      toast.error(err?.message || 'Could not sign out of every device. Try again.');
+      setRevokeAllError(err?.message || 'Could not sign out of every device. Try again.');
       setIsRevokingAll(false);
     }
   };
+
+  // The devices that will be signed out, as pills (one per kind of device, this one first).
+  const devicePills = (sessions || []).reduce<{ label: string; Icon: typeof Laptop }[]>((acc, sess) => {
+    const { label, isMobile } = describeDevice(sess.user_agent);
+    const name = sess.is_current ? `${label} (this one)` : label;
+    if (!acc.some((p) => p.label === name)) acc.push({ label: name, Icon: isMobile ? Smartphone : Laptop });
+    return acc;
+  }, []).slice(0, 5);
 
   return (
     <Card className="space-y-4">
@@ -169,7 +180,7 @@ export const SessionsSection: React.FC<SessionsSectionProps> = ({ onSignedOutEve
         <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
           <button
             type="button"
-            onClick={() => setShowRevokeAll(true)}
+            onClick={() => { setRevokeAllError(null); setShowRevokeAll(true); }}
             disabled={isRevokingAll}
             className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-rose-600 dark:text-rose-400 font-bold text-xs transition-colors cursor-pointer shrink-0 flex items-center justify-center gap-1.5 border border-slate-200 dark:border-slate-700 disabled:opacity-50"
           >
@@ -192,15 +203,22 @@ export const SessionsSection: React.FC<SessionsSectionProps> = ({ onSignedOutEve
         type="logout"
       />
 
-      <ConfirmationModal
+      <ConsequenceSheet
         isOpen={showRevokeAll}
         onClose={() => setShowRevokeAll(false)}
-        onConfirm={handleRevokeAll}
-        title="Sign Out of All Devices?"
-        description="Every device signed in to your account, including this one, will need to sign in again."
-        confirmText="Yes, Sign Out Everywhere"
-        cancelText="Keep Signed In"
-        type="logout"
+        theme="security"
+        icon={MonitorSmartphone}
+        title="Sign out everywhere?"
+        description="Every device signed in to your account, this one included, will need to sign in again."
+        pillsLabel={`Signs out ${sessions?.length ?? 0} ${sessions?.length === 1 ? 'session' : 'sessions'}`}
+        pills={devicePills}
+        note="Do this if you’ve lost a phone or signed in somewhere you don’t trust."
+        primaryLabel="Sign out everywhere"
+        busyLabel="Signing out…"
+        onPrimary={handleRevokeAll}
+        secondaryLabel="Keep me signed in"
+        busy={isRevokingAll}
+        error={revokeAllError}
       />
     </Card>
   );

@@ -1,5 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useAccountFrozen } from '../hooks/useAccountFrozen';
 import { PersonAvatar } from './ui/PersonAvatar';
+import { ConsequenceSheet } from './ui/ConsequenceSheet';
+import { BadgeCheck, Banknote, CircleCheckBig, HandCoins, Lock, Undo2 } from 'lucide-react';
 import { takePendingSearch } from '../lib/pendingSearch';
 import { Toggle } from './ui/Toggle';
 import { Professional, Category, Booking, ChatMessage } from '../types';
@@ -92,6 +95,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   savedProIds,
   onToggleSavePro
 }) => {
+  const { blockIfFrozen } = useAccountFrozen();
   const { user } = useAuth();
   const clientGreetingName = user?.first_name || (user?.email ? user.email.split('@')[0] : 'Client');
   // Pre-filled from the landing page's hero search when a new client arrives through it.
@@ -117,6 +121,9 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   const [bookingFilter, setBookingFilter] = useState<'all' | 'active' | 'awaiting_completion' | 'completed' | 'issue_reported' | 'closed'>('all');
   const [cancelModalBooking, setCancelModalBooking] = useState<Booking | null>(null);
   const [payingBookingId, setPayingBookingId] = useState<string | null>(null);
+  // Money sheets: paying into escrow, and releasing it to the artisan.
+  const [payBooking, setPayBooking] = useState<Booking | null>(null);
+  const [releaseBooking, setReleaseBooking] = useState<Booking | null>(null);
   const [rateToast, setRateToast] = useState<string | null>(null);
 
   const [complaintModalBooking, setComplaintModalBooking] = useState<Booking | null>(null);
@@ -1187,7 +1194,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            setCancelModalBooking(b);
+                            if (!blockIfFrozen()) setCancelModalBooking(b);
                           }}
                           className="px-3.5 py-2 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50/50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/80 hover:bg-rose-100 dark:hover:bg-rose-900/50 hover:border-rose-300 dark:hover:border-rose-700 transition-all cursor-pointer flex items-center justify-center gap-1.5"
                         >
@@ -1201,10 +1208,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                         <button
                           type="button"
                           disabled={payingBookingId === b.id}
-                          onClick={async () => {
-                            setPayingBookingId(b.id);
-                            try { await onPayEscrow(b.id); } finally { setPayingBookingId(null); }
-                          }}
+                          onClick={() => { if (!blockIfFrozen()) setPayBooking(b); }}
                           className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 disabled:hover:bg-navy-800 disabled:hover:text-white disabled:opacity-70 disabled:cursor-wait text-white font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer transition-all"
                         >
                           <ShieldCheck className="w-3.5 h-3.5" />
@@ -1218,7 +1222,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                           <button
                             type="button"
                             onClick={() => {
-                              setComplaintModalBooking(b);
+                              if (!blockIfFrozen()) setComplaintModalBooking(b);
                               setComplaintDetails('');
                             }}
                             className="px-3.5 py-2 rounded-xl border border-rose-200 dark:border-rose-800/80 bg-rose-50/50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/60 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
@@ -1228,11 +1232,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                           </button>
                           <button
                             type="button"
-                            onClick={() => {
-                              if (onUpdateBookingStatus) {
-                                onUpdateBookingStatus(b.id, 'paid_out', { completedAt: new Date().toISOString() });
-                              }
-                            }}
+                            onClick={() => { if (!blockIfFrozen()) setReleaseBooking(b); }}
                             className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer transition-all"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" />
@@ -1248,7 +1248,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                             <button
                               type="button"
                               onClick={() => {
-                                setComplaintModalBooking(b);
+                                if (!blockIfFrozen()) setComplaintModalBooking(b);
                                 setComplaintDetails('');
                               }}
                               className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-300 dark:hover:border-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
@@ -1536,9 +1536,82 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
         );
       })()}
 
-      {/* Cancellation Confirmation Modal (Bottom Slide-Up on Mobile) */}
+      {/* Paying into escrow: show the amount and what happens to it before Paystack opens */}
+      <ConsequenceSheet
+        isOpen={Boolean(payBooking)}
+        onClose={() => setPayBooking(null)}
+        theme="money"
+        icon={Lock}
+        title="Pay into escrow"
+        amount={payBooking ? { value: payBooking.amount ?? 0, to: 'KaziHub escrow' } : undefined}
+        description={`For “${payBooking?.title || payBooking?.category || 'this job'}” with ${payBooking?.professionalName || 'your artisan'}. It’s held safely, not paid to them yet.`}
+        pillsLabel="What happens next"
+        pills={[
+          { label: 'Held safely', Icon: Lock },
+          { label: 'Artisan does the job', Icon: BadgeCheck },
+          { label: 'You confirm, they’re paid', Icon: HandCoins },
+        ]}
+        note="You’ll pay on Paystack’s secure page, then come back here."
+        primaryLabel="Continue to payment"
+        busyLabel="Opening Paystack…"
+        onPrimary={async () => {
+          if (!payBooking || !onPayEscrow) return;
+          setPayingBookingId(payBooking.id);
+          try { await onPayEscrow(payBooking.id); } finally { setPayingBookingId(null); }
+        }}
+        secondaryLabel="Not now"
+        busy={Boolean(payBooking && payingBookingId === payBooking.id)}
+      />
+
+      {/* Releasing escrow pays the artisan and can't be taken back: hold to confirm */}
+      <ConsequenceSheet
+        isOpen={Boolean(releaseBooking)}
+        onClose={() => setReleaseBooking(null)}
+        theme="money"
+        icon={Banknote}
+        title="Release payment?"
+        amount={releaseBooking ? { value: releaseBooking.escrow_amount || releaseBooking.amount || 0, to: releaseBooking.professionalName } : undefined}
+        description="Only release it once you’re happy with the work. Once it’s paid out, it can’t be pulled back."
+        pillsLabel="This will"
+        pills={[
+          { label: 'Mark the job done', Icon: CircleCheckBig },
+          { label: 'Pay the artisan', Icon: HandCoins },
+        ]}
+        note="Not happy with the job? Close this and use Report Issue instead."
+        confirm="hold"
+        primaryLabel="Hold to release payment"
+        busyLabel="Releasing…"
+        onPrimary={() => {
+          if (releaseBooking && onUpdateBookingStatus) {
+            onUpdateBookingStatus(releaseBooking.id, 'paid_out', { completedAt: new Date().toISOString() });
+          }
+          setReleaseBooking(null);
+        }}
+        secondaryLabel="Not yet"
+      />
+
+      {/* Cancelling a booking with money held: a money sheet showing the refund */}
+      <ConsequenceSheet
+        isOpen={Boolean(cancelModalBooking) && cancelModalBooking?.escrow_status === 'held_in_escrow'}
+        onClose={() => setCancelModalBooking(null)}
+        theme="money"
+        icon={Undo2}
+        title="Cancel this paid booking?"
+        amount={cancelModalBooking ? { value: cancelModalBooking.escrow_amount || cancelModalBooking.amount || 0, to: 'a refund for you' } : undefined}
+        description={`“${cancelModalBooking?.title || cancelModalBooking?.category || 'This job'}” with ${cancelModalBooking?.professionalName || 'your artisan'} is cancelled, and a refund of the money held in escrow is recorded.`}
+        note="Problem with the work instead? Report an issue so KaziHub can step in."
+        primaryLabel="Cancel booking"
+        busyLabel="Cancelling…"
+        onPrimary={() => {
+          if (cancelModalBooking) onCancelBooking(cancelModalBooking.id);
+          setCancelModalBooking(null);
+        }}
+        secondaryLabel="Keep booking"
+      />
+
+      {/* Cancellation Confirmation Modal (Bottom Slide-Up on Mobile) -- unpaid bookings */}
       <ConfirmationModal
-        isOpen={Boolean(cancelModalBooking)}
+        isOpen={Boolean(cancelModalBooking) && cancelModalBooking?.escrow_status !== 'held_in_escrow'}
         onClose={() => setCancelModalBooking(null)}
         onConfirm={() => {
           if (cancelModalBooking) {
@@ -1554,7 +1627,6 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
         details={cancelModalBooking ? [
           `Service: ${cancelModalBooking.title || cancelModalBooking.category}`,
           `When: ${bookingWhen(cancelModalBooking)}`,
-          ...(cancelModalBooking.escrow_status === 'held_in_escrow' ? ['A refund is recorded for the money held in escrow'] : []),
         ] : []}
       />
       </>

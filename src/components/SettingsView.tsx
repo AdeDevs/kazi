@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { Role, Professional, Booking } from '../types';
 import { Language } from '../translations';
 import {
-  Key, Download, Snowflake, Trash2, X
+  Key, Download, Snowflake, Trash2
 } from 'lucide-react';
 import { changePassword, exportMyData, freezeMe, unfreezeMe } from '../lib/authApi';
 import { getMyProfile, saveMyProfile } from '../lib/profilesApi';
@@ -13,13 +13,14 @@ import { SessionsSection } from './settings/SessionsSection';
 import { TwoFactorSection } from './settings/TwoFactorSection';
 import { PayoutSection } from './settings/PayoutSection';
 import { FEATURES } from '../lib/features';
-import { ConfirmationModal } from './ui/ConfirmationModal';
+import { FROZEN_ON_HOLD, ConsequenceSheet } from './ui/ConsequenceSheet';
+import { markFrozenNoticeSeen } from './ui/FrozenInterstitial';
+import { Bookmark, DoorOpen, KeyRound, LogIn, MonitorSmartphone, UserX } from 'lucide-react';
+import { Calendar, MessageSquare, Pencil } from 'lucide-react';
 import { UnsavedChangesModal } from './ui/UnsavedChangesModal';
-import { SheetDragHandle } from './ui/SheetDragHandle';
 import { Toggle } from './ui/Toggle';
 import { Card, CardHeader } from './ui/Card';
 import { useAuth } from '../context/AuthContext';
-import { useSlideUpSheet } from '../hooks/useSlideUpSheet';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import { PreferencesSection } from './settings/PreferencesSection';
 import { HelpSupportSection } from './settings/HelpSupportSection';
@@ -123,26 +124,32 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [confirmPassword, setConfirmPassword] = useState('');
   const closePasswordModal = () => {
     setShowPasswordModal(false);
+    setPasswordError(null);
     setCurrentPassword('');
     setNewPassword('');
     setConfirmPassword('');
   };
   const isPasswordFormDirty = Boolean(currentPassword || newPassword || confirmPassword);
   const passwordGuard = useUnsavedChangesGuard(isPasswordFormDirty, closePasswordModal);
-  const passwordSheet = useSlideUpSheet(showPasswordModal, passwordGuard.requestClose);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setPasswordError(null);
     if (!currentPassword || !newPassword || !confirmPassword) {
-      toast.error('Fill in all three password fields.');
+      setPasswordError('Fill in all three password fields.');
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordError('Use at least 8 characters for your new password.');
       return;
     }
     if (newPassword !== confirmPassword) {
-      toast.error('The new passwords don’t match. Type the same password in both fields.');
+      setPasswordError('The new passwords don’t match. Type the same password in both fields.');
       return;
     }
     if (newPassword === currentPassword) {
-      toast.error('Your new password must be different from your current one.');
+      setPasswordError('Your new password must be different from your current one.');
       return;
     }
     setIsChangingPassword(true);
@@ -153,27 +160,43 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       closePasswordModal();
       onLogout?.();
     } catch (err: any) {
-      toast.error(err?.message || 'Could not change your password. Try again.');
+      setPasswordError(err?.message || 'Could not change your password. Try again.');
     } finally {
       setIsChangingPassword(false);
     }
   };
 
+  // Which way the sheet goes is fixed when it opens, so it doesn't swap text as the state flips.
+  const [freezeMode, setFreezeMode] = useState<'freeze' | 'unfreeze'>('freeze');
+  const [freezeError, setFreezeError] = useState<string | null>(null);
+  const openFreezeSheet = () => {
+    setFreezeMode(isFrozen ? 'unfreeze' : 'freeze');
+    setFreezeError(null);
+    setShowFreezeModal(true);
+  };
+
   const handleFreezeToggle = async () => {
-    const wasFrozen = isFrozen;
+    const freezing = freezeMode === 'freeze';
     setIsFreezeBusy(true);
+    setFreezeError(null);
     try {
-      await (wasFrozen ? unfreezeMe() : freezeMe());
+      if (freezing && user) markFrozenNoticeSeen(user.id); // they know: don't greet them with the frozen notice
+      await (freezing ? freezeMe() : unfreezeMe());
       await refreshUser();
-      toast.success(wasFrozen ? 'Account unfrozen. Bookings are open again.' : 'Account frozen. New bookings are paused.');
+      toast.success(freezing ? 'Account frozen. Unfreeze any time from here.' : 'Account unfrozen. Everything works again.');
+      setShowFreezeModal(false);
     } catch (err: any) {
-      toast.error(err?.message || `Could not ${wasFrozen ? 'unfreeze' : 'freeze'} your account. Try again.`);
+      setFreezeError(err?.message || `Couldn’t ${freezing ? 'freeze' : 'unfreeze'} your account. Try again.`);
     } finally {
       setIsFreezeBusy(false);
     }
   };
 
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const handlePermanentDelete = async () => {
+    setIsDeleting(true);
+    setDeleteError(null);
     try {
       await deleteAccount();
       toast.success('Your account is closed.');
@@ -183,7 +206,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         onLogout();
       }
     } catch (err: any) {
-      toast.error(err.message || 'Failed to delete account.');
+      setDeleteError(err?.message || 'Couldn’t delete your account. Try again.');
+      setIsDeleting(false);
     }
   };
 
@@ -376,7 +400,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
             <button
               type="button"
-              onClick={() => setShowFreezeModal(true)}
+              onClick={openFreezeSheet}
               disabled={isDemo || isFreezeBusy}
               className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed ${
                 isFrozen
@@ -399,7 +423,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
             <button
               type="button"
-              onClick={() => setShowDeleteModal(true)}
+              onClick={() => { if (blockIfFrozen()) return; setDeleteError(null); setShowDeleteModal(true); }}
               className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-bold text-xs transition-colors cursor-pointer shrink-0 flex items-center gap-1.5 shadow-xs"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -411,125 +435,136 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
       {/* ================= CONFIRMATION MODALS (BOTTOM SLIDE-UP ON MOBILE) ================= */}
 
-      {/* FREEZE CONFIRMATION MODAL */}
-      <ConfirmationModal
+      {/* FREEZE / UNFREEZE: the same frosted sheet as the frozen-account notice */}
+      <ConsequenceSheet
+        theme="frost"
+        icon={Snowflake}
         isOpen={showFreezeModal}
         onClose={() => setShowFreezeModal(false)}
-        onConfirm={handleFreezeToggle}
-        title={isFrozen ? 'Unfreeze Your Account?' : 'Freeze Your Account?'}
-        description={
-          isFrozen
-            ? 'Bookings, messages and profile changes open again straight away, and any artisan profile shows in search again.'
-            : 'Bookings, messages and profile changes are blocked, and any artisan profile drops out of search, until you unfreeze.'
-        }
-        confirmText={isFrozen ? 'Yes, Unfreeze Account' : 'Yes, Freeze Account'}
-        cancelText="Keep as is"
-        type="freeze"
-        details={
-          isFrozen
-            ? undefined
-            : ['You can still sign in while frozen', 'Unfreeze any time from this page']
-        }
+        busy={isFreezeBusy}
+        error={freezeError}
+        {...(freezeMode === 'freeze'
+          ? {
+              title: 'Freeze your account?',
+              description: `Take a break without deleting anything.${user?.role === 'artisan' ? ' Customers won’t find your profile while it’s frozen.' : ''} Unfreeze any time.`,
+              pillsLabel: 'Goes on hold',
+              pills: FROZEN_ON_HOLD,
+              note: 'You can still sign in and see your bookings, payments and messages.',
+              primaryLabel: 'Freeze account',
+              busyLabel: 'Freezing…',
+              secondaryLabel: 'Keep it active',
+            }
+          : {
+              title: 'Unfreeze your account?',
+              description: `Pick up where you left off.${user?.role === 'artisan' ? ' Customers can find your profile again straight away.' : ''}`,
+              pillsLabel: 'Back on',
+              pills: [
+                { label: 'Bookings', Icon: Calendar },
+                { label: 'Messages', Icon: MessageSquare },
+                { label: 'Profile changes', Icon: Pencil },
+              ],
+              note: 'Everything opens again the moment you unfreeze.',
+              primaryLabel: 'Unfreeze now',
+              busyLabel: 'Unfreezing…',
+              secondaryLabel: 'Keep it frozen',
+            })}
+        onPrimary={handleFreezeToggle}
       />
 
-      {/* DELETE ACCOUNT CONFIRMATION MODAL */}
-      <ConfirmationModal
+      {/* DELETE ACCOUNT: permanent, so it's hold to confirm */}
+      <ConsequenceSheet
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
-        onConfirm={handlePermanentDelete}
-        title="Delete Your Account?"
+        theme="permanent"
+        icon={DoorOpen}
+        title="Delete your account?"
         description="Your account closes now and you’re signed out on every device. You won’t be able to sign in with it again."
-        confirmText="Yes, Delete My Account"
-        cancelText="Keep My Account"
-        type="danger"
-        details={[
-          'Your personal details are removed later, after the period KaziHub has to keep booking and payment records',
-          'If money is held in escrow on one of your bookings, contact support before deleting',
-          'To take a break instead, freeze your account: you can unfreeze it any time',
+        pillsLabel="Goes away"
+        pills={[
+          { label: user?.role === 'artisan' ? 'Public profile' : 'Profile', Icon: UserX },
+          { label: 'Sign-in', Icon: LogIn },
+          { label: 'Saved artisans', Icon: Bookmark },
         ]}
-      />
-
-      {/* CHANGE PASSWORD MODAL */}
-      {passwordSheet.shouldRender && (
-        <div
-          className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md ${passwordSheet.backdropAnimationClasses}`}
-          onClick={passwordGuard.requestClose}
-        >
-          <div
-            className={`bg-white dark:bg-slate-900 w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl p-5 sm:p-6 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl relative ${passwordSheet.sheetAnimationClasses}`}
-            style={passwordSheet.dragStyle}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <SheetDragHandle dragHandleProps={passwordSheet.dragHandleProps} />
+        note="Your details are removed after the period KaziHub has to keep booking and payment records. Money held in escrow? Contact support first."
+        confirm="hold"
+        primaryLabel="Hold to delete account"
+        busyLabel="Closing your account…"
+        onPrimary={handlePermanentDelete}
+        secondaryLabel="Keep my account"
+        busy={isDeleting}
+        error={deleteError}
+      >
+        {!isFrozen && (
+          <p className="text-xs text-center text-slate-500 dark:text-slate-400">
+            Just need a break?{' '}
             <button
-              onClick={passwordGuard.requestClose}
-              className="absolute top-4 right-4 sm:top-5 sm:right-5 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
+              type="button"
+              onClick={() => { setShowDeleteModal(false); setTimeout(openFreezeSheet, 250); }}
+              className="font-bold text-navy-800 dark:text-navy-400 underline underline-offset-2 cursor-pointer"
             >
-              <X className="w-5 h-5" />
+              Freeze your account instead
             </button>
+          </p>
+        )}
+      </ConsequenceSheet>
 
-            <div className="space-y-1">
-              <h3 className="text-xl font-black text-slate-900 dark:text-slate-100">Update Password</h3>
-              <p className="text-xs text-slate-500">Use 8 to 128 characters.</p>
-            </div>
-
-            <form onSubmit={handlePasswordSubmit} className="space-y-3">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Current Password</label>
-                <input
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">New Password</label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  minLength={8}
-                  maxLength={128}
-                  autoComplete="new-password"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Confirm New Password</label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100"
-                  required
-                />
-              </div>
-
-              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={passwordGuard.requestClose}
-                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer text-center"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isChangingPassword}
-                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-brand-orange-500 hover:text-navy-950 disabled:hover:bg-navy-800 disabled:hover:text-white text-white font-bold text-xs shadow-xs cursor-pointer text-center disabled:opacity-70 disabled:cursor-not-allowed"
-                >
-                  {isChangingPassword ? 'Updating…' : 'Update Password'}
-                </button>
-              </div>
-            </form>
+      {/* CHANGE PASSWORD: it signs you out everywhere, so it's a security sheet */}
+      <ConsequenceSheet
+        isOpen={showPasswordModal}
+        onClose={passwordGuard.requestClose}
+        theme="security"
+        icon={KeyRound}
+        title="Change your password"
+        description="Saving it signs you out on every device, this one included. Sign in again with the new password."
+        pillsLabel="Signs out"
+        pills={[{ label: 'Every device', Icon: MonitorSmartphone }]}
+        primaryLabel="Change password"
+        busyLabel="Changing…"
+        onPrimary={() => undefined}
+        formId="change-password-form"
+        secondaryLabel="Cancel"
+        busy={isChangingPassword}
+        error={passwordError}
+      >
+        <form id="change-password-form" onSubmit={handlePasswordSubmit} className="space-y-3" noValidate>
+          <div>
+            <label htmlFor="pw-current" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Current Password</label>
+            <input
+              id="pw-current"
+              type="password"
+              autoComplete="current-password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100"
+            />
           </div>
-        </div>
-      )}
+          <div>
+            <label htmlFor="pw-new" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">New Password <span className="font-medium text-slate-400">(8–128 characters)</span></label>
+            <input
+              id="pw-new"
+              type="password"
+              autoComplete="new-password"
+              minLength={8}
+              maxLength={128}
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100"
+            />
+          </div>
+          <div>
+            <label htmlFor="pw-confirm" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Confirm New Password</label>
+            <input
+              id="pw-confirm"
+              type="password"
+              autoComplete="new-password"
+              maxLength={128}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100"
+            />
+          </div>
+        </form>
+      </ConsequenceSheet>
 
       <UnsavedChangesModal
         guard={passwordGuard}

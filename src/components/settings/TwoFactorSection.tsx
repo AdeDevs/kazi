@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Copy, Download, KeyRound, ShieldCheck, X } from 'lucide-react';
+import { Copy, Download, KeyRound, LogIn, ShieldCheck, ShieldOff, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { SheetDragHandle } from '../ui/SheetDragHandle';
 import { UnsavedChangesModal } from '../ui/UnsavedChangesModal';
@@ -10,6 +10,7 @@ import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 import { disableTwoFactor, regenerateBackupCodes, setupTwoFactor, verifyTwoFactorSetup } from '../../lib/authApi';
 import { TwoFactorSetupResponse } from '../../types/auth';
 import { BackupCodeInput, DigitCodeInput, isCompleteBackupCode } from '../ui/CodeInput';
+import { ConsequenceSheet } from '../ui/ConsequenceSheet';
 
 const inputClass =
   'w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-slate-100';
@@ -49,7 +50,9 @@ export const TwoFactorSection: React.FC = () => {
   // Backup codes are shown only once, so closing that step isn't "discarding" anything, and the
   // scan step has nothing typed yet until a code is entered.
   const guard = useUnsavedChangesGuard(flow?.kind !== 'codes' && Boolean(code || password), close);
-  const sheet = useSlideUpSheet(Boolean(flow), guard.requestClose);
+  // Turning 2FA off has its own security sheet below; this one carries the other steps.
+  const sheet = useSlideUpSheet(Boolean(flow) && flow?.kind !== 'disable', guard.requestClose);
+  const [disableError, setDisableError] = useState<string | null>(null);
 
   // Keep the last flow on screen while the sheet animates closed.
   const [shownFlow, setShownFlow] = useState<Flow | null>(null);
@@ -92,13 +95,14 @@ export const TwoFactorSection: React.FC = () => {
     e.preventDefault();
     if (isBusy || !password || (offWith === 'app' ? code.length !== 6 : !isCompleteBackupCode(code))) return;
     setIsBusy(true);
+    setDisableError(null);
     try {
       await disableTwoFactor(password, code);
       await refreshUser();
       toast.success('Two-factor sign-in is off.');
       close();
     } catch (err: any) {
-      toast.error(err?.message || 'Could not turn two-factor sign-in off. Check your password and code.');
+      setDisableError(err?.message || 'Could not turn two-factor sign-in off. Check your password and code.');
     } finally {
       setIsBusy(false);
     }
@@ -171,7 +175,7 @@ export const TwoFactorSection: React.FC = () => {
                 <KeyRound className="w-3.5 h-3.5 text-navy-800 dark:text-navy-400" />
                 <span>New Backup Codes</span>
               </button>
-              <button type="button" onClick={() => { if (!blockIfFrozen()) setFlow({ kind: 'disable' }); }} className={`${secondaryClass} text-rose-600 dark:text-rose-400`}>
+              <button type="button" onClick={() => { if (!blockIfFrozen()) { setDisableError(null); setFlow({ kind: 'disable' }); } }} className={`${secondaryClass} text-rose-600 dark:text-rose-400`}>
                 <span>Turn Off</span>
               </button>
             </>
@@ -244,44 +248,6 @@ export const TwoFactorSection: React.FC = () => {
               </form>
             )}
 
-            {f.kind === 'disable' && (
-              <form onSubmit={handleDisable} className="space-y-3">
-                <div>
-                  <label htmlFor="twofa-off-password" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Current Password</label>
-                  <input
-                    id="twofa-off-password"
-                    type="password"
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className={inputClass}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <p className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">{offWith === 'app' ? 'Code From Your App' : 'Backup Code'}</p>
-                  {offWith === 'app' ? (
-                    <DigitCodeInput appearance="app" idPrefix="twofa-off" label="6-digit code" value={code} onChange={setCode} disabled={isBusy} />
-                  ) : (
-                    <BackupCodeInput appearance="app" idPrefix="twofa-off-backup" value={code} onChange={setCode} disabled={isBusy} />
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => { setOffWith((m) => (m === 'app' ? 'backup' : 'app')); setCode(''); }}
-                    className="text-[11px] font-bold text-navy-800 dark:text-navy-400 hover:underline cursor-pointer"
-                  >
-                    {offWith === 'app' ? 'Lost your phone? Use a backup code' : 'Use the code from your app'}
-                  </button>
-                </div>
-                <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
-                  <button type="button" onClick={guard.requestClose} className={cancelClass}>Cancel</button>
-                  <button type="submit" disabled={isBusy || !password || (offWith === 'app' ? code.length !== 6 : !isCompleteBackupCode(code))} className={primaryClass}>
-                    {isBusy ? 'Turning off…' : 'Turn Off'}
-                  </button>
-                </div>
-              </form>
-            )}
-
             {f.kind === 'regenerate' && (
               <form onSubmit={handleRegenerate} className="space-y-3">
                 <div>
@@ -320,6 +286,55 @@ export const TwoFactorSection: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Turning 2FA off weakens sign-in: a security sheet */}
+      <ConsequenceSheet
+        isOpen={flow?.kind === 'disable'}
+        onClose={guard.requestClose}
+        theme="security"
+        icon={ShieldOff}
+        title="Turn off two-step sign-in?"
+        description="Signing in will only need your password. Anyone who learns it could get into your account."
+        pillsLabel="Stops asking for"
+        pills={[{ label: 'Authenticator codes', Icon: LogIn }, { label: 'Backup codes', Icon: KeyRound }]}
+        primaryLabel="Turn off"
+        busyLabel="Turning off…"
+        onPrimary={() => undefined}
+        primaryDisabled={!password || (offWith === 'app' ? code.length !== 6 : !isCompleteBackupCode(code))}
+        formId="twofa-off-form"
+        secondaryLabel="Keep it on"
+        busy={isBusy}
+        error={disableError}
+      >
+        <form id="twofa-off-form" onSubmit={handleDisable} className="space-y-3" noValidate>
+          <div>
+            <label htmlFor="twofa-off-password" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Current Password</label>
+            <input
+              id="twofa-off-password"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+          <div className="space-y-2">
+            <p className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">{offWith === 'app' ? 'Code From Your App' : 'Backup Code'}</p>
+            {offWith === 'app' ? (
+              <DigitCodeInput appearance="app" idPrefix="twofa-off" label="6-digit code" value={code} onChange={setCode} disabled={isBusy} />
+            ) : (
+              <BackupCodeInput appearance="app" idPrefix="twofa-off-backup" value={code} onChange={setCode} disabled={isBusy} />
+            )}
+            <button
+              type="button"
+              onClick={() => { setOffWith((m) => (m === 'app' ? 'backup' : 'app')); setCode(''); }}
+              className="text-[11px] font-bold text-navy-800 dark:text-navy-400 hover:underline cursor-pointer"
+            >
+              {offWith === 'app' ? 'Lost your phone? Use a backup code' : 'Use the code from your app'}
+            </button>
+          </div>
+        </form>
+      </ConsequenceSheet>
 
       <UnsavedChangesModal guard={guard} description="You haven’t finished yet. Closing now will discard what you’ve entered." />
     </>
