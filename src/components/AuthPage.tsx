@@ -452,7 +452,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
       {/* ───────── Phones: a plain header with the two-colour logo and a way back to the landing page ───────── */}
       <header className="lg:hidden h-16 md:h-[88px] shrink-0 px-5 md:px-10 flex items-center justify-between">
         <Link to="/" aria-label="KaziHub home" className={`${display} text-2xl md:text-[28px] tracking-[-0.04em]`}>
-          <span style={{ color: '#3B35C9' }}>Kazi</span><span style={{ color: '#FF6A2B' }}>Hub</span>
+          <span style={{ color: '#3B35C9' }}>Kazmi</span><span style={{ color: '#FF6A2B' }}>Hub</span>
         </Link>
         <Link to="/" aria-label="Close and go back to the home page" className="w-10 h-10 -mr-2.5 flex items-center justify-center">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12" /><path d="M18 6L6 18" /></svg>

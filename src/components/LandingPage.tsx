@@ -158,7 +158,7 @@ const STEPS = [
   { title: 'Tell us what needs fixing', body: 'Search a trade or describe the problem. We show checked artisans near you.', bg: C.mint, fg: C.navy, screen: MockNewRequest },
   { title: 'Agree a quote', body: 'Chat with the artisan and accept a written price before any work starts.', bg: C.pink, fg: C.navy, screen: null },
   { title: 'Pay into escrow', body: 'Your money goes to KaziHub escrow, not the artisan. It stays there while the job is done.', bg: C.yellow, fg: C.navy, screen: MockCheckout },
-  { title: 'Confirm, and they get paid', body: 'Happy with the work? Confirm it and the payment is released to the artisan.', bg: C.indigo, fg: C.cream, screen: MockWallet },
+  { title: 'Confirm, and they get paid', body: 'Happy with the work? Confirm it and the payment is released to the artisan.', bg: C.orange, fg: C.navy, screen: MockWallet },
 ];
 
 const MARQUEE = [
@@ -533,11 +533,11 @@ export const LandingPage: React.FC = () => {
                 style={{ background: s.bg, color: s.fg, animationDelay: `${200 + i * 90}ms` }}
               >
                 <div className="relative z-10 px-5 md:px-[26px] pt-5 md:pt-[26px] flex flex-col items-start gap-2.5 md:gap-3">
-                  <span className="px-[11px] md:px-3 py-[5px] md:py-1.5 rounded-full text-xs md:text-[13px] font-extrabold tracking-[0.04em]" style={{ background: s.fg, color: s.bg === C.indigo ? C.navy : C.cream }}>
+                  <span className="px-[11px] md:px-3 py-[5px] md:py-1.5 rounded-full text-xs md:text-[13px] font-extrabold tracking-[0.04em]" style={{ background: i === 3 ? C.navy : s.fg, color: C.cream }}>
                     Step {i + 1}<span className="md:hidden"> of 4</span>
                   </span>
                   <h3 className={`mt-0.5 md:mt-1 ${display} text-[24px] md:text-[30px] lg:text-[26px] leading-[0.98] tracking-[-0.04em]`}>{s.title}</h3>
-                  <p className="text-sm md:text-base lg:text-[15px] leading-[1.45] font-medium">{s.body}</p>
+                  <p className="text-sm md:text-base lg:text-[15px] leading-[1.45] font-medium" style={{ color: s.fg }}>{s.body}</p>
                 </div>
                 {s.screen ? (
                   <>
@@ -658,11 +658,10 @@ export const LandingPage: React.FC = () => {
           <div className="relative overflow-hidden col-span-2 md:col-span-5 rounded-[22px] md:rounded-[24px] lg:rounded-[26px] p-[22px] md:p-6 lg:p-[30px] flex flex-col justify-between gap-3" style={{ background: C.navy, color: C.cream, ...reveal(5) }}>
             <Swoosh viewBox="0 0 220 240" d="M190 20 C 40 20, 40 220, 190 220" color={C.orange} width={48} className="hidden md:block w-[180px] lg:w-[220px] -right-[50px] -top-10" />
             <span className={`relative ${display} text-[30px] lg:text-[38px] leading-[0.95] tracking-[-0.04em]`}>Reviews from<br className="hidden md:block" /> real jobs only</span>
-            <span className="relative text-sm leading-relaxed md:hidden" style={{ color: C.muted }}>Only after a paid, completed booking. No friends, no fakes.</span>
-            <ul className="relative hidden md:block pl-[18px] list-disc text-sm leading-[1.7]" style={{ color: C.muted }}>
-              <li>Only after a paid, completed booking</li>
-              <li>No friends, no fakes</li>
-            </ul>
+            <span className="relative text-sm leading-relaxed md:hidden" style={{ color: C.cream }}>You only see reviews from completed bookings, no fake reviews. Every review is from a real job, so you can trust them.</span>
+            <p className="relative hidden md:block text-sm leading-[1.7]" style={{ color: C.cream }}>
+              You only see reviews from completed bookings, no fake reviews. Every review is from a real job, so you can trust them.
+            </p>
           </div>
         </section>
 
