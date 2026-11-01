@@ -180,11 +180,12 @@ const ARTISAN_POINTS = [
 
 const FAQS = [
   { q: 'How does escrow work on KaziHub?', a: 'When you book, you pay into KaziHub escrow, not to the artisan. The money stays there while the work is done and is released only when you confirm the job is finished.' },
-  { q: 'How are artisans checked?', a: 'Every artisan verifies with a government ID and a live selfie before they get the Verified badge.' },
-  { q: 'What if I am not happy with the job?', a: 'Don’t confirm it. Raise it in the app instead, and the payment stays held while KaziHub looks into it with you and the artisan.' },
-  { q: 'Can I agree the price before work starts?', a: 'Yes. You chat with the artisan and accept a written quote first. Work starts only after you accept it.' },
+  { q: 'Which services and locations do you cover?', a: 'We cover electrical work, plumbing, AC installation and repair, solar installation, and carpentry, across all 36 states and the FCT. Availability varies by area. If we can’t find someone near you, we’ll tell you upfront.'},
+  { q: 'Is my information safe?', a: 'We only share your address and phone number with the technician you’ve chosen. We never sell your data.' },
+  { q: 'What if I am not happy with the job?', a: 'Contact us within 3 or 7 days of completion. We’ll arrange a fix depending on the situation. Include photos and a short description to speed things up' },
+  { q: 'What if there’s an emergency, like a power fault or a burst pipe?', a: 'Mark your request as urgent and we’ll notify nearby technicians first.' },
   { q: 'When do artisans get paid?', a: 'As soon as the customer confirms the job is done, the payment in escrow is released to the artisan.' },
-  { q: 'How do I join as an artisan?', a: 'Sign up, verify your ID and selfie, add your trade and the areas you cover, and you’ll start getting requests from people nearby.' },
+  { q: 'I’m a technician. How do I join?', a: 'Sign up, submit your details and proof of experience, and complete verification. Once approved, you can start receiving jobs.' },
 ];
 // SAMPLE reviews, shown only while GET /reviews/featured has none to give (it lists reviews clients
 // chose to share, from paid-out jobs). The section labels them as samples; never present them as genuine.
@@ -402,7 +403,7 @@ export const LandingPage: React.FC = () => {
             Light don off?<br />Get person<br className="md:hidden" /> wey sabi.
           </h1>
           <p className="kh-rise md:mt-5 md:mb-7 max-w-[330px] md:max-w-[540px] lg:max-w-[600px] text-center text-[15px] md:text-[19px] leading-normal font-semibold" style={{ animationDelay: '160ms', color: C.lilac }}>
-            ID-verified artisans near you. Your money stays in escrow until the job is done, and you say so.
+            Find trusted electricians, plumbers, AC technicians, solar installers and carpenters near you, in any Nigerian state. Verified, reviewed, and ready to work.
           </p>
 
           <form
